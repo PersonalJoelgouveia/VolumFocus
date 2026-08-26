@@ -1,0 +1,115 @@
+.timer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.cro-confirm-card,
+.met-card {
+  background: linear-gradient(135deg, var(--bg-1) 0%, rgba(0, 196, 179, 0.03) 100%);
+  border: 1px solid var(--border-md);
+  border-radius: var(--rl);
+  padding: 28px 24px 22px;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 196, 179, 0.1);
+  text-align: center;
+}
+
+.met-card {
+  background: linear-gradient(135deg, var(--bg-1) 0%, rgba(255, 150, 64, 0.03) 100%);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 150, 64, 0.1);
+}
+
+.cro-confirm-icon,
+.met-icon {
+  font-size: 2.2rem;
+  margin-bottom: 14px;
+}
+
+.cro-confirm-title,
+.met-title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: 1.08rem;
+  color: var(--text);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.cro-confirm-sub,
+.met-sub {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.cro-confirm-btns,
+.met-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.btn {
+  border-radius: var(--rs);
+  padding: 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-2);
+}
+
+.btn.btn-primary {
+  background: var(--teal-glow);
+  border-color: var(--teal-border);
+  color: var(--teal);
+}
+
+.met-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 150, 64, 0.06);
+  border: 1.5px solid rgba(255, 150, 64, 0.18);
+  border-radius: var(--rs);
+  padding: 11px 14px;
+  margin-bottom: 18px;
+}
+
+.met-input-row:focus-within {
+  border-color: var(--orange);
+  background: rgba(255, 150, 64, 0.12);
+}
+
+.met-input-row input {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 700;
+  width: 70px;
+  text-align: right;
+  outline: none;
+  padding: 0;
+  min-height: auto;
+}
+
+.met-input-unit {
+  font-size: 0.8rem;
+  color: var(--orange);
+  font-weight: 700;
+  font-family: var(--font-title);
+  letter-spacing: 0.05em;
+}
