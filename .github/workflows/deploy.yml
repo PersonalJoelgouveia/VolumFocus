@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +30,13 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          VITE_FIREBASE_API_KEY: "AIzaSyBBl2lbUHhBO9-dOA1pNZKrUwBxIaqEX5o"
+          VITE_FIREBASE_AUTH_DOMAIN: "volumfocus.firebaseapp.com"
+          VITE_FIREBASE_PROJECT_ID: "volumfocus"
+          VITE_FIREBASE_STORAGE_BUCKET: "volumfocus.firebasestorage.app"
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "666010218888"
+          VITE_FIREBASE_APP_ID: "1:666010218888:web:eb2ac1eb67ea3adfbe0a3d"
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
@@ -38,9 +46,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
