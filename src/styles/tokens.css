@@ -1,0 +1,88 @@
+/**
+ * Design tokens "Dark Glow" — migrados fielmente da seção DESIGN TOKENS
+ * da documentação (Documentacao_Completa_Joel_Gouveia.docx) e das
+ * variáveis :root do monolito index.html.
+ */
+:root {
+  /* Identidade / branding */
+  --teal: #00c4b3;
+  --teal-dim: #009d8f;
+  --teal-glow: rgba(0, 196, 179, 0.09);
+  --teal-border: rgba(0, 196, 179, 0.22);
+
+  /* Backgrounds & superfícies */
+  --bg: #060608;
+  --bg-1: #0c0c10;
+  --bg-2: #111116;
+  --bg-3: #18181f;
+
+  /* Tipografia */
+  --text: #eeeef2;
+  --text-2: #a0a0b0;
+  --text-3: #7a7a90;
+
+  /* Cores funcionais e semânticas */
+  --red: #ff4d6d;
+  --red-bg: rgba(255, 77, 109, 0.09);
+  --orange: #ff9640;
+  --orange-bg: rgba(255, 150, 64, 0.09);
+  --green: #22d3a0;
+  --green-bg: rgba(34, 211, 160, 0.09);
+  --yellow: #ffd166;
+  --yellow-bg: rgba(255, 209, 102, 0.09);
+  --purple: #a78bfa;
+
+  /* Bordas e espaçamentos */
+  --border: rgba(255, 255, 255, 0.055);
+  --border-md: rgba(255, 255, 255, 0.1);
+  --r: 12px;
+  --rl: 18px;
+  --rs: 8px;
+
+  /* Transição padrão — migrado 1:1 do :root do monolito */
+  --tr: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Fontes */
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-title: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Cores por grupo muscular (MC no monolito) — usadas em barras de volume e badges. */
+:root {
+  --mc-peito: #ff4d6d;
+  --mc-costas: #38bdf8;
+  --mc-quadriceps: #fbbf24;
+  --mc-isquiotibiais: #fb923c;
+  --mc-gluteos: #f472b6;
+  --mc-ombros: #a78bfa;
+  --mc-biceps: #34d399;
+  --mc-triceps: #f87171;
+  --mc-panturrilhas: #5eead4;
+  --mc-abdomen: #fde68a;
+  --mc-extensores-coluna: #86efac;
+  --mc-cardio: #22d3a0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  margin: 0;
+}
+
+/* iOS Safari zoom fix — preservado do monolito. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+button {
+  min-height: 44px;
+  font-family: inherit;
+}
