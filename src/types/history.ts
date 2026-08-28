@@ -30,9 +30,6 @@ export interface HistoricoSemana {
   weekPSE: Record<number, number>;
   weekVol: VolumeByMuscle;
   tonnage: number;
-  /** Total de séries executadas na semana (calcWeekTonnage().sets) — usada
-   *  pela insígnia "Máquina de Volume" (STREAKS, data/achievements.ts). */
-  sets: number;
   cardio: CardioWeekSummary;
   treinos: number;
   badge: EngajamentoBadge;
