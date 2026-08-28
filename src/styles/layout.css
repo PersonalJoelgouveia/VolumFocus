@@ -1,0 +1,80 @@
+.sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  font-family: var(--font-title);
+  font-weight: 800;
+  font-size: 1.28rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-shadow: 0 0 20px rgba(0, 196, 179, 0.1);
+}
+
+.tag {
+  font-size: 0.57rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: var(--teal);
+  background: var(--teal-glow);
+  border: 1px solid var(--teal-border);
+  border-radius: 5px;
+  padding: 3px 8px;
+  text-transform: uppercase;
+}
+
+.level-pill {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.lv-btn {
+  flex: 1;
+  padding: 10px 7px;
+  border-radius: var(--rs);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  font-family: inherit;
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 0.75rem;
+  transition: 0.15s ease;
+  text-align: center;
+}
+
+.lv-btn:hover {
+  border-color: var(--border-md);
+  color: var(--text);
+}
+
+.lv-btn.active {
+  border-color: var(--teal-border);
+  background: var(--teal-glow);
+  color: #fff;
+}
+
+.lv-ico {
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+.lv-rng {
+  font-size: 0.59rem;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+}
+
+.lv-btn.active .lv-rng {
+  color: rgba(0, 196, 179, 0.7);
+}
