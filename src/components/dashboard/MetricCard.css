@@ -1,0 +1,91 @@
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.conquest-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cq-icon {
+  font-size: 1.3rem;
+  margin-bottom: 6px;
+}
+
+.cq-label {
+  font-size: 0.72rem;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cq-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cq-unit {
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
+
+.cq-compare {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+.met-conquest-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.met-neutral {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.met-neutral-ico {
+  font-size: 1.2rem;
+}
+
+.met-neutral-txt {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.met-activate-btn {
+  background: var(--teal-glow);
+  border: 1px solid var(--teal-border);
+  color: var(--teal);
+  border-radius: var(--rs);
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.met-live-val {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--orange);
+}
+
+.met-live-unit,
+.met-live-detail {
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
