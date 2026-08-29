@@ -7,6 +7,7 @@ import { ImportWorkoutModal } from '../components/modals/ImportWorkoutModal';
 import { AddExerciseModal } from '../components/modals/AddExerciseModal';
 import { CloneDayModal } from '../components/registro/CloneDayModal';
 import { ExecutionModal } from '../components/registro/ExecutionModal';
+import { RotinasModal } from '../components/registro/RotinasModal';
 import { ToastContainer } from '../components/feedback/ToastContainer';
 import { ConfirmDialog } from '../components/feedback/ConfirmDialog';
 import { TimerEngine } from '../components/timer/TimerEngine';
@@ -27,6 +28,7 @@ import { ConquistasView } from '../views/ConquistasView';
 import { ClientesView } from '../views/ClientesView';
 import { NotificationsView } from '../views/NotificationsView';
 import { MinhaRotinaView } from '../views/MinhaRotinaView';
+import { useSyncStore } from '../store/useSyncStore';
 
 import './AppShell.css';
 
@@ -72,6 +74,12 @@ export function AppShell() {
   const safeMeta = VIEW_META[safeView];
   const ActiveViewComponent = VIEW_COMPONENTS[safeView];
 
+  // AppShell só renderiza com status==='granted' (ver AuthGate) — momento
+  // seguro pra ligar os watchers de auto-sync uma única vez por sessão.
+  useEffect(() => {
+    useSyncStore.getState().init();
+  }, []);
+
   return (
     <div id="app-shell">
       <Sidebar />
@@ -97,6 +105,7 @@ export function AppShell() {
       <AddExerciseModal />
       <CloneDayModal />
       <ExecutionModal />
+      <RotinasModal />
       <ToastContainer />
       <ConfirmDialog />
 

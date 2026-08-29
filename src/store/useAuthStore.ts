@@ -3,6 +3,9 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { auth, db, doc, getDoc, onAuthStateChanged, signInWithGoogle, signOutUser } from '../lib/firebase';
 import { useUIStore } from './useUIStore';
 import { useNotificationStore } from './useNotificationStore';
+import { useSyncStore } from './useSyncStore';
+import { useConfirmStore } from './useConfirmStore';
+import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -49,6 +52,12 @@ interface AuthState {
 }
 
 let listenerAttached = false;
+/** Sucessor em memória de LS_PENDING_ACTION (index.html ~7282, ~7309-7349):
+ *  marcado por login() antes de abrir o popup, lido dentro do
+ *  onAuthStateChanged assim que o acesso é confirmado — só então dispara
+ *  o push-ou-pull. Garante que a sincronização só roda após um login
+ *  explícito (nunca numa reconexão silenciosa de sessão já existente). */
+let pendingSyncOnGrant = false;
 
 function toAuthUser(fbUser: FirebaseUser): AuthUser {
   return {
@@ -65,8 +74,9 @@ function toAuthUser(fbUser: FirebaseUser): AuthUser {
  * mesma checagem, mesma coleção, para o React e o legado convergirem.
  *
  * Escopo desta store: identidade + gate de acesso (quem pode entrar, e
- * como). A sincronização de backup/rotinas na nuvem (vfAuth._pullBackup/
- * _uploadBackup) é uma frente à parte, ainda não migrada.
+ * como). A sincronização de backup em si (o payload, upload/download,
+ * dirty-tracking) vive em useSyncStore — aqui só decide QUANDO disparar
+ * (logo após um login explícito bem-sucedido).
  */
 export const useAuthStore = create<AuthState>()((set, get) => ({
   status: 'loading',
@@ -81,6 +91,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
     onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) {
+        pendingSyncOnGrant = false;
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'login', role: 'nao-logado', user: null, errorMessage: null });
@@ -100,6 +111,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           // já identificado pelo Firebase Auth, mas não libera o acesso;
           // evita travar em 'loading' e perder a mensagem de erro no gate.
           console.error('useAuthStore: falha ao verificar cadastro do aluno', e);
+          pendingSyncOnGrant = false;
           set({
             status: 'login',
             role: 'nao-logado',
@@ -119,7 +131,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         // sucessor de ntfInit() (index.html ~10502), que também roda uma
         // vez ao carregar a página.
         if (isPT) useNotificationStore.getState().fetchAll();
+        // Sucessor da decisão push-ou-pull de _requestSignIn() — só roda
+        // logo após um login explícito (ver pendingSyncOnGrant acima).
+        if (pendingSyncOnGrant) {
+          pendingSyncOnGrant = false;
+          useSyncStore.getState().syncAfterLogin();
+        }
       } else {
+        pendingSyncOnGrant = false;
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'denied', role: 'nao-logado', user, errorMessage: null });
@@ -130,10 +149,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   login: async () => {
     if (get().busy) return;
     set({ busy: true, errorMessage: null });
+    pendingSyncOnGrant = true;
     try {
       await signInWithGoogle();
-      // onAuthStateChanged acima cuida do resto (checagem + status).
+      // onAuthStateChanged acima cuida do resto (checagem + status + sync).
     } catch (e: unknown) {
+      pendingSyncOnGrant = false;
       const code = (e as { code?: string })?.code;
       console.error('useAuthStore: erro ao fazer login', e);
       set({
@@ -149,14 +170,47 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   logout: async () => {
     if (get().busy) return;
+
+    const ok = await useConfirmStore
+      .getState()
+      .ask('Sair da conta e apagar os dados salvos neste dispositivo?', { confirmLabel: 'Sair e Apagar', danger: true });
+    if (!ok) return;
+
     set({ busy: true });
+
+    // Proteção contra perda de dados: scheduleAutoSync() tem debounce de
+    // alguns segundos, então uma edição feita agora mesmo pode ainda não
+    // ter chegado à nuvem. Sem isso, apagar os dados locais abaixo antes
+    // do upload pendente terminar destrói a alteração pra sempre —
+    // sucessor direto do fix documentado em vfAuth.logout() (index.html
+    // ~7535-7552, bug: "meus clientes são excluídos no logout").
+    if (auth.currentUser && useSyncStore.getState().dirty) {
+      try {
+        useUIStore.getState().showToast('☁️ Enviando últimas alterações antes de sair…');
+        const pushed = await useSyncStore.getState().pushNow();
+        if (!pushed) throw new Error('push falhou');
+      } catch (e) {
+        console.error('useAuthStore: falha ao sincronizar antes do logout', e);
+        const proceedAnyway = await useConfirmStore.getState().ask(
+          '⚠️ Não foi possível confirmar que suas últimas alterações foram salvas na nuvem. Sair mesmo assim e apagar os dados deste dispositivo?',
+          { confirmLabel: 'Sair Mesmo Assim', danger: true }
+        );
+        if (!proceedAnyway) {
+          set({ busy: false });
+          return;
+        }
+      }
+    }
+
     try {
       await signOutUser();
     } catch (e) {
       console.error('useAuthStore: erro ao sair', e);
-    } finally {
-      set({ busy: false });
     }
+
+    LOCAL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+    useUIStore.getState().showToast('👋 Sessão encerrada. Limpando dados deste dispositivo…');
+    setTimeout(() => window.location.reload(), 600);
   },
 
   tryAnotherAccount: async () => {

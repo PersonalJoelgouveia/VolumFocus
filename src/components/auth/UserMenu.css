@@ -72,6 +72,29 @@
 .user-chip-logout:hover { color: var(--red); }
 .user-chip-logout:disabled { opacity: 0.5; cursor: default; }
 
+/* ── Dot de sincronização — sucessor de #vf-sync-dot ── */
+.vf-sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+  opacity: 0;
+  transition: opacity 0.35s ease, background 0.35s ease;
+  align-self: center;
+  flex-shrink: 0;
+  cursor: default;
+  border: none;
+  padding: 0;
+}
+.vf-sync-dot.vf-sync-syncing { opacity: 1; background: var(--teal); animation: vfSyncPulse 0.9s ease-in-out infinite; }
+.vf-sync-dot.vf-sync-ok { opacity: 1; background: var(--green); }
+.vf-sync-dot.vf-sync-error { opacity: 1; background: var(--red); cursor: pointer; }
+.vf-sync-dot.vf-sync-waiting { opacity: 1; background: var(--yellow); cursor: pointer; animation: vfSyncPulse 1.6s ease-in-out infinite; }
+@keyframes vfSyncPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
 @media (max-width: 767px) {
   .user-chip-name { display: none; }
 }

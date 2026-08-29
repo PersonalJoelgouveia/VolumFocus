@@ -78,11 +78,13 @@ export type WorkoutDayLog = WorkoutLogEntry[];
 /** weekLog completo — chave é o índice do dia (persistido como string em jg3_log). */
 export type WeekLog = Record<number, WorkoutDayLog>;
 
-/** Rotina salva pelo usuário ou por um Personal Trainer (jg3_rotinas / jg3_rotinas_personal). */
+/** Rotina salva pelo usuário ou por um Personal Trainer (jg3_rotinas / jg3_rotinas_personal).
+ *  `log` é a SEMANA inteira (WeekLog), não um único dia — confirmado em
+ *  _savRotina(nome, weekLog) (index.html ~5763, chamada em ~5741 e ~5908). */
 export interface Rotina {
   id: number;
   nome: string;
-  log: WorkoutDayLog;
+  log: WeekLog;
   criada: string;
 }
 

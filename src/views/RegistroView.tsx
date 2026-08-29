@@ -140,6 +140,9 @@ export function RegistroView() {
               <button className="btn btn-primary" onClick={() => openModal('clone-day')} disabled={dayLog.length === 0}>
                 📋 Clonar Dia
               </button>
+              <button className="btn btn-ghost" onClick={() => openModal('rotinas')}>
+                📁 Rotinas
+              </button>
               <button className="btn btn-primary" onClick={handleCheckProgress}>
                 📈 Verificar Progressão
               </button>
