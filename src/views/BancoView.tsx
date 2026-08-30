@@ -103,7 +103,19 @@ export function BancoView() {
                   <div className="ex-item" key={e.id}>
                     <div className="ex-accent" style={{ background: color }} />
                     <div className="ex-info">
-                      <div className="ex-name">{e.name}</div>
+                      <div className="ex-name">
+                        {e.name}
+                        {(e.imgInicio || e.imgFim) && (
+                          <span title="Tem imagens de execução" style={{ marginLeft: 6, fontSize: '0.7rem' }}>
+                            🖼️
+                          </span>
+                        )}
+                        {e.ytVideoUrl && (
+                          <span title="Tem vídeo do YouTube" style={{ marginLeft: 6, fontSize: '0.7rem' }}>
+                            ▶️
+                          </span>
+                        )}
+                      </div>
                       <div className="ex-tags">
                         {isCardio ? (
                           <span className="ex-tag ex-tag-cardio">❤️ Cardio</span>

@@ -3,6 +3,8 @@ import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { MUSCLE_GROUPS } from '../../types/exercise';
 import type { Exercise, MuscleGroup } from '../../types/exercise';
+import { ExerciseMediaPicker } from './ExerciseMediaPicker';
+import type { ExerciseMediaValue } from './ExerciseMediaPicker';
 import './ExerciseCreatorPanel.css';
 
 type Mode = 'manual' | 'rapido';
@@ -50,6 +52,17 @@ export function ExerciseCreatorPanel({ editing, onDoneEditing }: ExerciseCreator
   const [stab, setStab] = useState<string[]>(editing?.stabilizer ?? []);
   const [quick, setQuick] = useState('');
 
+  // Id estável pro exercício sendo criado — gerado uma vez, reutilizado
+  // tanto pelo caminho de upload de mídia (Storage) quanto pelo
+  // addExercise() final, pra não desalinhar onde a imagem foi enviada.
+  const [newExerciseId] = useState(() => Date.now().toString());
+  const targetId = editing?.id ?? newExerciseId;
+  const [media, setMedia] = useState<ExerciseMediaValue>({
+    imgInicio: editing?.imgInicio ?? null,
+    imgFim: editing?.imgFim ?? null,
+    ytVideoUrl: editing?.ytVideoUrl ?? null,
+  });
+
   // Reabre já preenchido sempre que o alvo de edição mudar.
   useEffect(() => {
     if (!editing) return;
@@ -60,6 +73,7 @@ export function ExerciseCreatorPanel({ editing, onDoneEditing }: ExerciseCreator
     setAgonist(editing.agonist !== 'Cardio' ? editing.agonist : MUSCLE_GROUPS[0]);
     setSyn(editing.synergist);
     setStab(editing.stabilizer);
+    setMedia({ imgInicio: editing.imgInicio ?? null, imgFim: editing.imgFim ?? null, ytVideoUrl: editing.ytVideoUrl ?? null });
   }, [editing]);
 
   const others = MUSCLE_GROUPS.filter((m) => m !== agonist);
@@ -83,6 +97,7 @@ export function ExerciseCreatorPanel({ editing, onDoneEditing }: ExerciseCreator
     setQuick('');
     setType('forca');
     setMode('manual');
+    setMedia({ imgInicio: null, imgFim: null, ytVideoUrl: null });
   }
 
   function handleSalvar() {
@@ -119,6 +134,9 @@ export function ExerciseCreatorPanel({ editing, onDoneEditing }: ExerciseCreator
         synergist: finalSyn as MuscleGroup[],
         stabilizer: finalStab as MuscleGroup[],
         ...(type === 'cardio' ? { type: 'cardio' as const } : { type: undefined }),
+        imgInicio: media.imgInicio,
+        imgFim: media.imgFim,
+        ytVideoUrl: media.ytVideoUrl,
       });
       showToast(`✅ "${finalName}" atualizado`, 'success');
       onDoneEditing?.();
@@ -126,12 +144,15 @@ export function ExerciseCreatorPanel({ editing, onDoneEditing }: ExerciseCreator
     }
 
     addExercise({
-      id: Date.now().toString(),
+      id: newExerciseId,
       name: finalName,
       agonist: finalAgonist as Exercise['agonist'],
       synergist: finalSyn as MuscleGroup[],
       stabilizer: finalStab as MuscleGroup[],
       ...(type === 'cardio' ? { type: 'cardio' as const } : {}),
+      imgInicio: media.imgInicio,
+      imgFim: media.imgFim,
+      ytVideoUrl: media.ytVideoUrl,
     });
     showToast(`✅ "${finalName}" adicionado ao Banco`, 'success');
     reset();
@@ -300,6 +321,8 @@ export function ExerciseCreatorPanel({ editing, onDoneEditing }: ExerciseCreator
               <strong style={{ color: 'var(--text-2)' }}>intensidade percebida (0–10)</strong>.
             </div>
           )}
+
+          <ExerciseMediaPicker exerciseId={targetId} value={media} onChange={setMedia} />
 
           <div className="bk-footer">
             {isEdit ? (

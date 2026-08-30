@@ -13,6 +13,7 @@ import {
   limit,
   getDocs,
 } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 /**
  * Cliente Firebase — migrado do `<script type="module">` inline do
@@ -32,6 +33,7 @@ const firebaseConfig = {
 export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
+export const storage = getStorage(firebaseApp);
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -45,3 +47,4 @@ export function signOutUser() {
 }
 
 export { onAuthStateChanged, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, getDocs };
+export { ref, uploadBytes, getDownloadURL, deleteObject };

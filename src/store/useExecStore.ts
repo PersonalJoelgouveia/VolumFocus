@@ -117,7 +117,11 @@ export const useExecStore = create<ExecState>()((set, get) => ({
       get().stopAlarm();
       return;
     }
-    s.running ? get().pauseTimer() : get().startTimer();
+    if (s.running) {
+      get().pauseTimer();
+    } else {
+      get().startTimer();
+    }
   },
 
   startTimer: () => {

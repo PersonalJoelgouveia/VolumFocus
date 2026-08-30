@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent } from 'react';
 import type { WorkoutLogEntry } from '../../types/workout';
 import { isCardioLogEntry } from '../../types/workout';
@@ -7,6 +7,7 @@ import { MUSCLE_COLOR } from '../../data/muscleColors';
 import { CARDIO_ZONES } from '../../types/cardio';
 import { getLastLoad } from '../../utils/lastLoad';
 import type { WeekLog } from '../../types/workout';
+import { ExerciseMediaModal } from './ExerciseMediaModal';
 
 export type ListMode = 'normal' | 'reorder' | 'conjugar';
 
@@ -51,11 +52,13 @@ export function ExerciseListItem({
   itemProps,
 }: ExerciseListItemProps) {
   const lastTapRef = useRef(0);
+  const [showMedia, setShowMedia] = useState(false);
 
   if (!exercise) return null;
 
   const isCardio = isCardioLogEntry(entry);
   const color = MUSCLE_COLOR[exercise.agonist] ?? '#888';
+  const hasMedia = !!(exercise.imgInicio || exercise.imgFim || exercise.ytVideoUrl);
 
   const classes = ['ex-item'];
   if (mode === 'reorder') classes.push('ro-mode-item');
@@ -199,6 +202,16 @@ export function ExerciseListItem({
       {mode === 'normal' && !isDone && (
         <div className="ex-controls">
           <button
+            className={`btn btn-icon btn-sm${hasMedia ? ' btn-play' : ' btn-ghost'}`}
+            title={hasMedia ? 'Ver mídia do exercício' : 'Sem mídia cadastrada'}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMedia(true);
+            }}
+          >
+            {hasMedia ? '🎬' : '📷'}
+          </button>
+          <button
             className="btn btn-play btn-icon btn-sm"
             title="Iniciar execução"
             onClick={(e) => {
@@ -224,10 +237,24 @@ export function ExerciseListItem({
       )}
 
       {mode === 'normal' && isDone && (
-        <div className="ex-done-badge">
-          ✓ Concluído<span className="ex-done-hint">· 2× p/ resetar</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            className={`btn btn-icon btn-sm${hasMedia ? ' btn-play' : ' btn-ghost'}`}
+            title={hasMedia ? 'Ver mídia do exercício' : 'Sem mídia cadastrada'}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMedia(true);
+            }}
+          >
+            {hasMedia ? '🎬' : '📷'}
+          </button>
+          <div className="ex-done-badge">
+            ✓ Concluído<span className="ex-done-hint">· 2× p/ resetar</span>
+          </div>
         </div>
       )}
+
+      {showMedia && <ExerciseMediaModal exercise={exercise} onClose={() => setShowMedia(false)} />}
     </div>
   );
 }

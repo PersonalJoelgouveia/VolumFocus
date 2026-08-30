@@ -33,6 +33,14 @@ export interface Exercise {
   type?: 'cardio';
   synergist: MuscleGroup[];
   stabilizer: MuscleGroup[];
+  /** Mídia do exercício — migrado de MX/obterPayloadDeMidia() (index.html
+   *  ~4286-4293, ~5338-5347). Mutuamente exclusivo com `ytVideoUrl`: um
+   *  exercício tem imagens OU vídeo, nunca os dois ao mesmo tempo.
+   *  URLs do Firebase Storage — nunca Base64 (ver lib/exerciseMediaRepository.ts). */
+  imgInicio?: string | null;
+  imgFim?: string | null;
+  /** URL de embed do YouTube (`https://www.youtube.com/embed/{id}`). */
+  ytVideoUrl?: string | null;
 }
 
 /** Helper de tipagem — equivalente a `ex.type === 'cardio'` usado no monolito. */
