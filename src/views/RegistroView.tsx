@@ -8,6 +8,8 @@ import type { GroupType, StrengthLogEntry } from '../types/workout';
 import { isCardioLogEntry } from '../types/workout';
 import { DayExerciseList } from '../components/registro/DayExerciseList';
 import { ConjugarBar } from '../components/registro/ConjugarBar';
+import { SessionTabsBar } from '../components/registro/SessionTabsBar';
+import { useSessionStore } from '../store/useSessionStore';
 import type { ListMode } from '../components/registro/ExerciseListItem';
 
 /**
@@ -25,6 +27,10 @@ export function RegistroView() {
   const dayLog = weekLog[selectedDay] ?? [];
   const setDayLog = useWorkoutStore((s) => s.setDayLog);
 
+  const isPersonalMode = useUIStore((s) => s.isPersonalMode);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const sessions = useSessionStore((s) => s.sessions);
+  const activeSessao = activeSessionId ? sessions.find((s) => s.id === activeSessionId) : undefined;
   const openModal = useUIStore((s) => s.openModal);
   const showToast = useUIStore((s) => s.showToast);
 
@@ -119,9 +125,16 @@ export function RegistroView() {
 
   return (
     <div>
+      {isPersonalMode && <SessionTabsBar />}
+
       <div className="sec-row">
         <div className="page-title">
           Treinos <span className="tag">SEMANA ATUAL</span>
+          {isPersonalMode && activeSessao && (
+            <span className="tag" style={{ marginLeft: 6, background: 'var(--teal-glow)', color: 'var(--teal)' }}>
+              SESSÃO · {activeSessao.alunoNome.split(' ')[0]}
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {mode === 'normal' && !isTimerActive && (

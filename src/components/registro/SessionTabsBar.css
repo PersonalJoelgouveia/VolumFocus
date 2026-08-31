@@ -1,0 +1,94 @@
+.sess-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+.sess-bar::-webkit-scrollbar { height: 4px; }
+
+.sess-new-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: var(--rs);
+  border: 1px dashed var(--border-md);
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--tr);
+  white-space: nowrap;
+  min-height: 40px;
+}
+.sess-new-btn:hover { border-color: var(--teal-border); color: var(--teal); background: var(--teal-glow); }
+.sess-new-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sess-tab {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px 9px 12px;
+  border-radius: var(--rs);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--tr);
+  white-space: nowrap;
+  min-height: 40px;
+}
+.sess-tab:hover { border-color: var(--border-md); }
+.sess-tab.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--text); box-shadow: 0 0 0 1px var(--teal-border); }
+.sess-tab-own { color: var(--text-3); }
+.sess-tab-own.active { color: var(--teal); }
+
+.sess-tab-dot { font-size: 0.6rem; line-height: 1; flex-shrink: 0; }
+.sess-tab-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.sess-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 0.68rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--tr);
+}
+.sess-tab-close:hover { background: var(--red-bg); color: var(--red); }
+
+.sess-limit-hint { font-size: 0.65rem; color: var(--text-3); white-space: nowrap; flex-shrink: 0; padding-left: 4px; }
+
+/* ── Modal de escolha de aluno ── */
+.sess-picker-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+.sess-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--rs);
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  cursor: pointer;
+  transition: var(--tr);
+  min-height: 44px;
+  text-align: left;
+}
+.sess-picker-item:hover { border-color: var(--teal-border); background: var(--teal-glow); }
+.sess-picker-item:disabled { opacity: 0.4; cursor: not-allowed; }
+.sess-picker-empty { text-align: center; padding: 24px 10px; color: var(--text-3); font-size: 0.82rem; }

@@ -39,6 +39,14 @@ interface SyncState {
    *  alguns segundos, depois envia se houver sessão ativa. */
   scheduleAutoSync: () => void;
 
+  /** Pausa/retoma os watchers — usado por useSessionStore ao trocar de
+   *  aba (ver alternarSessao()): o swap de weekLog/exDone pra dentro de
+   *  useWorkoutStore não pode marcar dirty nem subir pro backup pessoal
+   *  do Personal, já que é dado transitório de uma sessão em aba, não o
+   *  treino dele mesmo. */
+  pauseWatchers: () => void;
+  resumeWatchers: () => void;
+
   pushNow: () => Promise<boolean>;
   pullNow: () => Promise<boolean>;
   /** Botão explícito "Salvar na Nuvem" — sempre envia, mesmo sem estar dirty. */
@@ -54,6 +62,7 @@ interface SyncState {
 const AUTO_SYNC_DEBOUNCE_MS = 4000;
 let debounceHandle: ReturnType<typeof setTimeout> | null = null;
 let watchersAttached = false;
+let watchersPaused = false;
 
 export const useSyncStore = create<SyncState>()(
   persist(
@@ -80,12 +89,22 @@ export const useSyncStore = create<SyncState>()(
           useCardioGoalStore,
         ];
         stores.forEach((store) => {
-          store.subscribe(() => get().scheduleAutoSync());
+          store.subscribe(() => {
+            if (watchersPaused) return;
+            get().scheduleAutoSync();
+          });
         });
         if (auth.currentUser) set({ status: 'waiting' });
       },
 
       markDirty: () => set({ dirty: true }),
+
+      pauseWatchers: () => {
+        watchersPaused = true;
+      },
+      resumeWatchers: () => {
+        watchersPaused = false;
+      },
 
       scheduleAutoSync: () => {
         get().markDirty();
