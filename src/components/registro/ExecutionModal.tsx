@@ -9,6 +9,7 @@ import { registrarTreinoConcluido } from '../../lib/notificacaoRepository';
 import { isCardioLogEntry } from '../../types/workout';
 import type { StrengthLogEntry } from '../../types/workout';
 import { MUSCLE_COLOR } from '../../data/muscleColors';
+import { ExecutionMediaSection } from './ExecutionMediaSection';
 import './ExecutionModal.css';
 
 const RING_R = 88;
@@ -224,6 +225,8 @@ export function ExecutionModal() {
             )}
           </div>
         </div>
+
+        <ExecutionMediaSection exercise={exercise} />
 
         {!isCardio && (
           <div>
