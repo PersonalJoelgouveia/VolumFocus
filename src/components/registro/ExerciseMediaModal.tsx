@@ -5,6 +5,7 @@ import type { Exercise } from '../../types/exercise';
 import { ExerciseMediaPicker } from '../banco/ExerciseMediaPicker';
 import type { ExerciseMediaValue } from '../banco/ExerciseMediaPicker';
 import { idFromEmbedUrl } from '../../utils/youtubeParser';
+import { PersonalVideoRecorder } from './PersonalVideoRecorder';
 import './ExerciseMediaModal.css';
 
 interface ExerciseMediaModalProps {
@@ -13,19 +14,24 @@ interface ExerciseMediaModalProps {
 }
 
 /**
- * Visualização (e, pro Personal, edição) da mídia de um exercício —
- * acessível direto do Registro (Treino → Semana Atual), sem precisar
- * navegar até o Banco de Exercícios. Reaproveita o mesmo
- * ExerciseMediaPicker do Banco pro modo de edição — mesmo componente,
- * mesmo upload/compressão, sem duplicar lógica.
+ * Mídia de um exercício, acessível direto de Treinos → Semana Atual
+ * (ícone 🎬/📷 em cada exercício do dia). Dois blocos independentes:
+ *
+ * 1. Vídeo pessoal (PersonalVideoRecorder) — SEMPRE visível, pra
+ *    QUALQUER pessoa logada (aluno ou Personal). Não é uma ferramenta
+ *    do Personal: é o aluno gravando/anexando o próprio vídeo fazendo o
+ *    exercício, guardado só neste aparelho.
+ * 2. Imagens de posição inicial/final + YouTube — geridas pelo Personal
+ *    (ExerciseMediaPicker do Banco, reaproveitado aqui sem duplicar
+ *    lógica de upload/compressão), visualização liberada pra todos.
  */
 export function ExerciseMediaModal({ exercise, onClose }: ExerciseMediaModalProps) {
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
   const showToast = useUIStore((s) => s.showToast);
   const updateExercise = useExerciseStore((s) => s.updateExercise);
 
-  const hasMedia = !!(exercise.imgInicio || exercise.imgFim || exercise.ytVideoUrl);
-  const [editing, setEditing] = useState(isPersonalMode && !hasMedia);
+  const hasSharedMedia = !!(exercise.imgInicio || exercise.imgFim || exercise.ytVideoUrl);
+  const [editing, setEditing] = useState(false);
   const [media, setMedia] = useState<ExerciseMediaValue>({
     imgInicio: exercise.imgInicio ?? null,
     imgFim: exercise.imgFim ?? null,
@@ -41,7 +47,7 @@ export function ExerciseMediaModal({ exercise, onClose }: ExerciseMediaModalProp
       ytVideoUrl: media.ytVideoUrl,
     });
     showToast('✅ Mídia atualizada', 'success');
-    onClose();
+    setEditing(false);
   }
 
   return (
@@ -54,11 +60,15 @@ export function ExerciseMediaModal({ exercise, onClose }: ExerciseMediaModalProp
           </button>
         </div>
 
+        <PersonalVideoRecorder exercise={exercise} />
+
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '18px 0 14px' }} />
+
         {editing ? (
           <>
             <ExerciseMediaPicker exerciseId={exercise.id} value={media} onChange={setMedia} />
             <div className="exmedia-edit-actions">
-              <button className="btn btn-ghost btn-sm" onClick={() => (hasMedia ? setEditing(false) : onClose())}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
                 Cancelar
               </button>
               <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={handleSalvar}>
@@ -66,7 +76,7 @@ export function ExerciseMediaModal({ exercise, onClose }: ExerciseMediaModalProp
               </button>
             </div>
           </>
-        ) : hasMedia ? (
+        ) : hasSharedMedia ? (
           <>
             {(exercise.imgInicio || exercise.imgFim) && (
               <div className="exmedia-view-row">
@@ -96,18 +106,18 @@ export function ExerciseMediaModal({ exercise, onClose }: ExerciseMediaModalProp
             )}
             {isPersonalMode && (
               <button className="btn btn-ghost btn-sm btn-full" style={{ marginTop: 14 }} onClick={() => setEditing(true)}>
-                ✏️ Editar Mídia
+                ✏️ Editar Mídia do Personal
               </button>
             )}
           </>
         ) : (
           <div className="exmedia-empty">
-            📷 Este exercício ainda não tem imagens nem vídeo cadastrados.
+            📷 O Personal ainda não cadastrou imagens nem vídeo pra este exercício.
             {isPersonalMode && (
               <>
                 <br />
                 <button className="btn btn-primary btn-sm" style={{ marginTop: 14 }} onClick={() => setEditing(true)}>
-                  + Adicionar Mídia
+                  + Adicionar Mídia do Personal
                 </button>
               </>
             )}
