@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent } from 'react';
-import type { WorkoutLogEntry } from '../../types/workout';
+import type { WorkoutLogEntry, StrengthLogEntry } from '../../types/workout';
 import { isCardioLogEntry } from '../../types/workout';
 import type { Exercise } from '../../types/exercise';
 import { MUSCLE_COLOR } from '../../data/muscleColors';
@@ -8,6 +8,7 @@ import { CARDIO_ZONES } from '../../types/cardio';
 import { getLastLoad } from '../../utils/lastLoad';
 import type { WeekLog } from '../../types/workout';
 import { ExerciseMediaModal } from './ExerciseMediaModal';
+import { EditExerciseModal } from './EditExerciseModal';
 
 export type ListMode = 'normal' | 'reorder' | 'conjugar';
 
@@ -24,6 +25,9 @@ interface ExerciseListItemProps {
   onRemove: () => void;
   onPlay: () => void;
   onResetDone: () => void;
+  onUpdateEntry: (patch: Partial<StrengthLogEntry>) => void;
+  onMarkDone: () => void;
+  onUnmarkDone: () => void;
   weekLog: WeekLog;
   itemProps: Record<string, unknown>;
 }
@@ -48,11 +52,15 @@ export function ExerciseListItem({
   onRemove,
   onPlay,
   onResetDone,
+  onUpdateEntry,
+  onMarkDone,
+  onUnmarkDone,
   weekLog,
   itemProps,
 }: ExerciseListItemProps) {
   const lastTapRef = useRef(0);
   const [showMedia, setShowMedia] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   if (!exercise) return null;
 
@@ -223,16 +231,29 @@ export function ExerciseListItem({
               <polygon points="6 3 20 12 6 21 6 3" />
             </svg>
           </button>
-          <button
-            className="btn btn-ghost btn-icon btn-sm"
-            title="Remover"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            🗑️
-          </button>
+          {isCardio ? (
+            <button
+              className="btn btn-ghost btn-icon btn-sm"
+              title="Remover"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+            >
+              🗑️
+            </button>
+          ) : (
+            <button
+              className="btn btn-ghost btn-icon btn-sm"
+              title="Editar exercício"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEdit(true);
+              }}
+            >
+              ✏️
+            </button>
+          )}
         </div>
       )}
 
@@ -248,6 +269,18 @@ export function ExerciseListItem({
           >
             {hasMedia ? '🎬' : '📷'}
           </button>
+          {!isCardio && (
+            <button
+              className="btn btn-ghost btn-icon btn-sm"
+              title="Editar exercício"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEdit(true);
+              }}
+            >
+              ✏️
+            </button>
+          )}
           <div className="ex-done-badge">
             ✓ Concluído<span className="ex-done-hint">· 2× p/ resetar</span>
           </div>
@@ -255,6 +288,17 @@ export function ExerciseListItem({
       )}
 
       {showMedia && <ExerciseMediaModal exercise={exercise} onClose={() => setShowMedia(false)} />}
+      {showEdit && !isCardio && (
+        <EditExerciseModal
+          entry={entry as StrengthLogEntry}
+          exercise={exercise}
+          onUpdate={onUpdateEntry}
+          onRemoveExercise={onRemove}
+          onMarkDone={onMarkDone}
+          onUnmarkDone={onUnmarkDone}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
     </div>
   );
 }

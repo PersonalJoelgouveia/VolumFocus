@@ -33,6 +33,8 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
   const removeLogEntry = useWorkoutStore((s) => s.removeLogEntry);
   const exDone = useWorkoutStore((s) => s.exDone);
   const unmarkExerciseDone = useWorkoutStore((s) => s.unmarkExerciseDone);
+  const markExerciseDone = useWorkoutStore((s) => s.markExerciseDone);
+  const updateLogEntry = useWorkoutStore((s) => s.updateLogEntry);
   const exercises = useExerciseStore((s) => s.exercises);
   const openExec = useExecStore((s) => s.open);
 
@@ -85,6 +87,9 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
               onPlay={() => handlePlay(row.index)}
               isDone={!!exDone[`${selectedDay}:${row.index}`]}
               onResetDone={() => unmarkExerciseDone(selectedDay, row.index)}
+              onUpdateEntry={(patch) => updateLogEntry(selectedDay, row.index, patch)}
+              onMarkDone={() => markExerciseDone(selectedDay, row.index)}
+              onUnmarkDone={() => unmarkExerciseDone(selectedDay, row.index)}
               weekLog={weekLog}
               itemProps={getItemProps(row.index)}
             />
@@ -120,6 +125,9 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
                   onPlay={() => handlePlay(m.index)}
                   isDone={!!exDone[`${selectedDay}:${m.index}`]}
                   onResetDone={() => unmarkExerciseDone(selectedDay, m.index)}
+                  onUpdateEntry={(patch) => updateLogEntry(selectedDay, m.index, patch)}
+                  onMarkDone={() => markExerciseDone(selectedDay, m.index)}
+                  onUnmarkDone={() => unmarkExerciseDone(selectedDay, m.index)}
                   weekLog={weekLog}
                   itemProps={getItemProps(m.index)}
                 />

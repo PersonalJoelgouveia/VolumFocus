@@ -51,6 +51,17 @@ export interface StrengthLogEntry extends GroupableEntry {
   load: number;
   serieLoads: number[];
   serieReps: number[];
+  /** Quais séries já foram marcadas como feitas no editor rápido
+   *  (lápis ✏️ na lista do dia — types/workout.ts, EditExerciseModal).
+   *  Independente do `exDone`/useExecStore (esse é o "concluído" do
+   *  Modal de Execução, guiado por timer de descanso); este aqui é um
+   *  checklist simples, sem cronômetro. Índice bate com serieLoads/serieReps. */
+  doneSerie?: boolean[];
+  /** Janela de repetições definida pelo Personal (ex: 8-12) — só o
+   *  Personal define/altera; o aluno pode editar a rep de cada série,
+   *  mas só dentro desse intervalo, quando definido. */
+  repRangeMin?: number;
+  repRangeMax?: number;
   notes?: string;
 }
 
