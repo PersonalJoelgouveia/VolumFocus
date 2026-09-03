@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useWorkoutStore } from '../store/useWorkoutStore';
+import { useExerciseStore } from '../store/useExerciseStore';
+import { useUIStore } from '../store/useUIStore';
+import { useConfirmStore } from '../store/useConfirmStore';
 import { DAYS, DAYS_SHORT } from '../types/workout';
 import { isAlunoExercicioCardio } from '../types/aluno';
 import type { AlunoRotina } from '../types/aluno';
 import { fetchPublishedRotina } from '../lib/alunoRepository';
+import { buildWeekLogFromAlunoRotina } from '../utils/importAlunoRotina';
 import '../components/clientes/ClientesView.css';
 
 type LoadState = 'loading' | 'error' | 'empty' | 'ready';
@@ -21,10 +26,15 @@ type LoadState = 'loading' | 'error' | 'empty' | 'ready';
  */
 export function MinhaRotinaView() {
   const user = useAuthStore((s) => s.user);
+  const exercises = useExerciseStore((s) => s.exercises);
+  const addExercise = useExerciseStore((s) => s.addExercise);
+  const showToast = useUIStore((s) => s.showToast);
+
   const [state, setState] = useState<LoadState>('loading');
   const [rotina, setRotina] = useState<AlunoRotina | null>(null);
   const [atualizadoEm, setAtualizadoEm] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState(0);
+  const [importing, setImporting] = useState(false);
 
   async function load() {
     if (!user?.email) return;
@@ -50,6 +60,35 @@ export function MinhaRotinaView() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email]);
+
+  async function handleImportar() {
+    if (!rotina) return;
+    const totalExercicios = rotina.reduce((n, d) => n + d.exercicios.length, 0);
+    if (!totalExercicios) return;
+
+    const ok = await useConfirmStore.getState().ask(
+      `Importar esta rotina para Treinos → Semana Atual? Isso substitui o que já estiver registrado nos dias com exercícios prescritos.`,
+      { confirmLabel: 'Importar Rotina' }
+    );
+    if (!ok) return;
+
+    setImporting(true);
+    try {
+      const { weekLog, novosExercicios } = buildWeekLogFromAlunoRotina(rotina, exercises, addExercise);
+      const current = useWorkoutStore.getState().weekLog;
+      useWorkoutStore.setState({ weekLog: { ...current, ...weekLog } });
+
+      const extra = novosExercicios.length
+        ? ` (${novosExercicios.length} exercício${novosExercicios.length === 1 ? '' : 's'} novo${novosExercicios.length === 1 ? '' : 's'} criado${novosExercicios.length === 1 ? '' : 's'} no banco)`
+        : '';
+      showToast(`✅ Rotina importada para a Semana Atual!${extra}`, 'success');
+    } catch (e) {
+      console.error('MinhaRotinaView: falha ao importar rotina', e);
+      showToast('⚠️ Não foi possível importar a rotina.', 'error');
+    } finally {
+      setImporting(false);
+    }
+  }
 
   return (
     <div>
@@ -84,6 +123,15 @@ export function MinhaRotinaView() {
               Publicada em: {new Date(atualizadoEm).toLocaleString('pt-BR')}
             </div>
           )}
+
+          <button
+            className="btn btn-primary btn-full"
+            style={{ marginBottom: 16 }}
+            onClick={handleImportar}
+            disabled={importing || rotina.every((d) => d.exercicios.length === 0)}
+          >
+            {importing ? 'Importando…' : '📥 Importar Rotina para Semana Atual'}
+          </button>
 
           <div className="cli-days-bar">
             {DAYS_SHORT.map((label, d) => {
