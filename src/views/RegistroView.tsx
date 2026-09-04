@@ -9,6 +9,7 @@ import { isCardioLogEntry } from '../types/workout';
 import { DayExerciseList } from '../components/registro/DayExerciseList';
 import { ConjugarBar } from '../components/registro/ConjugarBar';
 import { SessionTabsBar } from '../components/registro/SessionTabsBar';
+import { AlunoRotinaSyncBanner } from '../components/registro/AlunoRotinaSyncBanner';
 import { useSessionStore } from '../store/useSessionStore';
 import type { ListMode } from '../components/registro/ExerciseListItem';
 
@@ -126,6 +127,7 @@ export function RegistroView() {
   return (
     <div>
       {isPersonalMode && <SessionTabsBar />}
+      <AlunoRotinaSyncBanner />
 
       <div className="sec-row">
         <div className="page-title">
