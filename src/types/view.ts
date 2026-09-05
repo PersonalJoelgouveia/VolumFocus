@@ -13,8 +13,7 @@ export type ViewId =
   | 'nova-semana'
   | 'conquistas'
   | 'clientes'
-  | 'notifications'
-  | 'minha-rotina';
+  | 'notifications';
 
 export interface ViewMeta {
   title: string;
@@ -39,17 +38,13 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
     sub: 'Treinos concluídos & aprovações pendentes',
     ptOnly: true,
   },
-  'minha-rotina': {
-    title: 'Minha Rotina',
-    sub: 'Treino publicado pelo seu Personal',
-    alunoOnly: true,
-  },
 };
 
 /** Itens da navegação principal (sidebar desktop), na ordem do monolito. */
 export const PRIMARY_NAV: ViewId[] = ['registro', 'dashboard', 'performance', 'conquistas'];
 export const PT_NAV: ViewId[] = ['banco', 'clientes', 'notifications'];
-export const ALUNO_NAV: ViewId[] = ['minha-rotina'];
+/** Sem views exclusivas de aluno hoje — "Minha Rotina" foi fundida em Treinos. */
+export const ALUNO_NAV: ViewId[] = [];
 export const TOOLS_NAV: ViewId[] = ['nova-semana'];
 
 /**

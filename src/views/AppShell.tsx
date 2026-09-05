@@ -27,7 +27,6 @@ import { NovaSemanaView } from '../views/NovaSemanaView';
 import { ConquistasView } from '../views/ConquistasView';
 import { ClientesView } from '../views/ClientesView';
 import { NotificationsView } from '../views/NotificationsView';
-import { MinhaRotinaView } from '../views/MinhaRotinaView';
 import { useSyncStore } from '../store/useSyncStore';
 
 import './AppShell.css';
@@ -49,7 +48,6 @@ const VIEW_COMPONENTS = {
   conquistas: ConquistasView,
   clientes: ClientesView,
   notifications: NotificationsView,
-  'minha-rotina': MinhaRotinaView,
 } as const;
 
 export function AppShell() {

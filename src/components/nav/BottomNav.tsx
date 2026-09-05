@@ -11,7 +11,6 @@ const SHORT_LABEL: Partial<Record<ViewId, string>> = {
   performance: 'Perf.',
   conquistas: 'Badges',
   'nova-semana': 'Semana',
-  'minha-rotina': 'Rotina',
 };
 
 /**

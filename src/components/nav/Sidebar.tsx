@@ -9,7 +9,6 @@ const ICONS: Partial<Record<ViewId, string>> = {
   conquistas: '🏆',
   banco: '🏋️',
   'nova-semana': '🔄',
-  'minha-rotina': '📋',
 };
 
 function NavButton({ view }: { view: ViewId }) {

@@ -10,6 +10,7 @@ import { DayExerciseList } from '../components/registro/DayExerciseList';
 import { ConjugarBar } from '../components/registro/ConjugarBar';
 import { SessionTabsBar } from '../components/registro/SessionTabsBar';
 import { AlunoRotinaSyncBanner } from '../components/registro/AlunoRotinaSyncBanner';
+import { RegistroActionsMenu } from '../components/registro/RegistroActionsMenu';
 import { useSessionStore } from '../store/useSessionStore';
 import type { ListMode } from '../components/registro/ExerciseListItem';
 
@@ -138,22 +139,11 @@ export function RegistroView() {
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {mode === 'normal' && !isTimerActive && (
-            <button className="btn btn-primary" onClick={askToStart}>
-              ⏱️ Cronometrar Treino
-            </button>
-          )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {mode === 'normal' && (
             <>
               <button className="btn btn-primary" onClick={() => openModal('add-exercise')}>
                 + Exercício
-              </button>
-              <button className="btn btn-primary" onClick={() => openModal('import-workout')}>
-                📥 Importar Treino
-              </button>
-              <button className="btn btn-primary" onClick={() => openModal('clone-day')} disabled={dayLog.length === 0}>
-                📋 Clonar Dia
               </button>
               <button className="btn btn-ghost" onClick={() => openModal('rotinas')}>
                 📁 Rotinas
@@ -164,16 +154,17 @@ export function RegistroView() {
             </>
           )}
 
-          {mode !== 'conjugar' && dayLog.length > 1 && (
-            <button className="btn btn-primary" onClick={handleToggleReorder}>
-              {mode === 'reorder' ? '✓ Concluir' : '↕️ Reordenar'}
-            </button>
-          )}
-          {mode !== 'reorder' && freeCount >= 2 && (
-            <button className="btn btn-primary" onClick={handleToggleConjugar}>
-              {mode === 'conjugar' ? '× Cancelar' : '🔗 Conjugar'}
-            </button>
-          )}
+          <RegistroActionsMenu
+            mode={mode}
+            dayLogLength={dayLog.length}
+            freeCount={freeCount}
+            isTimerActive={isTimerActive}
+            onCronometrar={askToStart}
+            onImportar={() => openModal('import-workout')}
+            onClonarDia={() => openModal('clone-day')}
+            onToggleConjugar={handleToggleConjugar}
+            onToggleReorder={handleToggleReorder}
+          />
         </div>
       </div>
 

@@ -1,10 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUIStore } from '../../store/useUIStore';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useRotinaStore } from '../../store/useRotinaStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useExerciseStore } from '../../store/useExerciseStore';
+import { useRotinaSyncStore } from '../../store/useRotinaSyncStore';
+import { fetchPublishedRotina } from '../../lib/alunoRepository';
+import { buildWeekLogFromAlunoRotina } from '../../utils/importAlunoRotina';
+import type { AlunoRotina } from '../../types/aluno';
 import { DAYS_SHORT } from '../../types/workout';
 import './RotinasModal.css';
+
+type PtLoadState = 'idle' | 'loading' | 'error' | 'empty' | 'ready';
 
 const MODAL_ID = 'rotinas';
 
@@ -14,17 +22,17 @@ const MODAL_ID = 'rotinas';
  * ~5763-5912): salvar a semana atual como template nomeado, listar,
  * aplicar (substituir ou mesclar) e excluir.
  *
- * A aba "Rotinas do Personal" do original (biblioteca compartilhada
- * PT→Aluno via `alunosrotinasModelo`, um SEGUNDO canal de
- * compartilhamento separado da publicação de rotina já existente em
- * RoutineEditorModal) não entrou aqui — abrir um segundo canal de
- * compartilhamento arriscava confundir o fluxo de Publicação já validado.
- * Fica como frente à parte se for necessária.
+ * Também concentra, para o aluno, o acesso explícito à rotina publicada
+ * pelo Personal (sucessora de MinhaRotinaView.tsx, removida após a fusão
+ * de "Minha Rotina" em "Treinos"): fetchPublishedRotina + import via
+ * utils/importAlunoRotina.ts. A checagem/aviso automático continua em
+ * AlunoRotinaSyncBanner.tsx — este painel é só a via manual explícita.
  */
 export function RotinasModal() {
   const openModalId = useUIStore((s) => s.openModalId);
   const closeModal = useUIStore((s) => s.closeModal);
   const showToast = useUIStore((s) => s.showToast);
+  const isAlunoMode = useUIStore((s) => s.isAlunoMode);
   const isOpen = openModalId === MODAL_ID;
 
   const weekLog = useWorkoutStore((s) => s.weekLog);
@@ -36,7 +44,59 @@ export function RotinasModal() {
   const [nome, setNome] = useState('');
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
+  // Rotina publicada pelo Personal — via alternativa/explícita ao aviso
+  // automático do AlunoRotinaSyncBanner (Treinos > Semana Atual), mesma
+  // lógica de import de utils/importAlunoRotina.ts.
+  const user = useAuthStore((s) => s.user);
+  const exercises = useExerciseStore((s) => s.exercises);
+  const addExercise = useExerciseStore((s) => s.addExercise);
+  const setLastSeenAt = useRotinaSyncStore((s) => s.setLastSeenAt);
+  const [ptState, setPtState] = useState<PtLoadState>('idle');
+  const [ptRotina, setPtRotina] = useState<AlunoRotina | null>(null);
+  const [ptAtualizadoEm, setPtAtualizadoEm] = useState<string | null>(null);
+  const [ptImporting, setPtImporting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !isAlunoMode || !user?.email) return;
+    setPtState('loading');
+    fetchPublishedRotina(user.email)
+      .then((result) => {
+        if (!result) return setPtState('empty');
+        setPtRotina(result.rotina);
+        setPtAtualizadoEm(result.atualizadoEm);
+        setPtState('ready');
+      })
+      .catch((e) => {
+        console.error('RotinasModal: falha ao carregar rotina publicada', e);
+        setPtState('error');
+      });
+  }, [isOpen, isAlunoMode, user?.email]);
+
   if (!isOpen) return null;
+
+  async function handleImportarDoPersonal() {
+    if (!ptRotina) return;
+    const ok = await useConfirmStore.getState().ask(
+      'Importar esta rotina para Treinos → Semana Atual? Isso substitui o que já estiver registrado nos dias com exercícios prescritos.',
+      { confirmLabel: 'Importar Rotina' }
+    );
+    if (!ok) return;
+
+    setPtImporting(true);
+    try {
+      const { weekLog: novoWeekLog, novosExercicios } = buildWeekLogFromAlunoRotina(ptRotina, exercises, addExercise);
+      const current = useWorkoutStore.getState().weekLog;
+      useWorkoutStore.setState({ weekLog: { ...current, ...novoWeekLog } });
+      if (ptAtualizadoEm) setLastSeenAt(ptAtualizadoEm);
+      const extra = novosExercicios.length ? ` (${novosExercicios.length} exercício(s) novo(s) criado(s) no banco)` : '';
+      showToast(`✅ Rotina do Personal importada!${extra}`, 'success');
+    } catch (e) {
+      console.error('RotinasModal: falha ao importar rotina do Personal', e);
+      showToast('⚠️ Não foi possível importar a rotina.', 'error');
+    } finally {
+      setPtImporting(false);
+    }
+  }
 
   function handleSalvar() {
     const trimmed = nome.trim();
@@ -73,6 +133,34 @@ export function RotinasModal() {
         <p style={{ fontSize: '0.78rem', color: 'var(--text-3)', marginBottom: 16 }}>
           Salve estruturas de treino para reutilizar como ponto de partida da semana.
         </p>
+
+        {isAlunoMode && (
+          <div className="routine-item" style={{ marginBottom: 18 }}>
+            <div className="routine-name">📋 Rotina do Personal</div>
+            {ptState === 'loading' && <div className="routine-meta">Carregando…</div>}
+            {ptState === 'error' && (
+              <div className="routine-meta">⚠️ Não foi possível carregar. Tente reabrir este painel.</div>
+            )}
+            {ptState === 'empty' && <div className="routine-meta">Seu Personal ainda não publicou uma rotina.</div>}
+            {ptState === 'ready' && ptRotina && (
+              <>
+                {ptAtualizadoEm && (
+                  <div className="routine-meta">
+                    Publicada em: {new Date(ptAtualizadoEm).toLocaleString('pt-BR')}
+                  </div>
+                )}
+                <button
+                  className="btn btn-primary btn-sm btn-full"
+                  style={{ marginTop: 8 }}
+                  onClick={handleImportarDoPersonal}
+                  disabled={ptImporting || ptRotina.every((d) => d.exercicios.length === 0)}
+                >
+                  {ptImporting ? 'Importando…' : '📥 Importar Rotina do Personal'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="rotinas-create-block">
           <input
