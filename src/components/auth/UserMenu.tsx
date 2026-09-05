@@ -3,11 +3,11 @@ import { useUIStore } from '../../store/useUIStore';
 import { useSyncStore } from '../../store/useSyncStore';
 import './UserMenu.css';
 
-const DOT_TITLES: Record<string, string> = {
-  idle: 'Sincronização com a nuvem',
+const CLOUD_TITLES: Record<string, string> = {
+  idle: 'Salvar na nuvem agora',
   waiting: 'Aguardando sincronização — toque para sincronizar agora',
   syncing: 'Sincronizando com a nuvem…',
-  ok: 'Tudo sincronizado com a nuvem',
+  ok: 'Tudo sincronizado — toque para salvar de novo',
   error: 'Falha ao sincronizar — toque para tentar de novo',
 };
 
@@ -16,7 +16,13 @@ const DOT_TITLES: Record<string, string> = {
  * #personal-mode-badge (~2533-2536) e #vf-sync-dot (~2565, ~7646-7673).
  * Como o AuthGate já garante um usuário logado e autorizado antes de
  * qualquer view renderizar, aqui não existe mais estado "deslogado" — só
- * o chip com avatar/nome + sair, o badge de Personal, e o dot de sync.
+ * o chip com avatar/nome + sair, o badge de Personal, e o botão de nuvem.
+ *
+ * O antigo dot de sync era um <button> de 8px separado do botão ☁️; o
+ * reset global `button { min-height: 44px }` (tokens.css) esticava ele
+ * numa cápsula deformada. Unificado num botão só: o clique decide
+ * reconectar (waiting/error) ou salvar (demais estados), e o status vira
+ * um badge discreto no canto do próprio ícone de nuvem.
  */
 export function UserMenu() {
   const user = useAuthStore((s) => s.user);
@@ -30,8 +36,9 @@ export function UserMenu() {
 
   if (!user) return null;
 
-  function handleDotClick() {
+  function handleCloudClick() {
     if (syncStatus === 'waiting' || syncStatus === 'error') reconnect();
+    else saveNow();
   }
 
   return (
@@ -49,19 +56,13 @@ export function UserMenu() {
       )}
 
       <button
-        className={`vf-sync-dot vf-sync-${syncStatus}`}
-        onClick={handleDotClick}
-        title={DOT_TITLES[syncStatus] ?? DOT_TITLES.idle}
-        aria-label="Status de sincronização com a nuvem"
-      />
-
-      <button
-        className="btn btn-ghost btn-icon btn-sm"
-        onClick={saveNow}
-        title="Salvar na nuvem agora"
-        aria-label="Salvar na nuvem agora"
+        className="btn btn-ghost btn-icon btn-sm vf-cloud-btn"
+        onClick={handleCloudClick}
+        title={CLOUD_TITLES[syncStatus] ?? CLOUD_TITLES.idle}
+        aria-label="Sincronizar com a nuvem"
       >
         ☁️
+        <span className={`vf-cloud-badge vf-sync-${syncStatus}`} aria-hidden="true" />
       </button>
 
       <div className="user-chip" title={user.email}>

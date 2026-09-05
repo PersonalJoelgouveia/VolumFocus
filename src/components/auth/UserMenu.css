@@ -72,24 +72,28 @@
 .user-chip-logout:hover { color: var(--red); }
 .user-chip-logout:disabled { opacity: 0.5; cursor: default; }
 
-/* ── Dot de sincronização — sucessor de #vf-sync-dot ── */
-.vf-sync-dot {
-  width: 8px;
-  height: 8px;
+/* ── Badge de status de sync — sucessor de #vf-sync-dot, agora dentro
+   do próprio botão ☁️ (não é mais um <button> separado, então não sofre
+   com o reset global `button { min-height: 44px }` que o deformava). ── */
+.vf-cloud-btn { position: relative; overflow: visible; }
+
+.vf-cloud-badge {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--text-3);
   opacity: 0;
   transition: opacity 0.35s ease, background 0.35s ease;
-  align-self: center;
-  flex-shrink: 0;
-  cursor: default;
-  border: none;
-  padding: 0;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--bg-1);
 }
-.vf-sync-dot.vf-sync-syncing { opacity: 1; background: var(--teal); animation: vfSyncPulse 0.9s ease-in-out infinite; }
-.vf-sync-dot.vf-sync-ok { opacity: 1; background: var(--green); }
-.vf-sync-dot.vf-sync-error { opacity: 1; background: var(--red); cursor: pointer; }
-.vf-sync-dot.vf-sync-waiting { opacity: 1; background: var(--yellow); cursor: pointer; animation: vfSyncPulse 1.6s ease-in-out infinite; }
+.vf-cloud-badge.vf-sync-syncing { opacity: 1; background: var(--teal); animation: vfSyncPulse 0.9s ease-in-out infinite; }
+.vf-cloud-badge.vf-sync-ok { opacity: 1; background: var(--green); }
+.vf-cloud-badge.vf-sync-error { opacity: 1; background: var(--red); }
+.vf-cloud-badge.vf-sync-waiting { opacity: 1; background: var(--yellow); animation: vfSyncPulse 1.6s ease-in-out infinite; }
 @keyframes vfSyncPulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.4); opacity: 0.6; }
