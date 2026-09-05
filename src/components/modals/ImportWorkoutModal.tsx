@@ -5,11 +5,54 @@ import { useUIStore } from '../../store/useUIStore';
 import { MUSCLE_GROUPS } from '../../types/exercise';
 import type { MuscleGroup } from '../../types/exercise';
 import { MUSCLE_COLOR } from '../../data/muscleColors';
-import { parseImportText } from '../../utils/importParser';
+import { parseImportText, groupParsedItems } from '../../utils/importParser';
 import type { ParsedImportItem } from '../../utils/importParser';
+import { GROUP_LABELS } from '../../types/workout';
 import './ImportWorkoutModal.css';
 
 const MODAL_ID = 'import-workout';
+
+/** Markup de um item do preview — extraído pra ser reutilizado tanto solto quanto dentro de um cj-group. */
+function renderParseItem(
+  p: ParsedImportItem,
+  i: number,
+  onMuscleChange: (index: number, muscle: MuscleGroup) => void
+) {
+  const color = p.matched ? MUSCLE_COLOR[p.matched.agonist] ?? '#888' : 'var(--orange)';
+  return (
+    <div className="parse-item" key={i}>
+      <div className="parse-dot" style={{ background: color }} />
+      <div style={{ flex: 1 }}>
+        <div className="parse-name">{p.rawName}</div>
+        <div className="parse-detail">
+          {p.sets}×{p.serieReps.join('/')} ·{' '}
+          {p.serieLoads.some((l) => l > 0) ? p.serieLoads.map((l) => `${l}kg`).join(' · ') : 'sem carga'}
+        </div>
+        {p.notes && (
+          <div className="parse-note">
+            <span className="parse-hash">#</span> {p.notes}
+          </div>
+        )}
+        {p.matched ? (
+          <div className="parse-matched" style={{ color }}>
+            ✓ {p.matched.name} [{p.matched.agonist}]
+          </div>
+        ) : (
+          <div className="parse-unmatched">
+            ⚠️ Novo — agonista:{' '}
+            <select value={p.newMuscle} onChange={(e) => onMuscleChange(i, e.target.value as MuscleGroup)}>
+              {MUSCLE_GROUPS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Modal de importação de treino por texto livre — sucessor do fluxo
@@ -80,6 +123,7 @@ export function ImportWorkoutModal() {
         serieLoads: [...p.serieLoads],
         serieReps: [...p.serieReps],
         ...(p.notes && { notes: p.notes }),
+        ...(p.groupId && { groupId: p.groupId, groupType: p.groupType }),
       });
     });
 
@@ -120,47 +164,30 @@ export function ImportWorkoutModal() {
               </div>
             ) : (
               <div id="import-preview-list">
-                {items.map((p, i) => {
-                  const color = p.matched ? MUSCLE_COLOR[p.matched.agonist] ?? '#888' : 'var(--orange)';
-                  return (
-                    <div className="parse-item" key={i}>
-                      <div className="parse-dot" style={{ background: color }} />
-                      <div style={{ flex: 1 }}>
-                        <div className="parse-name">{p.rawName}</div>
-                        <div className="parse-detail">
-                          {p.sets}×{p.serieReps.join('/')} ·{' '}
-                          {p.serieLoads.some((l) => l > 0)
-                            ? p.serieLoads.map((l) => `${l}kg`).join(' · ')
-                            : 'sem carga'}
+                {(() => {
+                  let cursor = 0;
+                  return groupParsedItems(items).map((group, gi) => {
+                    const startIdx = cursor;
+                    cursor += group.length;
+                    if (group.length === 1) {
+                      return renderParseItem(group[0], startIdx, handleMuscleChange);
+                    }
+                    return (
+                      <div className="cj-group" key={`grp-${gi}`} style={{ marginBottom: 10 }}>
+                        <div className="cj-group-header">
+                          <span className="cj-group-badge">{GROUP_LABELS[group[0].groupType ?? 'biset']}</span>
+                          <span className="cj-group-desc">{group.length} exercícios conjugados</span>
                         </div>
-                        {p.notes && (
-                          <div className="parse-note">
-                            <span className="parse-hash">#</span> {p.notes}
+                        {group.map((p, k) => (
+                          <div key={startIdx + k}>
+                            {k > 0 && <div className="cj-connector" />}
+                            {renderParseItem(p, startIdx + k, handleMuscleChange)}
                           </div>
-                        )}
-                        {p.matched ? (
-                          <div className="parse-matched" style={{ color }}>
-                            ✓ {p.matched.name} [{p.matched.agonist}]
-                          </div>
-                        ) : (
-                          <div className="parse-unmatched">
-                            ⚠️ Novo — agonista:{' '}
-                            <select
-                              value={p.newMuscle}
-                              onChange={(e) => handleMuscleChange(i, e.target.value as MuscleGroup)}
-                            >
-                              {MUSCLE_GROUPS.map((m) => (
-                                <option key={m} value={m}>
-                                  {m}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+                        ))}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             )}
 

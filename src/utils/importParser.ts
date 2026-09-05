@@ -1,4 +1,5 @@
 import type { Exercise, MuscleGroup } from '../types/exercise';
+import type { GroupType } from '../types/workout';
 
 export interface ParsedImportItem {
   rawName: string;
@@ -11,6 +12,11 @@ export interface ParsedImportItem {
   exId: string | null;
   newMuscle: MuscleGroup;
   notes?: string;
+  /** Presentes quando a linha usa `+` (Bi-Set) ou `+...+` (Tri-Set) pra
+   *  ligar exercícios conjugados — mesma convenção de groupId/groupType
+   *  do modo "Conjugar" (types/workout.ts). */
+  groupId?: string;
+  groupType?: GroupType;
 }
 
 export interface ParsedImportResult {
@@ -121,6 +127,55 @@ export function parseExLine(rawLine: string, exercises: Exercise[]): ParsedImpor
   };
 }
 
+/**
+ * Parseia uma linha com um ou mais `+` como Bi-Set (2 partes) ou Tri-Set
+ * (3+ partes) — Ex: "Flexão apoio de joelhos + PullOver 5kg 3x12/12/12" ou
+ * "A 3X12+ B 3X15 4kg+ C 3X12 5kg". Cada parte é parseada independentemente
+ * por parseExLine (ordem livre de sets/reps/carga). Quando uma parte não
+ * tem sets/reps/carga próprios (ex: "Flexão apoio de joelhos +"), ela herda
+ * a especificação da parte irmã que trouxe os números — cobre o caso comum
+ * de escrever sets/reps/carga uma única vez pro conjunto todo. Todas as
+ * partes recebem um groupId compartilhado. Retorna null se nenhuma parte
+ * tiver sets/reps (linha não é reconhecível como treino).
+ */
+export function parseConjugateLine(rawLine: string, exercises: Exercise[]): ParsedImportItem[] | null {
+  const parts = rawLine
+    .split('+')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length < 2) return null;
+
+  const parsedParts = parts.map((p) => parseExLine(p, exercises));
+  const anyParsed = parsedParts.find((p): p is ParsedImportItem => p !== null);
+  if (!anyParsed) return null;
+
+  const groupId = `imp-grp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const groupType: GroupType = parts.length >= 3 ? 'triset' : 'biset';
+
+  return parts.map((rawPart, i) => {
+    const parsed = parsedParts[i];
+    if (parsed) return { ...parsed, groupId, groupType };
+
+    // Parte sem números próprios: herda sets/reps/carga da parte irmã,
+    // mas mantém o próprio nome (e faz seu próprio fuzzy match).
+    const matched = fuzzyMatch(rawPart, exercises);
+    const item: ParsedImportItem = {
+      rawName: rawPart,
+      sets: anyParsed.sets,
+      reps: anyParsed.reps,
+      serieReps: [...anyParsed.serieReps],
+      load: anyParsed.load,
+      serieLoads: [...anyParsed.serieLoads],
+      matched,
+      exId: matched ? matched.id : null,
+      newMuscle: matched ? (matched.agonist === 'Cardio' ? 'Peito' : matched.agonist) : 'Peito',
+      groupId,
+      groupType,
+    };
+    return item;
+  });
+}
+
 /** Migrado de parseImportText() (index.html ~6260). */
 export function parseImportText(raw: string, exercises: Exercise[]): ParsedImportResult {
   const items: ParsedImportItem[] = [];
@@ -136,9 +191,39 @@ export function parseImportText(raw: string, exercises: Exercise[]): ParsedImpor
       pse = Math.min(10, Math.max(1, parseInt(pseMatch[1], 10)));
       return;
     }
+    if (line.includes('+')) {
+      const group = parseConjugateLine(line, exercises);
+      if (group) {
+        items.push(...group);
+        return;
+      }
+    }
     const parsed = parseExLine(line, exercises);
     if (parsed) items.push(parsed);
   });
 
   return { items, pse };
+}
+
+/** Agrupa uma lista já parseada (ordem sequencial — grupos sempre
+ *  contíguos, pois `parseConjugateLine` empurra as partes em sequência)
+ *  em linhas "livre" ou "grupo", pro preview do modal de importação. */
+export function groupParsedItems(items: ParsedImportItem[]): ParsedImportItem[][] {
+  const rows: ParsedImportItem[][] = [];
+  let i = 0;
+  while (i < items.length) {
+    const gid = items[i].groupId;
+    if (!gid) {
+      rows.push([items[i]]);
+      i++;
+      continue;
+    }
+    const group: ParsedImportItem[] = [];
+    while (i < items.length && items[i].groupId === gid) {
+      group.push(items[i]);
+      i++;
+    }
+    rows.push(group);
+  }
+  return rows;
 }

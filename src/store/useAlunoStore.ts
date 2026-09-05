@@ -16,6 +16,8 @@ interface AlunoState {
   /** Substitui o dia inteiro (equivale a mutar `a.rotina[d]` diretamente). */
   setRotinaDia: (alunoId: string, day: number, dia: AlunoRotinaDia) => void;
   addExercicio: (alunoId: string, day: number, ex: AlunoExercicio) => void;
+  /** Anexa vários exercícios de uma vez (importação de texto) num único set. */
+  addExerciciosBulk: (alunoId: string, day: number, exs: AlunoExercicio[]) => void;
   updateExercicio: (alunoId: string, day: number, idx: number, ex: AlunoExercicio) => void;
   removeExercicio: (alunoId: string, day: number, idx: number) => void;
   reorderExercicios: (alunoId: string, day: number, fromIdx: number, toIdx: number) => void;
@@ -68,6 +70,18 @@ export const useAlunoStore = create<AlunoState>()(
               ? updateDia(a, day, (dia) => ({
                   tipo: dia.tipo === 'Descanso Total' ? 'Treino Personalizado' : dia.tipo,
                   exercicios: [...dia.exercicios, ex],
+                }))
+              : a
+          ),
+        })),
+
+      addExerciciosBulk: (alunoId, day, exs) =>
+        set((state) => ({
+          alunos: state.alunos.map((a) =>
+            a.id === alunoId
+              ? updateDia(a, day, (dia) => ({
+                  tipo: dia.tipo === 'Descanso Total' ? 'Treino Personalizado' : dia.tipo,
+                  exercicios: [...dia.exercicios, ...exs],
                 }))
               : a
           ),

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
-import { DAYS, DAYS_SHORT } from '../../types/workout';
+import { DAYS, DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
 import { calcularIdade, iniciais, isAlunoExercicioCardio } from '../../types/aluno';
+import type { AlunoExercicio } from '../../types/aluno';
+import { buildGroupedRows } from '../../utils/dayLogGrouping';
 import './ClientesView.css';
 
 interface AlunoDetailModalProps {
@@ -44,6 +46,34 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
         showToast('🗑️ Aluno removido', 'success');
         onClose();
       });
+  }
+
+  function renderExItem(ex: AlunoExercicio, i: number) {
+    return (
+      <div className="cli-ex-item" key={i}>
+        <div className="cli-ex-info">
+          <div className="cli-ex-name" title={ex.nome}>
+            {ex.nome}
+          </div>
+          <div className="cli-ex-detail">
+            {isAlunoExercicioCardio(ex) ? (
+              <>
+                <span className="cli-ex-chip">{ex.duracao}</span>
+                <span className="cli-ex-chip">Intensidade: {ex.intensidade}</span>
+              </>
+            ) : (
+              <>
+                <span className="cli-ex-chip">
+                  {ex.series}×{ex.reps}
+                </span>
+                <span className="cli-ex-chip">{ex.carga}kg</span>
+                {ex.sugestao && <span className="cli-ex-chip cli-ex-chip-sug">▲ {ex.sugestao}kg</span>}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -122,31 +152,24 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           {dia.exercicios.length === 0 ? (
             <div className="cli-rest-day">💤 Dia de descanso — nenhum exercício programado.</div>
           ) : (
-            dia.exercicios.map((ex, i) => (
-              <div className="cli-ex-item" key={i}>
-                <div className="cli-ex-info">
-                  <div className="cli-ex-name" title={ex.nome}>
-                    {ex.nome}
+            buildGroupedRows(dia.exercicios).map((row) =>
+              row.kind === 'free' ? (
+                renderExItem(row.entry, row.index)
+              ) : (
+                <div className="cj-group" key={row.groupId}>
+                  <div className="cj-group-header">
+                    <span className="cj-group-badge">{GROUP_LABELS[row.members[0].entry.groupType ?? 'biset']}</span>
+                    <span className="cj-group-desc">{row.members.length} exercícios conjugados</span>
                   </div>
-                  <div className="cli-ex-detail">
-                    {isAlunoExercicioCardio(ex) ? (
-                      <>
-                        <span className="cli-ex-chip">{ex.duracao}</span>
-                        <span className="cli-ex-chip">Intensidade: {ex.intensidade}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="cli-ex-chip">
-                          {ex.series}×{ex.reps}
-                        </span>
-                        <span className="cli-ex-chip">{ex.carga}kg</span>
-                        {ex.sugestao && <span className="cli-ex-chip cli-ex-chip-sug">▲ {ex.sugestao}kg</span>}
-                      </>
-                    )}
-                  </div>
+                  {row.members.map((m, k) => (
+                    <div key={m.index}>
+                      {k > 0 && <div className="cj-connector" />}
+                      {renderExItem(m.entry, m.index)}
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))
+              )
+            )
           )}
         </div>
 

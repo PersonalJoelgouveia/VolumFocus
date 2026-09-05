@@ -10,10 +10,19 @@
  */
 
 import { DAYS_SHORT } from './workout';
+import type { GroupType } from './workout';
 
 export type AlunoStatus = 'ativo' | 'inativo';
 
-export interface AlunoExercicioForca {
+/** Campos de agrupamento pra Bi-Set/Tri-Set na rotina do Personal — mesma
+ *  convenção de groupId/groupType usada em WorkoutLogEntry, preenchida
+ *  pelo "Treino Por Extenso" (utils/importParser.ts). */
+interface AlunoGroupable {
+  groupId?: string;
+  groupType?: GroupType;
+}
+
+export interface AlunoExercicioForca extends AlunoGroupable {
   nome: string;
   cardio?: undefined;
   series: number;
@@ -24,7 +33,7 @@ export interface AlunoExercicioForca {
   notes?: string;
 }
 
-export interface AlunoExercicioCardio {
+export interface AlunoExercicioCardio extends AlunoGroupable {
   nome: string;
   cardio: true;
   duracao: string;

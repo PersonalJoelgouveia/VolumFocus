@@ -106,6 +106,7 @@ export function buildWeekLogFromAlunoRotina(
           intensity,
           hrZone: intensityToHrZone(intensity),
           ...(ex.notes ? { notes: ex.notes } : {}),
+          ...(ex.groupId ? { groupId: ex.groupId, groupType: ex.groupType } : {}),
         };
         return entry;
       }
@@ -119,6 +120,7 @@ export function buildWeekLogFromAlunoRotina(
         serieReps: Array(ex.series).fill(reps),
         serieLoads: Array(ex.series).fill(ex.carga),
         ...(ex.notes ? { notes: ex.notes } : {}),
+        ...(ex.groupId ? { groupId: ex.groupId, groupType: ex.groupType } : {}),
       };
       return entry;
     });
