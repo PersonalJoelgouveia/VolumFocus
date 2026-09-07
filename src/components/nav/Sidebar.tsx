@@ -1,15 +1,9 @@
 import { useUIStore } from '../../store/useUIStore';
 import { useNotificationStore, selectUnreadCount } from '../../store/useNotificationStore';
-import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_META } from '../../types/view';
+import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON, VIEW_META } from '../../types/view';
 import type { ViewId } from '../../types/view';
 import '../feedback/Notifications.css';
 import './Sidebar.css';
-
-const ICONS: Partial<Record<ViewId, string>> = {
-  conquistas: '🏆',
-  banco: '🏋️',
-  'nova-semana': '🔄',
-};
 
 function NavButton({ view }: { view: ViewId }) {
   const activeView = useUIStore((s) => s.activeView);
@@ -25,7 +19,7 @@ function NavButton({ view }: { view: ViewId }) {
       aria-current={isActive ? 'page' : undefined}
     >
       <div className="ni-icon">
-        {ICONS[view] ?? '•'}
+        {VIEW_ICON[view] ?? '•'}
         {badgeCount > 0 && <span className="ntf-badge">{badgeCount > 99 ? '99+' : badgeCount}</span>}
       </div>
       <span className="ni-label">{VIEW_META[view].title}</span>

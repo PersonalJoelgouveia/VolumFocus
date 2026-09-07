@@ -23,6 +23,13 @@ export interface ViewMeta {
   alunoOnly?: boolean;
 }
 
+/** Ícones por view — usado pela Sidebar desktop e pela MobileSidebar (rail mobile). */
+export const VIEW_ICON: Partial<Record<ViewId, string>> = {
+  conquistas: '🏆',
+  banco: '🏋️',
+  'nova-semana': '🔄',
+};
+
 export const VIEW_META: Record<ViewId, ViewMeta> = {
   registro: { title: 'Treinos', sub: 'Semana Atual' },
   dashboard: { title: 'X-ray', sub: 'Análise & Resumo Unificado' },
@@ -46,10 +53,3 @@ export const PT_NAV: ViewId[] = ['banco', 'clientes', 'notifications'];
 /** Sem views exclusivas de aluno hoje — "Minha Rotina" foi fundida em Treinos. */
 export const ALUNO_NAV: ViewId[] = [];
 export const TOOLS_NAV: ViewId[] = ['nova-semana'];
-
-/**
- * Itens da bottom-nav mobile: 5 visíveis + "Mais" (popover), migrado da
- * auditoria UX/UI de julho/2026 (redução de 7 para 6 itens na nav do PT).
- */
-export const BOTTOM_NAV_MAIN: ViewId[] = ['registro', 'dashboard', 'performance', 'conquistas', 'nova-semana'];
-export const BOTTOM_NAV_MORE: ViewId[] = ['clientes', 'notifications'];

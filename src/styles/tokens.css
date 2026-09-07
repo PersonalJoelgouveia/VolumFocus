@@ -39,6 +39,10 @@
   --rl: 18px;
   --rs: 8px;
 
+  /* Larguras da Sidebar retrátil (collapsed/expanded) — migradas 1:1 do :root do monolito. */
+  --sb-c: 64px;
+  --sb-e: 222px;
+
   /* Transição padrão — migrado 1:1 do :root do monolito */
   --tr: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 

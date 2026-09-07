@@ -1,12 +1,25 @@
 #sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 200;
+  width: var(--sb-c);
+  background: rgba(10, 10, 14, 0.76);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   display: flex;
   flex-direction: column;
-  width: 240px;
-  height: 100vh;
-  background: var(--bg-1);
   border-right: 1px solid var(--border);
   padding: 16px 12px;
-  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sidebar:hover,
+#sidebar:focus-within {
+  width: var(--sb-e);
+  box-shadow: 4px 0 40px rgba(0, 0, 0, 0.5);
 }
 
 .sb-logo {
@@ -15,10 +28,17 @@
   gap: 10px;
   padding: 8px;
   margin-bottom: 20px;
+  overflow: hidden;
 }
 
 .sb-logo-icon {
   font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.sb-logo-text {
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .sb-logo-name {
@@ -38,6 +58,7 @@
   letter-spacing: 0.05em;
   color: var(--text-3);
   padding: 12px 9px 6px;
+  white-space: nowrap;
 }
 
 .sb-nav {
@@ -45,6 +66,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sb-bottom {
@@ -118,7 +141,19 @@
   border-radius: 0 2px 2px 0;
 }
 
-/* Sidebar oculta em mobile — bottom-nav assume a navegação (ver BottomNav.css). */
+/* Rótulo escondido por padrão (rail collapsed); revelado no hover/focus do #sidebar. */
+.ni-label {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+#sidebar:hover .ni-label,
+#sidebar:focus-within .ni-label {
+  opacity: 1;
+}
+
+/* Sidebar oculta em mobile — MobileSidebar assume a navegação (ver MobileSidebar.css). */
 @media (max-width: 860px) {
   #sidebar {
     display: none;

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { UserMenu } from '../components/auth/UserMenu';
 import { Sidebar } from '../components/nav/Sidebar';
-import { BottomNav } from '../components/nav/BottomNav';
+import { MobileSidebar } from '../components/nav/MobileSidebar';
 import { ImportWorkoutModal } from '../components/modals/ImportWorkoutModal';
 import { AddExerciseModal } from '../components/modals/AddExerciseModal';
 import { CloneDayModal } from '../components/registro/CloneDayModal';
@@ -35,7 +35,9 @@ import './AppShell.css';
  * Shell principal — sucessor da composição estática Sidebar + bottom-nav +
  * #app-main + troca de `.view` por classList (index.html ~2421-2620,
  * switchView() ~4398). Aqui a troca de view é 100% controlada por estado
- * (useUIStore.activeView), sem manipulação direta de DOM.
+ * (useUIStore.activeView), sem manipulação direta de DOM. A bottom-nav
+ * mobile foi substituída pela MobileSidebar (drawer retrátil icon-only,
+ * ver components/nav/MobileSidebar.tsx) — a Sidebar desktop continua igual.
  */
 const VIEW_COMPONENTS = {
   registro: RegistroView,
@@ -98,7 +100,7 @@ export function AppShell() {
         </main>
       </div>
 
-      <BottomNav />
+      <MobileSidebar />
       <ImportWorkoutModal />
       <AddExerciseModal />
       <CloneDayModal />

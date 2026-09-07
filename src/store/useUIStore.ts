@@ -31,8 +31,11 @@ interface UIState {
   openModal: (id: string) => void;
   closeModal: () => void;
 
+  /** Drawer retrátil da MobileSidebar (mobile) — true = minimizado (icon-only rail),
+   *  false = expandido (overlay com rótulos). Sem efeito na Sidebar desktop. */
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  collapseSidebar: () => void;
 
   /** Popover "Mais" da bottom-nav mobile (bnToggleMore/bnCloseMore). */
   isMoreMenuOpen: boolean;
@@ -46,7 +49,7 @@ interface UIState {
 
 export const useUIStore = create<UIState>()((set) => ({
   activeView: 'registro',
-  setActiveView: (view) => set({ activeView: view, isMoreMenuOpen: false }),
+  setActiveView: (view) => set({ activeView: view, isMoreMenuOpen: false, isSidebarCollapsed: true }),
 
   isPersonalMode: false,
   setPersonalMode: (isPersonal) => set({ isPersonalMode: isPersonal }),
@@ -58,8 +61,9 @@ export const useUIStore = create<UIState>()((set) => ({
   openModal: (id) => set({ openModalId: id }),
   closeModal: () => set({ openModalId: null }),
 
-  isSidebarCollapsed: false,
+  isSidebarCollapsed: true,
   toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+  collapseSidebar: () => set({ isSidebarCollapsed: true }),
 
   isMoreMenuOpen: false,
   toggleMoreMenu: () => set((state) => ({ isMoreMenuOpen: !state.isMoreMenuOpen })),

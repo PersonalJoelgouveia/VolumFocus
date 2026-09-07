@@ -8,6 +8,9 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* #sidebar é `position: fixed` (ver Sidebar.css) — sai do fluxo flex, então
+     reservamos aqui o espaço da rail collapsed pra não ficar coberto por ela. */
+  margin-left: var(--sb-c);
 }
 
 .app-header {
@@ -53,9 +56,14 @@
   padding: 24px 28px 40px;
 }
 
-/* Abaixo de 860px: sidebar já se esconde (Sidebar.css); bottom-nav assume
-   e o conteúdo ganha respiro extra no rodapé para não ficar coberto por ela. */
+/* Abaixo de 860px: Sidebar desktop se esconde (Sidebar.css) e a MobileSidebar
+   assume — como ela é `position: fixed` (rail de 60px, ver MobileSidebar.css),
+   o shell reserva esse espaço à esquerda pra não ficar coberto por ela. */
 @media (max-width: 860px) {
+  #app-shell {
+    padding-left: calc(60px + env(safe-area-inset-left, 0px));
+  }
+
   #app-main {
     max-width: 480px;
     margin: 0 auto;
@@ -67,6 +75,6 @@
   }
 
   .app-content {
-    padding: 16px 16px 96px;
+    padding: 16px 16px 40px;
   }
 }
