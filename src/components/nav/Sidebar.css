@@ -3,6 +3,9 @@
   left: 0;
   top: 0;
   bottom: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   z-index: 200;
   width: var(--sb-c);
   background: rgba(10, 10, 14, 0.76);
@@ -120,7 +123,7 @@
 }
 
 .nav-item.active {
-  color: #fff;
+  color: var(--text);
 }
 
 .nav-item.active .ni-icon {

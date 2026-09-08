@@ -38,6 +38,11 @@ export const GROUP_LABELS: Record<GroupType, string> = {
 
 /** Campos de agrupamento compartilhados por qualquer tipo de entrada de log. */
 interface GroupableEntry {
+  /** Id estável da instância (não confundir com `exId`, que referencia o
+   *  exercício no banco) — usado só como React key na lista do dia
+   *  (DayExerciseList). Opcional pra não quebrar dado antigo já persistido
+   *  sem esse campo; nesse caso a lista cai de volta pro índice como key. */
+  id?: string;
   groupId?: string;
   groupType?: GroupType;
 }

@@ -35,10 +35,15 @@
   display: flex;
   gap: 6px;
   margin-bottom: 24px;
+  /* Sem isso, os 7 .lv-btn (flex:1) nunca encolhem abaixo do conteúdo e
+     estouram a viewport em mobile — só some com zoom-out manual. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lv-btn {
   flex: 1;
+  min-width: 0;
   padding: 10px 7px;
   border-radius: var(--rs);
   cursor: pointer;
@@ -50,6 +55,7 @@
   font-size: 0.75rem;
   transition: 0.15s ease;
   text-align: center;
+  white-space: nowrap;
 }
 
 .lv-btn:hover {
@@ -60,7 +66,7 @@
 .lv-btn.active {
   border-color: var(--teal-border);
   background: var(--teal-glow);
-  color: #fff;
+  color: var(--text);
 }
 
 .lv-ico {

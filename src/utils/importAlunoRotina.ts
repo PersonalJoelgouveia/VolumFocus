@@ -3,6 +3,7 @@ import { isAlunoExercicioCardio } from '../types/aluno';
 import type { Exercise } from '../types/exercise';
 import type { CardioLogEntry, StrengthLogEntry, WeekLog } from '../types/workout';
 import type { HrZone } from '../types/cardio';
+import { genLogEntryId } from './logEntryId';
 
 /**
  * Ponte entre a rotina publicada pelo Personal (`AlunoRotina` — schema
@@ -100,6 +101,7 @@ export function buildWeekLogFromAlunoRotina(
       if (isAlunoExercicioCardio(ex)) {
         const intensity = parseIntensity(ex.intensidade);
         const entry: CardioLogEntry = {
+          id: genLogEntryId(),
           exId,
           type: 'cardio',
           duration: parseDurationMin(ex.duracao),
@@ -113,6 +115,7 @@ export function buildWeekLogFromAlunoRotina(
 
       const reps = parseRepsNumber(ex.reps);
       const entry: StrengthLogEntry = {
+        id: genLogEntryId(),
         exId,
         sets: ex.series,
         reps,

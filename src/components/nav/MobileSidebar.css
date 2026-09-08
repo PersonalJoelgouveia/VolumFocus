@@ -12,7 +12,10 @@
     position: fixed;
     top: 0;
     left: 0;
+    bottom: 0;
+    height: 100vh;
     height: 100dvh;
+    min-height: -webkit-fill-available;
     width: 60px;
     background: var(--bg-1);
     border-right: 1px solid var(--border);
@@ -139,7 +142,7 @@
 }
 
 .msb-item.active {
-  color: #fff;
+  color: var(--text);
 }
 
 .msb-icon {

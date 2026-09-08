@@ -1,4 +1,8 @@
 /* Reset mínimo — o restante do estilo global vive em styles/tokens.css */
 html, body, #root {
   height: 100%;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }

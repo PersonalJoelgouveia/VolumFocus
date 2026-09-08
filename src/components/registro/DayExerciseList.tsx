@@ -74,7 +74,7 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
           const ex = exercises.find((e) => e.id === row.entry.exId);
           return (
             <ExerciseListItem
-              key={row.index}
+              key={row.entry.id ?? row.index}
               entry={row.entry}
               exercise={ex}
               mode={mode}
@@ -109,10 +109,10 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
               )}
             </div>
             {row.members.map((m, k) => (
-              <div key={`wrap-${m.index}`}>
-                {k > 0 && <div className="cj-connector" key={`conn-${m.index}`} />}
+              <div key={m.entry.id ?? `wrap-${m.index}`}>
+                {k > 0 && <div className="cj-connector" key={`conn-${m.entry.id ?? m.index}`} />}
                 <ExerciseListItem
-                  key={`item-${m.index}`}
+                  key={`item-${m.entry.id ?? m.index}`}
                   entry={m.entry}
                   exercise={exercises.find((e) => e.id === m.entry.exId)}
                   mode={mode}

@@ -5,6 +5,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { MUSCLE_GROUPS } from '../../types/exercise';
 import type { MuscleGroup } from '../../types/exercise';
 import { norm } from '../../utils/importParser';
+import { genLogEntryId } from '../../utils/logEntryId';
 import type { StrengthLogEntry, CardioLogEntry } from '../../types/workout';
 import './AddExerciseModal.css';
 
@@ -108,6 +109,7 @@ export function AddExerciseModal() {
 
     const entry: StrengthLogEntry | CardioLogEntry = isCardio
       ? {
+          id: genLogEntryId(),
           exId,
           type: 'cardio',
           duration,
@@ -116,6 +118,7 @@ export function AddExerciseModal() {
           ...(notes.trim() && { notes: notes.trim() }),
         }
       : {
+          id: genLogEntryId(),
           exId,
           sets,
           reps,

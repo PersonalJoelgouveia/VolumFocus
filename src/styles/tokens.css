@@ -50,6 +50,11 @@
   --font-body: 'Plus Jakarta Sans', sans-serif;
   --font-title: 'Syne', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+  /* Fundo do header/app-bar — era rgba(6,6,8,.92) fixo em AppShell.css, por
+     isso os títulos (var(--text), que vira escuro no tema claro) ficavam
+     ilegíveis sobre esse fundo sempre-escuro. */
+  --header-bg: rgba(6, 6, 8, 0.92);
 }
 
 /* Cores por grupo muscular (MC no monolito) — usadas em barras de volume e badges. */
@@ -94,6 +99,8 @@
 
   --border: rgba(20, 20, 30, 0.08);
   --border-md: rgba(20, 20, 30, 0.14);
+
+  --header-bg: rgba(255, 255, 255, 0.85);
 }
 
 * {

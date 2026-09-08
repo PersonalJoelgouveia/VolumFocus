@@ -8,6 +8,7 @@ import { MUSCLE_COLOR } from '../../data/muscleColors';
 import { parseImportText, groupParsedItems } from '../../utils/importParser';
 import type { ParsedImportItem } from '../../utils/importParser';
 import { GROUP_LABELS } from '../../types/workout';
+import { genLogEntryId } from '../../utils/logEntryId';
 import './ImportWorkoutModal.css';
 
 const MODAL_ID = 'import-workout';
@@ -116,6 +117,7 @@ export function ImportWorkoutModal() {
         exId = newId;
       }
       log.push({
+        id: genLogEntryId(),
         exId,
         sets: p.sets,
         reps: p.reps,

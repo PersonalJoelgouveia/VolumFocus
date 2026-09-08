@@ -4,6 +4,7 @@ import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { DAYS, DAYS_SHORT, isCardioLogEntry } from '../../types/workout';
 import { totalDaySets } from '../../utils/volumeCalc';
+import { genLogEntryId } from '../../utils/logEntryId';
 import './CloneDayModal.css';
 
 const MODAL_ID = 'clone-day';
@@ -41,7 +42,7 @@ export function CloneDayModal() {
     // groupId/groupType (mesma fidelidade do JSON.parse(JSON.stringify())
     // do monolito: se o dia de origem tinha grupos, os clones mantêm o
     // mesmo groupId por dentro do próprio array de destino).
-    const clones = structuredClone(sourceLog);
+    const clones = structuredClone(sourceLog).map((entry) => ({ ...entry, id: genLogEntryId() }));
     const destLog = weekLog[targetDay] ?? [];
     setDayLog(targetDay, [...destLog, ...clones]);
     showToast(`${clones.length} exercícios clonados para ${DAYS[targetDay]}.`, 'success');
