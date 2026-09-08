@@ -13,7 +13,8 @@ export type ViewId =
   | 'nova-semana'
   | 'conquistas'
   | 'clientes'
-  | 'notifications';
+  | 'notifications'
+  | 'settings';
 
 export interface ViewMeta {
   title: string;
@@ -45,6 +46,7 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
     sub: 'Treinos concluídos & aprovações pendentes',
     ptOnly: true,
   },
+  settings: { title: 'Configurações', sub: 'Preferências do aplicativo' },
 };
 
 /** Itens da navegação principal (sidebar desktop), na ordem do monolito. */

@@ -29,6 +29,7 @@ export function UserMenu() {
   const busy = useAuthStore((s) => s.busy);
   const logout = useAuthStore((s) => s.logout);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
+  const setActiveView = useUIStore((s) => s.setActiveView);
 
   const syncStatus = useSyncStore((s) => s.status);
   const reconnect = useSyncStore((s) => s.reconnect);
@@ -54,6 +55,15 @@ export function UserMenu() {
           PERSONAL ATIVO
         </span>
       )}
+
+      <button
+        className="btn btn-ghost btn-icon btn-sm"
+        onClick={() => setActiveView('settings')}
+        title="Configurações"
+        aria-label="Abrir configurações"
+      >
+        ⚙️
+      </button>
 
       <button
         className="btn btn-ghost btn-icon btn-sm vf-cloud-btn"

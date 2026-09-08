@@ -25,7 +25,6 @@ export function MobileSidebar() {
   const isCollapsed = useUIStore((s) => s.isSidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const collapseSidebar = useUIStore((s) => s.collapseSidebar);
-  const showToast = useUIStore((s) => s.showToast);
   const unreadCount = useNotificationStore(selectUnreadCount);
   const expanded = !isCollapsed;
 
@@ -37,7 +36,7 @@ export function MobileSidebar() {
   ];
 
   const handleSettingsSelect = () => {
-    showToast('Configurações — em breve', 'info');
+    setActiveView('settings');
     collapseSidebar();
   };
 
@@ -74,7 +73,7 @@ export function MobileSidebar() {
           <NavItem
             icon="⚙️"
             label="Configurações"
-            isActive={false}
+            isActive={activeView === 'settings'}
             expanded={expanded}
             onSelect={handleSettingsSelect}
           />

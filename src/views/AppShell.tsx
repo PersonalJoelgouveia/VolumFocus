@@ -27,6 +27,7 @@ import { NovaSemanaView } from '../views/NovaSemanaView';
 import { ConquistasView } from '../views/ConquistasView';
 import { ClientesView } from '../views/ClientesView';
 import { NotificationsView } from '../views/NotificationsView';
+import { SettingsView } from '../views/SettingsView';
 import { useSyncStore } from '../store/useSyncStore';
 
 import './AppShell.css';
@@ -50,6 +51,7 @@ const VIEW_COMPONENTS = {
   conquistas: ConquistasView,
   clientes: ClientesView,
   notifications: NotificationsView,
+  settings: SettingsView,
 } as const;
 
 export function AppShell() {

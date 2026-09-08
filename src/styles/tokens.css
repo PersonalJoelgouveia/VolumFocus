@@ -68,6 +68,34 @@
   --mc-cardio: #22d3a0;
 }
 
+/*
+ * Tema claro — sobrescreve só os tokens de superfície/tipografia/borda do
+ * "Dark Glow" acima; cores de marca (--teal) e semânticas (--red/--green/…)
+ * ficam as mesmas, só com fundo (--*-bg) um pouco mais opaco pra manter
+ * contraste em fundo claro. Aplicado via [data-theme="light"] no <html>
+ * (ver store/useThemeStore.ts) — não existe no monolito, era só Dark Glow.
+ */
+:root[data-theme='light'] {
+  --bg: #f4f5f7;
+  --bg-1: #ffffff;
+  --bg-2: #ffffff;
+  --bg-3: #eceef2;
+
+  --text: #14141c;
+  --text-2: #52525f;
+  --text-3: #767685;
+
+  --teal-glow: rgba(0, 196, 179, 0.12);
+  --teal-border: rgba(0, 196, 179, 0.3);
+  --red-bg: rgba(255, 77, 109, 0.12);
+  --orange-bg: rgba(255, 150, 64, 0.12);
+  --green-bg: rgba(34, 211, 160, 0.12);
+  --yellow-bg: rgba(255, 209, 102, 0.14);
+
+  --border: rgba(20, 20, 30, 0.08);
+  --border-md: rgba(20, 20, 30, 0.14);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -77,6 +105,7 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   margin: 0;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* iOS Safari zoom fix — preservado do monolito. */
