@@ -1,10 +1,7 @@
 import { useUIStore } from '../../store/useUIStore';
-import { useThemeStore } from '../../store/useThemeStore';
 import { useNotificationStore, selectUnreadCount } from '../../store/useNotificationStore';
 import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON, VIEW_META } from '../../types/view';
 import type { ViewId } from '../../types/view';
-import logoBlue from '../../assets/brand/joel-gouveia-symbol-blue.png';
-import logoWhite from '../../assets/brand/joel-gouveia-symbol-white.png';
 import '../feedback/Notifications.css';
 import './Sidebar.css';
 
@@ -38,14 +35,11 @@ function NavButton({ view }: { view: ViewId }) {
 export function Sidebar() {
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
   const isAlunoMode = useUIStore((s) => s.isAlunoMode);
-  const theme = useThemeStore((s) => s.theme);
 
   return (
     <nav id="sidebar">
       <div className="sb-logo">
-        <div className="sb-logo-icon">
-          <img src={theme === 'dark' ? logoWhite : logoBlue} alt="Joel Gouveia" width={28} height={28} />
-        </div>
+        <div className="sb-logo-icon">💪</div>
         <div className="sb-logo-text">
           <div className="sb-logo-name">Joel Gouveia</div>
           <div className="sb-logo-sub">Performance</div>

@@ -5,6 +5,12 @@
   margin-bottom: 20px;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sec-row > * {
+  min-width: 0;
 }
 
 .page-title {
@@ -15,8 +21,20 @@
   color: var(--text);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
   text-shadow: 0 0 20px rgba(0, 196, 179, 0.1);
+}
+
+@media (max-width: 420px) {
+  .sec-row {
+    gap: 10px;
+  }
+
+  .page-title {
+    font-size: 1.05rem;
+  }
 }
 
 .tag {

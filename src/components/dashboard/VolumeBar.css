@@ -52,6 +52,10 @@
   border: 1px solid var(--border);
   border-radius: var(--r);
   padding: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .card-title {
