@@ -1,11 +1,8 @@
 import { useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
-import { useThemeStore } from '../store/useThemeStore';
 import { UserMenu } from '../components/auth/UserMenu';
 import { Sidebar } from '../components/nav/Sidebar';
 import { MobileSidebar } from '../components/nav/MobileSidebar';
-import logoBlue from '../assets/brand/joel-gouveia-symbol-blue.png';
-import logoWhite from '../assets/brand/joel-gouveia-symbol-white.png';
 import { ImportWorkoutModal } from '../components/modals/ImportWorkoutModal';
 import { AddExerciseModal } from '../components/modals/AddExerciseModal';
 import { CloneDayModal } from '../components/registro/CloneDayModal';
@@ -62,7 +59,6 @@ export function AppShell() {
   const setActiveView = useUIStore((s) => s.setActiveView);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
   const isAlunoMode = useUIStore((s) => s.isAlunoMode);
-  const theme = useThemeStore((s) => s.theme);
   const meta = VIEW_META[activeView];
 
   // Restringe views `ptOnly`/`alunoOnly` a cada papel — reforço em nível de
@@ -93,20 +89,9 @@ export function AppShell() {
       <div id="app-main">
         <header className="app-header">
           <div className="hdr-title-row">
-            {/* Logo só existe na Sidebar desktop (escondida <=860px) — sem isso
-                o header mobile fica sem marca. Escondida em desktop via CSS. */}
-            <div className="hdr-brand">
-              <img
-                className="hdr-brand-logo"
-                src={theme === 'dark' ? logoWhite : logoBlue}
-                alt="Joel Gouveia"
-                width={36}
-                height={36}
-              />
-              <div className="hdr-brand-text">
-                <div className="hdr-title">{safeMeta.title}</div>
-                <div className="hdr-sub">{safeMeta.sub}</div>
-              </div>
+            <div>
+              <div className="hdr-title">{safeMeta.title}</div>
+              <div className="hdr-sub">{safeMeta.sub}</div>
             </div>
             <UserMenu />
           </div>
