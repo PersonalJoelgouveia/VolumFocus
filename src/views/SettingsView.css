@@ -84,3 +84,37 @@
 }
 
 .stg-theme-opt svg { flex-shrink: 0; }
+
+.stg-lang-switch {
+  display: flex;
+  gap: 6px;
+  background: var(--bg-3);
+  border-radius: var(--r);
+  padding: 4px;
+}
+
+.stg-lang-opt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--rs);
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--tr);
+  white-space: nowrap;
+}
+
+.stg-lang-opt:active { transform: scale(0.97); }
+
+.stg-lang-opt.active {
+  background: var(--bg-2);
+  color: var(--teal);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}

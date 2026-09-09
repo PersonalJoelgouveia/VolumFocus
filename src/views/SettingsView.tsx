@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 import { useThemeStore } from '../store/useThemeStore';
+import { useLocaleStore, type Locale } from '../store/useLocaleStore';
+import { useT } from '../i18n/useT';
+import { LOCALE_NAMES } from '../i18n/translations';
 import './SettingsView.css';
+
+const LOCALES: Locale[] = ['pt-BR', 'es', 'en'];
 
 /** Ícones minimalistas — traçado idêntico ao Lucide (Sun/Moon), inline pra
  *  não adicionar lucide-react como dependência nova (projeto não a usa
@@ -30,12 +35,12 @@ function ChevronIcon() {
   );
 }
 
-function SettingsNavRow({ icon, label }: { icon: ReactNode; label: string }) {
+function SettingsNavRow({ icon, label, soonLabel }: { icon: ReactNode; label: string; soonLabel: string }) {
   return (
     <div className="stg-row stg-row-disabled" aria-disabled="true">
       <span className="stg-row-icon">{icon}</span>
       <span className="stg-row-label">{label}</span>
-      <span className="stg-row-soon">Em breve</span>
+      <span className="stg-row-soon">{soonLabel}</span>
       <ChevronIcon />
     </div>
   );
@@ -43,34 +48,37 @@ function SettingsNavRow({ icon, label }: { icon: ReactNode; label: string }) {
 
 /**
  * Menu Configurações — estrutura inspirada em hevy.com/settings: seções
- * agrupadas em cards, cada uma com linhas de navegação. Perfil/Conta/Idiomas
- * ficam como placeholders desabilitados (fora de escopo desta entrega); só
- * Tema é funcional. Aberta via item "Configurações" do drawer mobile e do
- * botão ⚙️ no UserMenu (desktop) — ver AppShell.tsx/MobileSidebar.tsx.
+ * agrupadas em cards, cada uma com linhas de navegação. Perfil/Conta ficam
+ * como placeholders desabilitados (fora de escopo desta entrega); Tema e
+ * Idioma são funcionais. Idioma vive em Aparência (não em Conta) por ser,
+ * como Tema, preferência local do dispositivo — ver useLocaleStore. Aberta
+ * via item "Configurações" do drawer mobile e do botão ⚙️ no UserMenu
+ * (desktop) — ver AppShell.tsx/MobileSidebar.tsx.
  */
 export function SettingsView() {
+  const t = useT();
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
+  const locale = useLocaleStore((s) => s.locale);
+  const setLocale = useLocaleStore((s) => s.setLocale);
 
   return (
-    <div className="stg-view">
+    <div className="stg-view" translate="no">
       <div className="stg-group">
-        <div className="stg-group-title">Conta</div>
+        <div className="stg-group-title">{t('settings.group.account')}</div>
         <div className="stg-card">
-          <SettingsNavRow icon="👤" label="Perfil" />
+          <SettingsNavRow icon="👤" label={t('settings.row.profile')} soonLabel={t('settings.comingSoon')} />
           <div className="stg-divider" />
-          <SettingsNavRow icon="🔐" label="Conta" />
-          <div className="stg-divider" />
-          <SettingsNavRow icon="🌐" label="Idiomas" />
+          <SettingsNavRow icon="🔐" label={t('settings.row.account')} soonLabel={t('settings.comingSoon')} />
         </div>
       </div>
 
       <div className="stg-group">
-        <div className="stg-group-title">Aparência</div>
+        <div className="stg-group-title">{t('settings.group.appearance')}</div>
         <div className="stg-card">
           <div className="stg-row stg-row-theme">
-            <span className="stg-row-label">Tema</span>
-            <div className="stg-theme-switch" role="group" aria-label="Escolher tema">
+            <span className="stg-row-label">{t('settings.theme.label')}</span>
+            <div className="stg-theme-switch" role="group" aria-label={t('settings.theme.aria')}>
               <button
                 type="button"
                 className={`stg-theme-opt${theme === 'light' ? ' active' : ''}`}
@@ -78,7 +86,7 @@ export function SettingsView() {
                 aria-pressed={theme === 'light'}
               >
                 <SunIcon />
-                <span>Claro</span>
+                <span>{t('settings.theme.light')}</span>
               </button>
               <button
                 type="button"
@@ -87,8 +95,25 @@ export function SettingsView() {
                 aria-pressed={theme === 'dark'}
               >
                 <MoonIcon />
-                <span>Escuro</span>
+                <span>{t('settings.theme.dark')}</span>
               </button>
+            </div>
+          </div>
+          <div className="stg-divider" />
+          <div className="stg-row stg-row-theme">
+            <span className="stg-row-label">{t('settings.language.label')}</span>
+            <div className="stg-lang-switch" role="group" aria-label={t('settings.language.aria')}>
+              {LOCALES.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  className={`stg-lang-opt${locale === loc ? ' active' : ''}`}
+                  onClick={() => setLocale(loc)}
+                  aria-pressed={locale === loc}
+                >
+                  {LOCALE_NAMES[loc]}
+                </button>
+              ))}
             </div>
           </div>
         </div>
