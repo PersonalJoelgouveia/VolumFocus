@@ -37,18 +37,42 @@
   min-width: 0;
 }
 
+.hdr-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Logo redundante no desktop (já aparece em .sb-logo, ver Sidebar.css). */
+.hdr-brand-logo {
+  display: none;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.hdr-brand-text {
+  min-width: 0;
+}
+
 .hdr-title {
   font-family: var(--font-title);
   font-weight: 800;
   font-size: 0.92rem;
   color: var(--text);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hdr-sub {
   font-size: 0.68rem;
   color: var(--text-3);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-content {
@@ -65,9 +89,13 @@
   }
 
   #app-main {
-    max-width: 480px;
-    margin: 0 auto;
+    /* max-width fixo de 480px forçava corte/scroll horizontal em telas reais
+       (ex.: 390–430px de largura útil) sob zoom bloqueado — usa a largura
+       disponível e deixa o conteúdo interno (.app-content) definir limites. */
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .app-header {
@@ -76,5 +104,16 @@
 
   .app-content {
     padding: 16px 16px 40px;
+    box-sizing: border-box;
+  }
+}
+
+/* Mesma quebra do Sidebar/MobileSidebar (860px, ver Sidebar.css) — abaixo
+   dela #sidebar (com .sb-logo) some, então o header mobile assume a logo. */
+@media (max-width: 860px) {
+  .hdr-brand-logo {
+    display: block;
+    width: 32px;
+    height: 32px;
   }
 }
