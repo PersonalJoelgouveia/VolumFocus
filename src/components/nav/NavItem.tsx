@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { NavTooltip } from './NavTooltip';
 
 const LONG_PRESS_MS = 450;
 
 interface NavItemProps {
-  icon: string;
+  icon: ReactNode;
   label: string;
   isActive: boolean;
   /** true = drawer aberto (ícone + rótulo lado a lado); false = rail icon-only. */
