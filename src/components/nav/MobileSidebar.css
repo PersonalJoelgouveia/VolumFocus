@@ -16,17 +16,17 @@
     height: 100vh;
     height: 100dvh;
     min-height: -webkit-fill-available;
-    width: 60px;
+    width: 72px;
     background: var(--bg-1);
     border-right: 1px solid var(--border);
     padding: calc(env(safe-area-inset-top, 0px) + 10px) 0 calc(env(safe-area-inset-bottom, 0px) + 10px);
     z-index: 200;
     overflow: hidden;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+    transition: width 0.3s ease-in-out, box-shadow 0.3s ease;
   }
 
   .mobile-sidebar.expanded {
-    width: 240px;
+    width: 280px;
     border-right: 1px solid var(--border-md);
     border-radius: 0 var(--rl) var(--rl) 0;
     box-shadow: 12px 0 32px rgba(0, 0, 0, 0.45);
@@ -55,10 +55,10 @@
 
 .msb-handle {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
   margin: 0 auto 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-2);
@@ -71,12 +71,37 @@
 }
 
 .mobile-sidebar.expanded .msb-handle {
-  margin: 0 0 14px 12px;
+  width: 100%;
+  height: auto;
+  margin: 0 0 14px;
+  padding: 6px 12px;
+  justify-content: flex-start;
 }
 
-.msb-handle:active {
-  transform: scale(0.92);
+.msb-logo-btn {
+  cursor: pointer;
+  padding: 6px;
+  opacity: 1;
+}
+
+.msb-logo-btn:hover {
+  transform: scale(1.02);
   border-color: var(--border-md);
+}
+
+.msb-logo-btn:active {
+  opacity: 0.9;
+}
+
+.msb-logo-img {
+  width: 100%;
+  height: auto;
+  max-height: 32px;
+  object-fit: contain;
+}
+
+.mobile-sidebar.expanded .msb-logo-img {
+  max-height: 48px;
 }
 
 .msb-list {

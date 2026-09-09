@@ -1,8 +1,11 @@
 import { useNotificationStore, selectUnreadCount } from '../../store/useNotificationStore';
+import { useThemeStore } from '../../store/useThemeStore';
 import { useUIStore } from '../../store/useUIStore';
 import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON, VIEW_META } from '../../types/view';
 import type { ViewId } from '../../types/view';
 import { NavItem } from './NavItem';
+import logoAzul from '../../assets/branding/JoelGouveia_Simbolo_Azul.png';
+import logoBranco from '../../assets/branding/JoelGouveia_Simbolo_Branco.png';
 import '../feedback/Notifications.css';
 import './MobileSidebar.css';
 
@@ -26,7 +29,9 @@ export function MobileSidebar() {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const collapseSidebar = useUIStore((s) => s.collapseSidebar);
   const unreadCount = useNotificationStore(selectUnreadCount);
+  const theme = useThemeStore((s) => s.theme);
   const expanded = !isCollapsed;
+  const logoSrc = theme === 'dark' ? logoBranco : logoAzul;
 
   const items: ViewId[] = [
     ...(isAlunoMode ? ALUNO_NAV : []),
@@ -47,12 +52,12 @@ export function MobileSidebar() {
       <nav className={`mobile-sidebar${expanded ? ' expanded' : ' collapsed'}`}>
         <button
           type="button"
-          className="msb-handle"
+          className="msb-handle msb-logo-btn"
           onClick={toggleSidebar}
           aria-label={expanded ? 'Recolher menu' : 'Expandir menu'}
           aria-expanded={expanded}
         >
-          {expanded ? '✕' : '☰'}
+          <img className="msb-logo-img" src={logoSrc} alt="Joel Gouveia" draggable={false} />
         </button>
 
         <div className="msb-list">
