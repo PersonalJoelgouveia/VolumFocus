@@ -10,8 +10,30 @@
 .pv-video-actions .btn { flex: 1; min-width: 130px; min-height: 48px; font-size: 0.82rem; }
 
 .pv-record-wrap { text-align: center; }
-.pv-record-preview { width: 100%; border-radius: var(--rs); overflow: hidden; background: #000; margin-bottom: 12px; border: 1px solid var(--border); }
+.pv-record-preview { position: relative; width: 100%; border-radius: var(--rs); overflow: hidden; background: #000; margin-bottom: 12px; border: 1px solid var(--border); }
 .pv-record-preview video { width: 100%; max-height: 320px; display: block; }
+
+.pv-camera-toggle-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.pv-camera-toggle-btn:hover { background: rgba(0, 0, 0, 0.75); }
+.pv-camera-toggle-btn:active { transform: scale(0.94); }
 .pv-rec-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; font-weight: 700; color: var(--red); margin-bottom: 10px; }
 .pv-rec-dot::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: croPulse 1s ease-in-out infinite; }
 .pv-record-controls { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }

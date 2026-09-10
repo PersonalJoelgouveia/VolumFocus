@@ -24,6 +24,17 @@ function pickMimeType(): string | undefined {
   return undefined;
 }
 
+/** Ícone minimalista de alternância de câmera — traçado no padrão Lucide (inline, sem dependência extra). */
+function FlipCameraIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 11a8 8 0 0 0-14.9-4M4 13a8 8 0 0 0 14.9 4" />
+      <polyline points="4 6 4 11 9 11" />
+      <polyline points="20 18 20 13 15 13" />
+    </svg>
+  );
+}
+
 interface PersonalVideoRecorderProps {
   exercise: Exercise;
 }
@@ -49,6 +60,7 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
   const [savedUrl, setSavedUrl] = useState<string | null>(null);
 
   const [phase, setPhase] = useState<RecorderPhase>('idle');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [recSeconds, setRecSeconds] = useState(0);
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewUrl, setReviewUrl] = useState<string | null>(null);
@@ -131,12 +143,29 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
 
   async function handleStartCamera() {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
       streamRef.current = stream;
       setPhase('live');
     } catch (e) {
       console.error('PersonalVideoRecorder: falha ao acessar câmera', e);
       showToast('⚠️ Não foi possível acessar a câmera. Verifique as permissões.', 'error');
+    }
+  }
+
+  // Troca frontal/traseira durante a preparação (fase 'live', antes de gravar):
+  // encerra as tracks atuais e reabre getUserMedia com o novo facingMode.
+  async function toggleCamera() {
+    const nextFacingMode = facingMode === 'environment' ? 'user' : 'environment';
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: nextFacingMode }, audio: true });
+      streamRef.current = stream;
+      setFacingMode(nextFacingMode);
+      if (liveVideoRef.current) liveVideoRef.current.srcObject = stream;
+    } catch (e) {
+      console.error('PersonalVideoRecorder: falha ao alternar câmera', e);
+      showToast('⚠️ Não foi possível alternar a câmera.', 'error');
     }
   }
 
@@ -241,6 +270,15 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
         <div className="pv-record-wrap">
           <div className="pv-record-preview">
             <video ref={liveVideoRef} autoPlay muted playsInline />
+            <button
+              type="button"
+              className="pv-camera-toggle-btn"
+              onClick={toggleCamera}
+              aria-label="Alternar câmera frontal/traseira"
+              title="Alternar câmera"
+            >
+              <FlipCameraIcon />
+            </button>
           </div>
           <div className="pv-record-controls">
             <button className="btn btn-primary" onClick={handleStartRecording}>

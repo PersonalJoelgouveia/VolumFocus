@@ -75,6 +75,7 @@ export function AppShell() {
   }, [isBlocked, setActiveView]);
 
   const safeView = isBlocked ? 'registro' : activeView;
+  const safeMeta = VIEW_META[safeView];
   const ActiveViewComponent = VIEW_COMPONENTS[safeView];
 
   // AppShell só renderiza com status==='granted' (ver AuthGate) — momento
