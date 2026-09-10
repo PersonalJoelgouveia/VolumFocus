@@ -1,0 +1,12 @@
+/* Reset mínimo — o restante do estilo global vive em styles/tokens.css.
+   Sem 100vw/overflow-hidden na raiz: em vez de mascarar vazamento de tela,
+   a cadeia de dimensionamento (width/max-width/min-width/box-sizing) é
+   respeitada em html/body/#root até #app-shell/#app-main/.app-content
+   (ver AppShell.css), que é onde o overflow real era causado. */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}

@@ -1,0 +1,180 @@
+.cro-widget {
+  position: fixed;
+  right: 14px;
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: 7000;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+@media (min-width: 861px) {
+  .cro-widget {
+    bottom: 24px;
+  }
+}
+
+.cro-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, rgba(10, 10, 14, 0.95) 0%, rgba(0, 196, 179, 0.05) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 196, 179, 0.2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 196, 179, 0.1);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+  user-select: none;
+}
+
+.cro-pill:hover {
+  transform: translateY(-2px);
+}
+
+.cro-pill:active {
+  transform: scale(0.96);
+}
+
+.cro-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 7px rgba(0, 196, 179, 0.8);
+  animation: croPulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.cro-dot.cro-paused {
+  background: var(--text-3);
+  box-shadow: none;
+  animation: none;
+}
+
+@keyframes croPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.cro-time {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  min-width: 62px;
+}
+
+.cro-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(10, 10, 14, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 196, 179, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 196, 179, 0.1);
+  min-width: 200px;
+}
+
+.cro-panel-time {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--teal);
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 2px 0 6px;
+}
+
+.cro-panel-label {
+  font-size: 0.67rem;
+  color: var(--text-3);
+  text-align: center;
+  margin-top: -6px;
+  margin-bottom: 4px;
+  font-family: var(--font-title);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cro-kcal-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 0 2px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--orange);
+  font-weight: 600;
+}
+
+.cro-kcal-ico {
+  font-size: 0.85rem;
+}
+
+.cro-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+.cro-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.cro-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-family: var(--font-title);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 38px;
+}
+
+.cro-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
+.cro-btn.cro-btn-rest {
+  border-color: var(--teal-border);
+  background: rgba(0, 196, 179, 0.12);
+  color: var(--teal);
+}
+
+.cro-btn.cro-btn-rest:hover {
+  background: rgba(0, 196, 179, 0.22);
+}
+
+.cro-btn.cro-btn-stop {
+  border-color: rgba(255, 77, 109, 0.3);
+  background: rgba(255, 77, 109, 0.1);
+  color: var(--red);
+}
+
+.cro-btn.cro-btn-stop:hover {
+  background: rgba(255, 77, 109, 0.2);
+}

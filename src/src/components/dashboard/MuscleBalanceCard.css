@@ -1,0 +1,77 @@
+.bal-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.bal-name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.bal-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.bal-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bal-count {
+  font-family: var(--font-mono);
+  font-size: 0.67rem;
+  color: var(--text-3);
+  min-width: 28px;
+  text-align: right;
+}
+
+.bal-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: var(--rs);
+  font-size: 0.77rem;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.bal-alert.danger {
+  background: var(--red-bg);
+  border: 1px solid rgba(255, 77, 109, 0.2);
+  color: var(--red);
+}
+
+.bal-alert.warn {
+  background: var(--orange-bg);
+  border: 1px solid rgba(255, 150, 64, 0.2);
+  color: var(--orange);
+}
+
+.bal-alert.ok {
+  background: var(--green-bg);
+  border: 1px solid rgba(34, 211, 160, 0.2);
+  color: var(--green);
+}
+
+.bal-ratio {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  padding: 7px 11px;
+  margin-top: 10px;
+  margin-bottom: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}

@@ -1,0 +1,58 @@
+.vf-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-1);
+  padding: 24px;
+}
+
+.vf-gate-box {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px 24px;
+}
+
+.vf-gate-box h2 {
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+  margin: 0 0 10px;
+}
+
+.vf-gate-box p {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+
+.vf-gate-error {
+  color: var(--red) !important;
+}
+
+.vf-gate-box .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.vf-gate-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--teal);
+  animation: vfSpin 0.8s linear infinite;
+}
+
+@keyframes vfSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

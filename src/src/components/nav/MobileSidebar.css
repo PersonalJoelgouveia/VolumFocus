@@ -1,0 +1,236 @@
+/* Desktop: navegação é feita pela Sidebar (#sidebar, ver Sidebar.css). */
+.mobile-sidebar,
+.msb-backdrop {
+  display: none;
+}
+
+/* Mesma quebra usada em Sidebar.css — abaixo de 860px a MobileSidebar assume a navegação. */
+@media (max-width: 860px) {
+  .mobile-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
+    width: 72px;
+    background: var(--bg-1);
+    border-right: 1px solid var(--border);
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 0 calc(env(safe-area-inset-bottom, 0px) + 10px);
+    z-index: 200;
+    overflow: hidden;
+    transition: width 0.3s ease-in-out, box-shadow 0.3s ease;
+  }
+
+  .mobile-sidebar.expanded {
+    width: 280px;
+    border-right: 1px solid var(--border-md);
+    border-radius: 0 var(--rl) var(--rl) 0;
+    box-shadow: 12px 0 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .msb-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    animation: msb-fade-in 0.2s ease;
+  }
+}
+
+@keyframes msb-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.msb-handle {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-2);
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  transition: var(--tr);
+}
+
+.mobile-sidebar.expanded .msb-handle {
+  width: 100%;
+  height: auto;
+  margin: 0 0 14px;
+  padding: 6px 12px;
+  justify-content: flex-start;
+}
+
+.msb-logo-btn {
+  cursor: pointer;
+  padding: 6px;
+  opacity: 1;
+}
+
+.msb-logo-btn:hover {
+  transform: scale(1.02);
+  border-color: var(--border-md);
+}
+
+.msb-logo-btn:active {
+  opacity: 0.9;
+}
+
+.msb-logo-img {
+  width: 100%;
+  height: auto;
+  max-height: 32px;
+  object-fit: contain;
+}
+
+.mobile-sidebar.expanded .msb-logo-img {
+  max-height: 48px;
+}
+
+.msb-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.mobile-sidebar.expanded .msb-list {
+  align-items: stretch;
+  padding: 0 8px;
+}
+
+.msb-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mobile-sidebar.expanded .msb-footer {
+  align-items: stretch;
+  padding: 8px 8px 0;
+}
+
+.msb-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  width: 44px;
+  height: 44px;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: var(--tr);
+}
+
+.msb-item.expanded {
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  justify-content: flex-start;
+  padding: 9px;
+}
+
+.msb-item:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.msb-item.active {
+  color: var(--text);
+}
+
+.msb-icon {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  transition: var(--tr);
+}
+
+.msb-item.active .msb-icon {
+  background: var(--teal-glow);
+  border-color: var(--teal-border);
+  box-shadow: 0 0 12px rgba(0, 196, 179, 0.12);
+}
+
+.msb-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tooltip de long-press — só existe em modo icon-only (ver NavItem). */
+.nav-tooltip {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px) scale(0.94);
+  background: var(--bg-3);
+  border: 1px solid var(--border-md);
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 7px 12px;
+  border-radius: var(--rs);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 210;
+}
+
+.nav-tooltip.visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0) scale(1);
+}
+
+.nav-tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-right-color: var(--bg-3);
+}
