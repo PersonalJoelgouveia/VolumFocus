@@ -11,5 +11,6 @@ export type {
 export type { WearableProvider } from './WearableProvider';
 export { WebFallbackProvider } from './WebFallbackProvider';
 export { HealthConnectProvider } from './HealthConnectProvider';
+export { HealthKitProvider } from './HealthKitProvider';
 export { detectPlatform } from './platform';
 export { WearableService, getWearableService, resetWearableService } from './WearableService';

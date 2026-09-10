@@ -11,6 +11,7 @@ import type { PlatformId } from './models';
 import type { WearableProvider } from './WearableProvider';
 import { WebFallbackProvider } from './WebFallbackProvider';
 import { HealthConnectProvider } from './HealthConnectProvider';
+import { HealthKitProvider } from './HealthKitProvider';
 import { detectPlatform } from './platform';
 
 export class WearableService {
@@ -54,6 +55,9 @@ export function getWearableService(): WearableService {
       // seguem 100% no WebFallbackProvider, sem nenhuma mudança de
       // comportamento.
       singleton.registerProvider('android', new HealthConnectProvider());
+    }
+    if (platform === 'ios') {
+      singleton.registerProvider('ios', new HealthKitProvider());
     }
   }
   return singleton;

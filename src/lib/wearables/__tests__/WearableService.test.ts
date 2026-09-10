@@ -9,6 +9,7 @@ import { Capacitor } from '@capacitor/core';
 import { WearableService, getWearableService, resetWearableService } from '../WearableService';
 import { WebFallbackProvider } from '../WebFallbackProvider';
 import { HealthConnectProvider } from '../HealthConnectProvider';
+import { HealthKitProvider } from '../HealthKitProvider';
 import type { WearableProvider } from '../WearableProvider';
 
 describe('WearableService', () => {
@@ -65,6 +66,12 @@ describe('WearableService', () => {
     vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
     const service = getWearableService();
     expect(service.getProvider()).toBeInstanceOf(HealthConnectProvider);
+  });
+
+  it('getWearableService() registra HealthKitProvider real quando a plataforma é ios', () => {
+    vi.mocked(Capacitor.getPlatform).mockReturnValue('ios');
+    const service = getWearableService();
+    expect(service.getProvider()).toBeInstanceOf(HealthKitProvider);
   });
 
   it('getWearableService() mantém WebFallbackProvider na Web (sem bridge nenhuma)', () => {
