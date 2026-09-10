@@ -1,8 +1,9 @@
 import { useNotificationStore, selectUnreadCount } from '../../store/useNotificationStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useUIStore } from '../../store/useUIStore';
-import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON, VIEW_META } from '../../types/view';
+import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON } from '../../types/view';
 import type { ViewId } from '../../types/view';
+import { useT } from '../../i18n/useT';
 import { NavItem } from './NavItem';
 import logoAzul from '../../assets/branding/JoelGouveia_Simbolo_Azul.png';
 import logoBranco from '../../assets/branding/JoelGouveia_Simbolo_Branco.png';
@@ -21,6 +22,7 @@ import './MobileSidebar.css';
  * MobileSidebar.css) — mesma quebra que antes escondia a Sidebar desktop.
  */
 export function MobileSidebar() {
+  const t = useT();
   const activeView = useUIStore((s) => s.activeView);
   const setActiveView = useUIStore((s) => s.setActiveView);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
@@ -54,7 +56,7 @@ export function MobileSidebar() {
           type="button"
           className="msb-handle msb-logo-btn"
           onClick={toggleSidebar}
-          aria-label={expanded ? 'Recolher menu' : 'Expandir menu'}
+          aria-label={expanded ? t('nav.aria.collapse') : t('nav.aria.expand')}
           aria-expanded={expanded}
         >
           <img className="msb-logo-img" src={logoSrc} alt="Joel Gouveia" draggable={false} />
@@ -65,7 +67,7 @@ export function MobileSidebar() {
             <NavItem
               key={view}
               icon={VIEW_ICON[view] ?? '•'}
-              label={VIEW_META[view].title}
+              label={t(`nav.view.${view}.title`)}
               isActive={activeView === view}
               expanded={expanded}
               badgeCount={view === 'notifications' ? unreadCount : 0}
@@ -77,7 +79,7 @@ export function MobileSidebar() {
         <div className="msb-footer">
           <NavItem
             icon="⚙️"
-            label="Configurações"
+            label={t('nav.view.settings.title')}
             isActive={activeView === 'settings'}
             expanded={expanded}
             onSelect={handleSettingsSelect}

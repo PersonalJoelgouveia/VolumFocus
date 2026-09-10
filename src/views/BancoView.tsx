@@ -5,6 +5,7 @@ import { useUIStore } from '../store/useUIStore';
 import { MUSCLE_COLOR } from '../data/muscleColors';
 import type { Exercise } from '../types/exercise';
 import { ExerciseCreatorPanel } from '../components/banco/ExerciseCreatorPanel';
+import { useT, useExerciseName, useMuscleLabel } from '../i18n/useT';
 import '../components/registro/DayExerciseList.css';
 import '../components/banco/ExerciseCreatorPanel.css';
 
@@ -15,6 +16,9 @@ import '../components/banco/ExerciseCreatorPanel.css';
  * item. PT-only (ver types/view.ts).
  */
 export function BancoView() {
+  const t = useT();
+  const exerciseName = useExerciseName();
+  const muscleLabel = useMuscleLabel();
   const exercises = useExerciseStore((s) => s.exercises);
   const removeExercise = useExerciseStore((s) => s.removeExercise);
   const showToast = useUIStore((s) => s.showToast);
@@ -23,7 +27,9 @@ export function BancoView() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const q = query.trim().toLowerCase();
-  const filtered = exercises.filter((e) => e.name.toLowerCase().includes(q) || e.agonist.toLowerCase().includes(q));
+  const filtered = exercises.filter(
+    (e) => exerciseName(e).toLowerCase().includes(q) || e.agonist.toLowerCase().includes(q)
+  );
 
   const grouped: Record<string, Exercise[]> = {};
   filtered.forEach((e) => {
@@ -34,7 +40,7 @@ export function BancoView() {
   const editingExercise = editingId ? exercises.find((e) => e.id === editingId) : undefined;
 
   async function handleDelete(ex: Exercise) {
-    const ok = await useConfirmStore.getState().ask(`Remover "${ex.name}" do banco?`, {
+    const ok = await useConfirmStore.getState().ask(`Remover "${exerciseName(ex)}" do banco?`, {
       confirmLabel: 'Remover',
       danger: true,
     });
@@ -48,7 +54,7 @@ export function BancoView() {
     <div>
       <div className="sec-row">
         <div className="page-title">
-          Banco de Exercícios <span className="tag">BIBLIOTECA</span>
+          {t('banco.title')} <span className="tag">{t('banco.tag')}</span>
         </div>
       </div>
 
@@ -60,7 +66,7 @@ export function BancoView() {
 
       <div className="search-wrap">
         <span className="search-icon">🔍</span>
-        <input type="text" placeholder="Buscar exercício…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <input type="text" placeholder={t('banco.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
 
       <div className="info-box mb-4">
@@ -75,7 +81,7 @@ export function BancoView() {
       </div>
 
       {groups.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>Nenhum exercício encontrado.</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>{t('banco.empty')}</div>
       ) : (
         groups.map(([muscle, exs]) => {
           const color = MUSCLE_COLOR[muscle as keyof typeof MUSCLE_COLOR] ?? '#888';
@@ -95,7 +101,7 @@ export function BancoView() {
                 }}
               >
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-                {muscle}
+                {muscleLabel(muscle as Parameters<typeof muscleLabel>[0])}
               </div>
               {exs.map((e) => {
                 const isCardio = e.type === 'cardio';
@@ -104,7 +110,7 @@ export function BancoView() {
                     <div className="ex-accent" style={{ background: color }} />
                     <div className="ex-info">
                       <div className="ex-name">
-                        {e.name}
+                        {exerciseName(e)}
                         {(e.imgInicio || e.imgFim) && (
                           <span title="Tem imagens de execução" style={{ marginLeft: 6, fontSize: '0.7rem' }}>
                             🖼️
@@ -118,18 +124,18 @@ export function BancoView() {
                       </div>
                       <div className="ex-tags">
                         {isCardio ? (
-                          <span className="ex-tag ex-tag-cardio">❤️ Cardio</span>
+                          <span className="ex-tag ex-tag-cardio">❤️ {t('banco.cardioTag')}</span>
                         ) : (
                           <>
-                            <span className="ex-tag ex-tag-ag">{e.agonist}</span>
+                            <span className="ex-tag ex-tag-ag">{muscleLabel(e.agonist)}</span>
                             {e.synergist.map((s) => (
                               <span className="ex-tag ex-tag-sin" key={s}>
-                                {s}
+                                {muscleLabel(s)}
                               </span>
                             ))}
                             {e.stabilizer.map((s) => (
                               <span className="ex-tag ex-tag-est" key={s}>
-                                {s}
+                                {muscleLabel(s)}
                               </span>
                             ))}
                           </>

@@ -16,6 +16,7 @@ import { TimerConfirmModal } from '../components/timer/TimerConfirmModal';
 import { MetWeightModal } from '../components/timer/MetWeightModal';
 import { ProgressPopup } from '../components/analytics/ProgressPopup';
 import { VIEW_META } from '../types/view';
+import { useT } from '../i18n/useT';
 
 import { RegistroView } from '../views/RegistroView';
 import { DashboardView } from '../views/DashboardView';
@@ -55,6 +56,7 @@ const VIEW_COMPONENTS = {
 } as const;
 
 export function AppShell() {
+  const t = useT();
   const activeView = useUIStore((s) => s.activeView);
   const setActiveView = useUIStore((s) => s.setActiveView);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
@@ -90,8 +92,8 @@ export function AppShell() {
         <header className="app-header">
           <div className="hdr-title-row">
             <div>
-              <div className="hdr-title">{safeMeta.title}</div>
-              <div className="hdr-sub">{safeMeta.sub}</div>
+              <div className="hdr-title">{t(`nav.view.${safeView}.title`)}</div>
+              <div className="hdr-sub">{t(`nav.view.${safeView}.sub`)}</div>
             </div>
             <UserMenu />
           </div>
