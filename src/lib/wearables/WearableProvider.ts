@@ -26,6 +26,8 @@ export interface WearableProvider {
   requestPermissions(scopes: WearableScope[]): Promise<boolean>;
 
   getHeartRate(range: DateRange): Promise<HeartRateSample[]>;
+  /** FC em repouso — mesmo formato de HeartRateSample, escopo de permissão separado. */
+  getRestingHeartRate(range: DateRange): Promise<HeartRateSample[]>;
   getSteps(range: DateRange): Promise<StepSample[]>;
   getDistance(range: DateRange): Promise<DistanceSample[]>;
   getCalories(range: DateRange): Promise<CalorieSample[]>;

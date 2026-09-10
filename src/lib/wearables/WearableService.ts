@@ -10,6 +10,7 @@
 import type { PlatformId } from './models';
 import type { WearableProvider } from './WearableProvider';
 import { WebFallbackProvider } from './WebFallbackProvider';
+import { HealthConnectProvider } from './HealthConnectProvider';
 import { detectPlatform } from './platform';
 
 export class WearableService {
@@ -46,7 +47,14 @@ let singleton: WearableService | null = null;
  *  pela sessão do app. */
 export function getWearableService(): WearableService {
   if (!singleton) {
-    singleton = new WearableService(detectPlatform());
+    const platform = detectPlatform();
+    singleton = new WearableService(platform);
+    if (platform === 'android') {
+      // Único ponto de wiring do provider real desta etapa — Web e iOS
+      // seguem 100% no WebFallbackProvider, sem nenhuma mudança de
+      // comportamento.
+      singleton.registerProvider('android', new HealthConnectProvider());
+    }
   }
   return singleton;
 }

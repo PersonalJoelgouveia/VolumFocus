@@ -17,6 +17,7 @@ describe('WebFallbackProvider', () => {
   it('retorna listas vazias pra todos os tipos de dado', async () => {
     const provider = new WebFallbackProvider();
     await expect(provider.getHeartRate(range)).resolves.toEqual([]);
+    await expect(provider.getRestingHeartRate(range)).resolves.toEqual([]);
     await expect(provider.getSteps(range)).resolves.toEqual([]);
     await expect(provider.getDistance(range)).resolves.toEqual([]);
     await expect(provider.getCalories(range)).resolves.toEqual([]);

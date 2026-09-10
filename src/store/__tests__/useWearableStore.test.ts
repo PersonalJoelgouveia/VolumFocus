@@ -4,6 +4,7 @@ const mockProvider = {
   isAvailable: vi.fn(),
   requestPermissions: vi.fn(),
   getHeartRate: vi.fn(),
+  getRestingHeartRate: vi.fn(),
   getSteps: vi.fn(),
   getDistance: vi.fn(),
   getCalories: vi.fn(),

@@ -6,7 +6,7 @@
 
 export type PlatformId = 'android' | 'ios' | 'web';
 
-export type WearableScope = 'heartRate' | 'steps' | 'distance' | 'calories' | 'sessions';
+export type WearableScope = 'heartRate' | 'restingHeartRate' | 'steps' | 'distance' | 'calories' | 'sessions';
 
 export interface DateRange {
   start: Date;

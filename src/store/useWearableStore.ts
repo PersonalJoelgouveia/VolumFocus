@@ -29,6 +29,7 @@ interface WearableState {
   // chamador, igual useHealthStore (decisão de privacidade ainda pendente
   // sobre persistir dado bruto de saúde).
   fetchHeartRate: (range: DateRange) => Promise<HeartRateSample[]>;
+  fetchRestingHeartRate: (range: DateRange) => Promise<HeartRateSample[]>;
   fetchSteps: (range: DateRange) => Promise<StepSample[]>;
   fetchDistance: (range: DateRange) => Promise<DistanceSample[]>;
   fetchCalories: (range: DateRange) => Promise<CalorieSample[]>;
@@ -72,6 +73,7 @@ export const useWearableStore = create<WearableState>()(
       },
 
       fetchHeartRate: (range) => getWearableService().getProvider().getHeartRate(range),
+      fetchRestingHeartRate: (range) => getWearableService().getProvider().getRestingHeartRate(range),
       fetchSteps: (range) => getWearableService().getProvider().getSteps(range),
       fetchDistance: (range) => getWearableService().getProvider().getDistance(range),
       fetchCalories: (range) => getWearableService().getProvider().getCalories(range),

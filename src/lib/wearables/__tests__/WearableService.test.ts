@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: vi.fn(() => 'web') },
+  registerPlugin: vi.fn(() => ({})),
 }));
 
+import { Capacitor } from '@capacitor/core';
 import { WearableService, getWearableService, resetWearableService } from '../WearableService';
 import { WebFallbackProvider } from '../WebFallbackProvider';
+import { HealthConnectProvider } from '../HealthConnectProvider';
 import type { WearableProvider } from '../WearableProvider';
 
 describe('WearableService', () => {
@@ -31,6 +34,7 @@ describe('WearableService', () => {
       isAvailable: vi.fn().mockResolvedValue(true),
       requestPermissions: vi.fn().mockResolvedValue(true),
       getHeartRate: vi.fn().mockResolvedValue([]),
+      getRestingHeartRate: vi.fn().mockResolvedValue([]),
       getSteps: vi.fn().mockResolvedValue([]),
       getDistance: vi.fn().mockResolvedValue([]),
       getCalories: vi.fn().mockResolvedValue([]),
@@ -55,5 +59,17 @@ describe('WearableService', () => {
     resetWearableService();
     const b = getWearableService();
     expect(a).not.toBe(b);
+  });
+
+  it('getWearableService() registra HealthConnectProvider real quando a plataforma é android', () => {
+    vi.mocked(Capacitor.getPlatform).mockReturnValue('android');
+    const service = getWearableService();
+    expect(service.getProvider()).toBeInstanceOf(HealthConnectProvider);
+  });
+
+  it('getWearableService() mantém WebFallbackProvider na Web (sem bridge nenhuma)', () => {
+    vi.mocked(Capacitor.getPlatform).mockReturnValue('web');
+    const service = getWearableService();
+    expect(service.getProvider()).toBeInstanceOf(WebFallbackProvider);
   });
 });

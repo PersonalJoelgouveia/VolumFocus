@@ -37,6 +37,10 @@ export class WebFallbackProvider implements WearableProvider {
     return [];
   }
 
+  async getRestingHeartRate(_range: DateRange): Promise<HeartRateSample[]> {
+    return [];
+  }
+
   async getSteps(_range: DateRange): Promise<StepSample[]> {
     return [];
   }
