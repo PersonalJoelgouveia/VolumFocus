@@ -4,6 +4,11 @@ import type { CardioWeekSummary } from '../../types/history';
 
 interface CardioGoalCardProps {
   summary: CardioWeekSummary;
+  /** Minutos vindos de sessões wearable não-duplicadas da semana (ver
+   *  useWearableCardioWeek) — somados ao total manual pra fins da meta.
+   *  O cálculo de %/restante/concluído continua o mesmo de sempre, só
+   *  recebe um total maior quando há wearable conectado. */
+  wearableExtraMin?: number;
 }
 
 /**
@@ -12,15 +17,16 @@ interface CardioGoalCardProps {
  * configurável via useCardioGoalStore (mesma store que a NovaSemanaView
  * lê, para não ter dois números "meta semanal" divergentes no app).
  */
-export function CardioGoalCard({ summary }: CardioGoalCardProps) {
+export function CardioGoalCard({ summary, wearableExtraMin = 0 }: CardioGoalCardProps) {
   const metaMin = useCardioGoalStore((s) => s.metaMin);
   const setMetaMin = useCardioGoalStore((s) => s.setMetaMin);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(metaMin));
 
-  const pct = metaMin > 0 ? Math.min(100, (summary.totalMin / metaMin) * 100) : 0;
-  const restantes = Math.max(0, metaMin - summary.totalMin);
-  const done = summary.totalMin >= metaMin;
+  const totalMin = summary.totalMin + wearableExtraMin;
+  const pct = metaMin > 0 ? Math.min(100, (totalMin / metaMin) * 100) : 0;
+  const restantes = Math.max(0, metaMin - totalMin);
+  const done = totalMin >= metaMin;
 
   function salvarMeta() {
     const val = parseInt(draft, 10);
@@ -48,7 +54,7 @@ export function CardioGoalCard({ summary }: CardioGoalCardProps) {
           </div>
         ) : (
           <div>
-            <span className="cardio-goal-value">{summary.totalMin}</span>
+            <span className="cardio-goal-value">{totalMin}</span>
             <span className="cardio-goal-of"> / {metaMin} min</span>
           </div>
         )}
@@ -83,6 +89,12 @@ export function CardioGoalCard({ summary }: CardioGoalCardProps) {
           <div className="cardio-sub-stat-value">{done ? '✅' : `${restantes} min`}</div>
         </div>
       </div>
+
+      {wearableExtraMin > 0 && (
+        <div className="cardio-goal-breakdown">
+          ✍️ Manual: {summary.totalMin} min &nbsp;·&nbsp; ⌚ Wearable: {wearableExtraMin} min
+        </div>
+      )}
     </div>
   );
 }
