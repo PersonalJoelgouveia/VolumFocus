@@ -1,0 +1,152 @@
+.sd-view { max-width: 720px; margin: 0 auto; }
+
+/* ---------- Card de conexão ---------- */
+.sd-conn-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sd-conn-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sd-conn-icon {
+  font-size: 1.4rem;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-3);
+  border-radius: var(--r);
+}
+
+.sd-conn-info { flex: 1; min-width: 0; }
+.sd-conn-platform { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+.sd-conn-sync { font-size: 0.72rem; color: var(--text-3); margin-top: 2px; }
+
+.sd-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.sd-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.sd-status-connected { color: var(--green); background: var(--green-bg); }
+.sd-status-disconnected { color: var(--text-3); background: var(--bg-3); }
+.sd-status-syncing { color: var(--teal); background: var(--teal-glow); }
+.sd-status-syncing .sd-status-dot { animation: sd-pulse 1s ease-in-out infinite; }
+.sd-status-error { color: var(--red); background: var(--red-bg); }
+
+.sd-conn-cta {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--rs);
+  border: 1px solid var(--teal-border);
+  background: var(--teal-glow);
+  color: var(--teal);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: var(--tr);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sd-conn-cta:active { transform: scale(0.98); }
+.sd-conn-cta:disabled { opacity: 0.6; cursor: default; }
+
+.sd-conn-cta.sd-cta-retry { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+
+.sd-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: sd-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ---------- Dashboard de métricas ---------- */
+.sd-section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  font-weight: 700;
+  margin: 0 4px 8px;
+}
+
+/* skeleton (loading) — mesmo grid-auto dos conquest-card, placeholders pulsando */
+.sd-skel-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  height: 84px;
+}
+
+.sd-skel-line {
+  height: 10px;
+  border-radius: 4px;
+  background: var(--bg-3);
+  animation: sd-pulse 1.2s ease-in-out infinite;
+}
+
+.sd-skel-line.sd-skel-lg { height: 22px; width: 60%; margin-top: 10px; }
+.sd-skel-line.sd-skel-sm { width: 40%; }
+
+/* estado neutro/vazio/erro/fallback web — mesmo padrão de CalorieCard (met-neutral) */
+.sd-neutral-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.sd-neutral-ico { font-size: 1.8rem; }
+.sd-neutral-txt { font-size: 0.85rem; color: var(--text-2); max-width: 320px; }
+.sd-neutral-card.sd-neutral-error .sd-neutral-txt { color: var(--red); }
+
+.sd-metric-footer { font-size: 0.68rem; color: var(--text-3); margin-top: 4px; }
+
+@keyframes sd-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes sd-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Viewports estreitos (360–430px) ---------- */
+@media (max-width: 420px) {
+  .sd-conn-top { flex-wrap: wrap; }
+  .sd-status { order: 3; margin-left: 52px; }
+}
