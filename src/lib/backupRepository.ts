@@ -83,6 +83,11 @@ export const LOCAL_STORAGE_KEYS = [
   'jg3_cardio_data',
   'jg3_cardio_meta',
   'jg3_dirty',
+  // Status de conexão wearable (Health Connect/HealthKit) — não guarda dado
+  // de saúde em si (isso é IndexedDB à parte, limpo via
+  // wipeWearableLocalHistory() no logout), mas precisa sair daqui também
+  // pra o próximo usuário do mesmo aparelho não herdar "conectado".
+  'jg3_wearable_status',
 ];
 
 /** Lê o estado atual de todas as stores locais persistidas — sucessor de BACKUP_KEYS. */

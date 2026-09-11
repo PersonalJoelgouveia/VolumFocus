@@ -17,6 +17,7 @@ import { HealthKitProvider } from './HealthKitProvider';
 import { detectPlatform } from './platform';
 import { hashRecordId } from './recordId';
 import * as LocalStore from './WearableLocalStore';
+import { warnDev } from './devLog';
 
 /** Todos os escopos que a sincronização automática cobre. `sessions` fica
  *  de fora do loop genérico (formato próprio, sem "valor" único) e ganha
@@ -225,7 +226,7 @@ export class WearableService {
       return { scope, status: 'ok', recordsWritten };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      console.warn(`WearableService: sync do escopo "${scope}" falhou, mantendo cursor anterior`, e);
+      warnDev(`WearableService: sync do escopo "${scope}" falhou, mantendo cursor anterior`, e);
       await LocalStore.setCursor(scope, { lastSyncAt: now.toISOString(), lastSuccessfulSyncAt: cursor.lastSuccessfulSyncAt });
       const existing = (await LocalStore.listRetryQueue()).find((entry) => entry.scope === scope);
       await LocalStore.enqueueRetry({

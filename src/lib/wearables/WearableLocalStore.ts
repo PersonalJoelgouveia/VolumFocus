@@ -19,6 +19,22 @@
  */
 
 import type { SyncCursor, SyncRetryEntry, WearableScope, WearableSyncRecord } from './models';
+import { warnDev } from './devLog';
+import { decryptPayload, encryptPayload, isEncryptedPayload } from './secureStorage';
+
+/** Teto de amostras retornadas por consulta pro escopo de FC (o único
+ *  realmente contínuo/alta-frequência aqui) — protege qualquer consumidor
+ *  atual ou futuro de carregar centenas de milhares de pontos de uma vez
+ *  na memória. Downsample uniforme, não corta o intervalo, só a densidade. */
+const MAX_HEART_RATE_POINTS = 2000;
+
+function downsampleUniform<T>(items: T[], maxPoints: number): T[] {
+  if (items.length <= maxPoints) return items;
+  const step = items.length / maxPoints;
+  const out: T[] = [];
+  for (let i = 0; i < maxPoints; i++) out.push(items[Math.floor(i * step)]);
+  return out;
+}
 
 const DB_NAME = 'volumfocus-wearables';
 const DB_VERSION = 1;
@@ -86,11 +102,17 @@ export async function putRecords(records: WearableSyncRecord[]): Promise<number>
   let written = 0;
   for (let i = 0; i < records.length; i += CHUNK) {
     const chunk = records.slice(i, i + CHUNK);
+    // `payload` (o dado de saúde em si) é cifrado antes de entrar na
+    // transação — id/type/timestamp continuam em texto plano (servem de
+    // índice pra by_type_timestamp).
+    const encryptedChunk = await Promise.all(
+      chunk.map(async (record) => ({ ...record, payload: await encryptPayload(record.payload) }))
+    );
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_RECORDS, 'readwrite');
       const store = tx.objectStore(STORE_RECORDS);
-      for (const record of chunk) store.put(record);
+      for (const record of encryptedChunk) store.put(record);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error('Falha ao gravar registros de wearable'));
     });
@@ -110,7 +132,7 @@ export async function getRecordsInRange(
 ): Promise<WearableSyncRecord[]> {
   try {
     const db = await openDb();
-    return await new Promise((resolve, reject) => {
+    const raw = await new Promise<WearableSyncRecord[]>((resolve, reject) => {
       const tx = db.transaction(STORE_RECORDS, 'readonly');
       const index = tx.objectStore(STORE_RECORDS).index('by_type_timestamp');
       const lower = [type, range.start.toISOString()];
@@ -128,8 +150,18 @@ export async function getRecordsInRange(
       };
       req.onerror = () => reject(req.error ?? new Error('Falha ao ler histórico local de wearable'));
     });
+
+    // Compatível com registros antigos gravados antes da criptografia em
+    // repouso (payload em texto plano) — só decifra o que veio cifrado.
+    const decrypted = await Promise.all(
+      raw.map(async (r) => (isEncryptedPayload(r.payload) ? { ...r, payload: await decryptPayload(r.payload) } : r))
+    );
+
+    // FC é o único escopo realmente contínuo/alta-frequência — downsample
+    // uniforme protege contra arrays de centenas de milhares de pontos.
+    return type === 'heartRate' ? downsampleUniform(decrypted, MAX_HEART_RATE_POINTS) : decrypted;
   } catch (e) {
-    console.warn('WearableLocalStore: getRecordsInRange falhou, retornando vazio', e);
+    warnDev('WearableLocalStore: getRecordsInRange falhou, retornando vazio', e);
     return [];
   }
 }
@@ -141,7 +173,7 @@ export async function getCursor(scope: WearableScope): Promise<SyncCursor> {
     );
     return result ? { lastSyncAt: result.lastSyncAt, lastSuccessfulSyncAt: result.lastSuccessfulSyncAt } : { lastSyncAt: null, lastSuccessfulSyncAt: null };
   } catch (e) {
-    console.warn(`WearableLocalStore: getCursor(${scope}) falhou, tratando como primeiro sync`, e);
+    warnDev(`WearableLocalStore: getCursor(${scope}) falhou, tratando como primeiro sync`, e);
     return { lastSyncAt: null, lastSuccessfulSyncAt: null };
   }
 }
@@ -150,7 +182,7 @@ export async function setCursor(scope: WearableScope, cursor: SyncCursor): Promi
   try {
     await runTx(STORE_CURSORS, 'readwrite', (store) => store.put({ scope, ...cursor }));
   } catch (e) {
-    console.warn(`WearableLocalStore: setCursor(${scope}) falhou`, e);
+    warnDev(`WearableLocalStore: setCursor(${scope}) falhou`, e);
   }
 }
 
@@ -158,7 +190,7 @@ export async function listRetryQueue(): Promise<SyncRetryEntry[]> {
   try {
     return await runTx<SyncRetryEntry[]>(STORE_RETRY_QUEUE, 'readonly', (store) => store.getAll());
   } catch (e) {
-    console.warn('WearableLocalStore: listRetryQueue falhou, tratando fila como vazia', e);
+    warnDev('WearableLocalStore: listRetryQueue falhou, tratando fila como vazia', e);
     return [];
   }
 }
@@ -167,7 +199,7 @@ export async function enqueueRetry(entry: SyncRetryEntry): Promise<void> {
   try {
     await runTx(STORE_RETRY_QUEUE, 'readwrite', (store) => store.put(entry));
   } catch (e) {
-    console.warn('WearableLocalStore: enqueueRetry falhou', e);
+    warnDev('WearableLocalStore: enqueueRetry falhou', e);
   }
 }
 
@@ -175,7 +207,7 @@ export async function dequeueRetry(id: string): Promise<void> {
   try {
     await runTx(STORE_RETRY_QUEUE, 'readwrite', (store) => store.delete(id));
   } catch (e) {
-    console.warn('WearableLocalStore: dequeueRetry falhou', e);
+    warnDev('WearableLocalStore: dequeueRetry falhou', e);
   }
 }
 
@@ -195,7 +227,7 @@ export async function wipeAll(): Promise<void> {
       tx.onerror = () => reject(tx.error ?? new Error('Falha ao limpar dados locais de wearable'));
     });
   } catch (e) {
-    console.warn('WearableLocalStore: wipeAll falhou', e);
+    warnDev('WearableLocalStore: wipeAll falhou', e);
   }
 }
 

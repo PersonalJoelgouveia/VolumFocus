@@ -23,6 +23,7 @@ import type {
   WearableWorkoutSession,
 } from './models';
 import type { WearableProvider } from './WearableProvider';
+import { warnDev } from './devLog';
 
 const SCOPE_TO_DATATYPE: Record<WearableScope, HealthDataType> = {
   heartRate: 'heartRate',
@@ -44,7 +45,7 @@ export class HealthConnectProvider implements WearableProvider {
       const result = await Health.isAvailable();
       return result.available;
     } catch (e) {
-      console.warn('HealthConnectProvider: isAvailable falhou', e);
+      warnDev('HealthConnectProvider: isAvailable falhou', e);
       return false;
     }
   }
@@ -60,7 +61,7 @@ export class HealthConnectProvider implements WearableProvider {
       const status = await Health.requestAuthorization({ read, write: [] });
       return status.readAuthorized.length > 0;
     } catch (e) {
-      console.warn('HealthConnectProvider: requestPermissions falhou', e);
+      warnDev('HealthConnectProvider: requestPermissions falhou', e);
       return false;
     }
   }
@@ -87,7 +88,7 @@ export class HealthConnectProvider implements WearableProvider {
       });
       return samples.map((s) => ({ date: s.startDate.slice(0, 10), steps: s.value }));
     } catch (e) {
-      console.warn('HealthConnectProvider: getSteps falhou', e);
+      warnDev('HealthConnectProvider: getSteps falhou', e);
       return [];
     }
   }
@@ -104,7 +105,7 @@ export class HealthConnectProvider implements WearableProvider {
       });
       return samples.map((s) => ({ date: s.startDate.slice(0, 10), meters: s.value }));
     } catch (e) {
-      console.warn('HealthConnectProvider: getDistance falhou', e);
+      warnDev('HealthConnectProvider: getDistance falhou', e);
       return [];
     }
   }
@@ -123,7 +124,7 @@ export class HealthConnectProvider implements WearableProvider {
       });
       return samples.map((s) => ({ date: s.startDate.slice(0, 10), kcal: s.value }));
     } catch (e) {
-      console.warn('HealthConnectProvider: getCalories falhou', e);
+      warnDev('HealthConnectProvider: getCalories falhou', e);
       return [];
     }
   }
@@ -146,7 +147,7 @@ export class HealthConnectProvider implements WearableProvider {
         calories: w.totalEnergyBurned,
       }));
     } catch (e) {
-      console.warn('HealthConnectProvider: getSessions falhou', e);
+      warnDev('HealthConnectProvider: getSessions falhou', e);
       return [];
     }
   }
@@ -162,7 +163,7 @@ export class HealthConnectProvider implements WearableProvider {
         endDate: session.end.toISOString(),
       });
     } catch (e) {
-      console.warn('HealthConnectProvider: writeSession falhou', e);
+      warnDev('HealthConnectProvider: writeSession falhou', e);
     }
   }
 
@@ -178,7 +179,7 @@ export class HealthConnectProvider implements WearableProvider {
       });
       return samples;
     } catch (e) {
-      console.warn(`HealthConnectProvider: readSamples(${scope}) falhou`, e);
+      warnDev(`HealthConnectProvider: readSamples(${scope}) falhou`, e);
       return [];
     }
   }
@@ -193,7 +194,7 @@ export class HealthConnectProvider implements WearableProvider {
       const status = await Health.checkAuthorization({ read: [dataType] });
       return status.readAuthorized.includes(dataType);
     } catch (e) {
-      console.warn(`HealthConnectProvider: checkAuthorization(${scope}) falhou`, e);
+      warnDev(`HealthConnectProvider: checkAuthorization(${scope}) falhou`, e);
       return false;
     }
   }
