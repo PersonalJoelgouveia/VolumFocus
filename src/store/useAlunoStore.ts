@@ -34,6 +34,10 @@ interface AlunoState {
   getAvaliacoes: (alunoId: string) => PhysicalAssessment[];
   getUltimaAvaliacao: (alunoId: string) => PhysicalAssessment | undefined;
   addAvaliacao: (alunoId: string, avaliacao: PhysicalAssessment) => void;
+  /** Substitui a lista inteira (usado ao sincronizar com o Firestore). */
+  setAvaliacoes: (alunoId: string, avaliacoes: PhysicalAssessment[]) => void;
+  updateAvaliacao: (alunoId: string, assessmentId: string, patch: Partial<PhysicalAssessment>) => void;
+  removeAvaliacao: (alunoId: string, assessmentId: string) => void;
 }
 
 function updateDia(aluno: Aluno, day: number, updater: (dia: AlunoRotinaDia) => AlunoRotinaDia): Aluno {
@@ -165,6 +169,27 @@ export const useAlunoStore = create<AlunoState>()(
           avaliacoes: {
             ...state.avaliacoes,
             [alunoId]: [...(state.avaliacoes[alunoId] ?? []), avaliacao],
+          },
+        })),
+
+      setAvaliacoes: (alunoId, avaliacoes) =>
+        set((state) => ({ avaliacoes: { ...state.avaliacoes, [alunoId]: avaliacoes } })),
+
+      updateAvaliacao: (alunoId, assessmentId, patch) =>
+        set((state) => ({
+          avaliacoes: {
+            ...state.avaliacoes,
+            [alunoId]: (state.avaliacoes[alunoId] ?? []).map((a) =>
+              a.id === assessmentId ? { ...a, ...patch } : a
+            ),
+          },
+        })),
+
+      removeAvaliacao: (alunoId, assessmentId) =>
+        set((state) => ({
+          avaliacoes: {
+            ...state.avaliacoes,
+            [alunoId]: (state.avaliacoes[alunoId] ?? []).filter((a) => a.id !== assessmentId),
           },
         })),
     }),

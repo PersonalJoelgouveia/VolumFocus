@@ -19,6 +19,29 @@
 
 .af-last-value { font-size: 20px; font-weight: 600; }
 
+.af-last-value-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.af-last-card--erro { border-color: rgba(255, 77, 109, 0.4); box-shadow: none; text-align: center; }
+
+.af-retry-btn { margin-top: 10px; width: 100%; }
+
+.af-delete-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.af-delete-btn:active { transform: scale(0.9); }
+
 .af-empty { font-size: 14px; color: var(--text-2); }
 
 .af-actions { display: flex; gap: 8px; }

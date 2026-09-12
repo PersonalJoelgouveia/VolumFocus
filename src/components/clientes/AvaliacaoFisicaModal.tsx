@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
+import { usePhysicalAssessments } from '../../hooks/usePhysicalAssessments';
 import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../types/assessment';
 import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
 import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
@@ -49,8 +50,8 @@ export function AvaliacaoFisicaModal({
   readOnly = false,
 }: AvaliacaoFisicaModalProps) {
   const ultimaAvaliacao = useAlunoStore((s) => s.getUltimaAvaliacao(alunoId));
-  const addAvaliacao = useAlunoStore((s) => s.addAvaliacao);
   const temHistorico = !!ultimaAvaliacao;
+  const { loading, error, retry, canWrite, salvar, remover } = usePhysicalAssessments(alunoId);
 
   const dataFormatada = ultimaAvaliacao
     ? new Date(ultimaAvaliacao.date).toLocaleDateString('pt-BR')
@@ -71,7 +72,7 @@ export function AvaliacaoFisicaModal({
     }
   }
 
-  function handleSaveSkinfold(payload: SkinfoldAssessmentPayload) {
+  async function handleSaveSkinfold(payload: SkinfoldAssessmentPayload) {
     const now = new Date().toISOString();
     const imc = payload.pesoKg / (payload.alturaCm / 100) ** 2;
 
@@ -100,7 +101,7 @@ export function AvaliacaoFisicaModal({
       updatedAt: now,
     };
 
-    addAvaliacao(alunoId, assessment);
+    await salvar(assessment);
     setStep('resumo');
   }
 
@@ -131,14 +132,38 @@ export function AvaliacaoFisicaModal({
 
         {step === 'resumo' ? (
           <>
-            <div className="af-last-card">
-              <div className="af-last-label">Última avaliação</div>
-              {temHistorico ? (
-                <div className="af-last-value">{dataFormatada}</div>
-              ) : (
-                <div className="af-empty">Nenhuma avaliação registrada.</div>
-              )}
-            </div>
+            {loading && <div className="af-empty">Carregando histórico…</div>}
+
+            {!loading && error && (
+              <div className="af-last-card af-last-card--erro">
+                <div className="af-empty">{error}</div>
+                <button className="btn btn-ghost af-retry-btn" onClick={retry}>
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+
+            {!loading && !error && (
+              <div className="af-last-card">
+                <div className="af-last-label">Última avaliação</div>
+                {temHistorico ? (
+                  <div className="af-last-value-row">
+                    <div className="af-last-value">{dataFormatada}</div>
+                    {canWrite && (
+                      <button
+                        className="af-delete-btn"
+                        onClick={() => ultimaAvaliacao && remover(ultimaAvaliacao.id)}
+                        aria-label="Remover última avaliação"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="af-empty">Nenhuma avaliação registrada.</div>
+                )}
+              </div>
+            )}
 
             <div className="af-actions">
               <button
