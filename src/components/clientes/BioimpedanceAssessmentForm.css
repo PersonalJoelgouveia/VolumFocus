@@ -1,0 +1,82 @@
+.bf-panel { max-width: 480px; max-height: 88vh; overflow-y: auto; }
+
+.bf-fields { display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+
+.bf-field label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.bf-field input {
+  width: 100%;
+  min-height: 44px;
+  font-size: 16px;
+  padding: 0 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-md);
+  border-radius: var(--rs);
+  color: var(--text);
+}
+
+.bf-field input:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.bf-field--readonly .bf-readonly-value {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.bf-field-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.bf-field-header label { margin-bottom: 0; }
+
+.bf-reset-btn {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--teal);
+  background: var(--teal-glow);
+  border: 1px solid var(--teal-border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.bf-reset-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.bf-hint { font-size: 0.68rem; color: var(--text-3); margin-top: 4px; }
+
+.bf-error { font-size: 0.72rem; color: var(--red); margin-top: 6px; }
+.bf-error-summary { text-align: center; margin: 4px 0; }
+
+.bf-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--teal-border);
+  box-shadow: 0 0 0 1px var(--teal-glow), 0 0 24px var(--teal-glow);
+  border-radius: var(--rl);
+  padding: 14px 16px;
+  margin: 16px 0;
+}
+
+.bf-summary-row { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.86rem; }
+.bf-summary-row span { color: var(--text-2); }
+.bf-summary-row strong { color: var(--teal); font-size: 0.95rem; }
+
+.bf-actions { display: flex; gap: 8px; margin-top: 16px; }
+.bf-actions .btn { flex: 1; min-height: 44px; }
