@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useWearableStore } from '../store/useWearableStore';
 import type { WearableScope, WearableWorkoutSession } from '../lib/wearables';
 import { MetricCard } from '../components/dashboard/MetricCard';
@@ -107,7 +107,7 @@ export function SaudeView() {
     } as Record<typeof badge, string>
   )[badge];
 
-  const handleSync = useCallback(async () => {
+  async function handleSync() {
     setDataState('loading');
     await checkAvailability();
 
@@ -163,7 +163,7 @@ export function SaudeView() {
 
     setSnapshot(next);
     setDataState(isEmpty ? 'empty' : 'loaded');
-  }, [checkAvailability, requestPermissions, fetchHeartRate, fetchRestingHeartRate, fetchSteps, fetchDistance, fetchCalories, fetchSessions]);
+  }
 
   useEffect(() => {
     checkAvailability();
@@ -175,7 +175,8 @@ export function SaudeView() {
       autoSyncedRef.current = true;
       handleSync();
     }
-  }, [available, permissionsGranted, isWeb, handleSync]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [available, permissionsGranted, isWeb]);
 
   return (
     <div className="sd-view">
@@ -187,9 +188,7 @@ export function SaudeView() {
 
       <div className="sd-conn-card">
         <div className="sd-conn-top">
-          <div className="sd-conn-icon" aria-hidden="true">
-            {PLATFORM_ICON[platform]}
-          </div>
+          <div className="sd-conn-icon">{PLATFORM_ICON[platform]}</div>
           <div className="sd-conn-info">
             <div className="sd-conn-platform">{PLATFORM_LABEL[platform]}</div>
             <div className="sd-conn-sync">Última sincronização: {formatSyncTime(lastSyncAt)}</div>
@@ -242,18 +241,14 @@ export function SaudeView() {
 
           {dataState === 'error' && (
             <div className="sd-neutral-card sd-neutral-error" role="alert">
-              <div className="sd-neutral-ico" aria-hidden="true">
-                ⚠️
-              </div>
+              <div className="sd-neutral-ico">⚠️</div>
               <div className="sd-neutral-txt">{errorMessage ?? 'Não foi possível buscar os dados agora.'}</div>
             </div>
           )}
 
           {dataState === 'empty' && (
             <div className="sd-neutral-card">
-              <div className="sd-neutral-ico" aria-hidden="true">
-                📭
-              </div>
+              <div className="sd-neutral-ico">📭</div>
               <div className="sd-neutral-txt">
                 {permissionsGranted
                   ? 'Nenhum dado encontrado nas últimas 24h.'
@@ -264,9 +259,7 @@ export function SaudeView() {
 
           {dataState === 'idle' && (
             <div className="sd-neutral-card">
-              <div className="sd-neutral-ico" aria-hidden="true">
-                ⌚
-              </div>
+              <div className="sd-neutral-ico">⌚</div>
               <div className="sd-neutral-txt">Toque em "Conectar" pra buscar seus dados de saúde.</div>
             </div>
           )}

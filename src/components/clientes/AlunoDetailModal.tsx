@@ -6,6 +6,7 @@ import { DAYS, DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
 import { calcularIdade, iniciais, isAlunoExercicioCardio } from '../../types/aluno';
 import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
+import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
 import './ClientesView.css';
 
 interface AlunoDetailModalProps {
@@ -30,6 +31,7 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   const initialDay = aluno?.rotina.findIndex((d) => d.exercicios.length > 0) ?? -1;
   const [activeDay, setActiveDay] = useState(initialDay >= 0 ? initialDay : 0);
   const [perfilOpen, setPerfilOpen] = useState(false);
+  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
 
   if (!aluno) return null;
 
@@ -96,6 +98,10 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
 
         <button className="cli-profile-toggle" onClick={() => setPerfilOpen((v) => !v)}>
           {perfilOpen ? '▲ Ocultar' : '▼ Ver'} mini-perfil
+        </button>
+
+        <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setAvaliacaoOpen(true)}>
+          📋 Avaliação Física
         </button>
 
         {perfilOpen && (
@@ -182,6 +188,10 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           </button>
         </div>
       </div>
+
+      {avaliacaoOpen && (
+        <AvaliacaoFisicaModal alunoId={alunoId} onClose={() => setAvaliacaoOpen(false)} />
+      )}
     </div>
   );
 }

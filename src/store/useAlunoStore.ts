@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Aluno, AlunoExercicio, AlunoRotinaDia } from '../types/aluno';
 import { criarRotinaVazia } from '../types/aluno';
+import type { PhysicalAssessment } from '../types/assessment';
 
 interface AlunoState {
   /** Alunos ativos do Personal. Equivale a `cli_dados_alunos` (jg3_alunos).
@@ -25,6 +26,14 @@ interface AlunoState {
 
   /** Atualiza `ultimoTreino` para a data de hoje (chamado ao publicar). */
   marcarPublicadoHoje: (alunoId: string) => void;
+
+  /** Histórico de Avaliações Físicas por aluno. Mapa isolado (não embutido em
+   *  `Aluno`) — desacoplado do papel de quem escreve/lê, para que a mesma
+   *  leitura sirva tanto o app do Personal quanto, futuramente, o do Aluno. */
+  avaliacoes: Record<string, PhysicalAssessment[]>;
+  getAvaliacoes: (alunoId: string) => PhysicalAssessment[];
+  getUltimaAvaliacao: (alunoId: string) => PhysicalAssessment | undefined;
+  addAvaliacao: (alunoId: string, avaliacao: PhysicalAssessment) => void;
 }
 
 function updateDia(aluno: Aluno, day: number, updater: (dia: AlunoRotinaDia) => AlunoRotinaDia): Aluno {
@@ -137,6 +146,26 @@ export const useAlunoStore = create<AlunoState>()(
           alunos: state.alunos.map((a) =>
             a.id === alunoId ? { ...a, ultimoTreino: new Date().toLocaleDateString('pt-BR') } : a
           ),
+        })),
+
+      avaliacoes: {},
+
+      getAvaliacoes: (alunoId) => get().avaliacoes[alunoId] ?? [],
+
+      getUltimaAvaliacao: (alunoId) => {
+        const lista = get().avaliacoes[alunoId] ?? [];
+        if (lista.length === 0) return undefined;
+        return [...lista].sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0];
+      },
+
+      addAvaliacao: (alunoId, avaliacao) =>
+        set((state) => ({
+          avaliacoes: {
+            ...state.avaliacoes,
+            [alunoId]: [...(state.avaliacoes[alunoId] ?? []), avaliacao],
+          },
         })),
     }),
     {

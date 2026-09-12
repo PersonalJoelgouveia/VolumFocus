@@ -6,7 +6,6 @@ import { useNotificationStore } from './useNotificationStore';
 import { useSyncStore } from './useSyncStore';
 import { useConfirmStore } from './useConfirmStore';
 import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
-import { wipeWearableLocalHistory } from '../lib/wearables';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -210,10 +209,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
 
     LOCAL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-    // Dado de saúde (FC, passos, sessões) é local-only e nunca deve
-    // sobreviver a uma troca de conta no mesmo aparelho — sem isso, o
-    // próximo usuário logado herdaria o histórico wearable do anterior.
-    await wipeWearableLocalHistory();
     useUIStore.getState().showToast('👋 Sessão encerrada. Limpando dados deste dispositivo…');
     setTimeout(() => window.location.reload(), 600);
   },

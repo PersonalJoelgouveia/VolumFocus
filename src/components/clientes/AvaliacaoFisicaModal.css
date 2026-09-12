@@ -1,0 +1,25 @@
+.af-panel { max-width: 380px; }
+
+.af-last-card {
+  background: var(--bg-2);
+  border: 1px solid var(--teal-border);
+  box-shadow: 0 0 0 1px var(--teal-glow), 0 0 20px var(--teal-glow);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  margin: 16px 0;
+}
+
+.af-last-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--txt-2, rgba(255, 255, 255, 0.55));
+  margin-bottom: 6px;
+}
+
+.af-last-value { font-size: 20px; font-weight: 600; }
+
+.af-empty { font-size: 14px; color: var(--txt-2, rgba(255, 255, 255, 0.5)); }
+
+.af-actions { display: flex; gap: 8px; }
+.af-actions .btn { flex: 1; min-height: 44px; }

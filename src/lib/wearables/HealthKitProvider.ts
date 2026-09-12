@@ -28,7 +28,6 @@ import type {
   WearableWorkoutSession,
 } from './models';
 import type { WearableProvider } from './WearableProvider';
-import { warnDev } from './devLog';
 
 const SCOPE_TO_DATATYPE: Record<WearableScope, HealthDataType> = {
   heartRate: 'heartRate',
@@ -50,7 +49,7 @@ export class HealthKitProvider implements WearableProvider {
       const result = await Health.isAvailable();
       return result.available;
     } catch (e) {
-      warnDev('HealthKitProvider: isAvailable falhou', e);
+      console.warn('HealthKitProvider: isAvailable falhou', e);
       return false;
     }
   }
@@ -66,7 +65,7 @@ export class HealthKitProvider implements WearableProvider {
       const status = await Health.requestAuthorization({ read, write: [] });
       return status.readAuthorized.length > 0;
     } catch (e) {
-      warnDev('HealthKitProvider: requestPermissions falhou', e);
+      console.warn('HealthKitProvider: requestPermissions falhou', e);
       return false;
     }
   }
@@ -93,7 +92,7 @@ export class HealthKitProvider implements WearableProvider {
       });
       return samples.map((s) => ({ date: s.startDate.slice(0, 10), steps: s.value }));
     } catch (e) {
-      warnDev('HealthKitProvider: getSteps falhou', e);
+      console.warn('HealthKitProvider: getSteps falhou', e);
       return [];
     }
   }
@@ -110,7 +109,7 @@ export class HealthKitProvider implements WearableProvider {
       });
       return samples.map((s) => ({ date: s.startDate.slice(0, 10), meters: s.value }));
     } catch (e) {
-      warnDev('HealthKitProvider: getDistance falhou', e);
+      console.warn('HealthKitProvider: getDistance falhou', e);
       return [];
     }
   }
@@ -129,7 +128,7 @@ export class HealthKitProvider implements WearableProvider {
       });
       return samples.map((s) => ({ date: s.startDate.slice(0, 10), kcal: s.value }));
     } catch (e) {
-      warnDev('HealthKitProvider: getCalories falhou', e);
+      console.warn('HealthKitProvider: getCalories falhou', e);
       return [];
     }
   }
@@ -152,7 +151,7 @@ export class HealthKitProvider implements WearableProvider {
         calories: w.totalEnergyBurned,
       }));
     } catch (e) {
-      warnDev('HealthKitProvider: getSessions falhou', e);
+      console.warn('HealthKitProvider: getSessions falhou', e);
       return [];
     }
   }
@@ -168,7 +167,7 @@ export class HealthKitProvider implements WearableProvider {
         endDate: session.end.toISOString(),
       });
     } catch (e) {
-      warnDev('HealthKitProvider: writeSession falhou', e);
+      console.warn('HealthKitProvider: writeSession falhou', e);
     }
   }
 
@@ -184,7 +183,7 @@ export class HealthKitProvider implements WearableProvider {
       });
       return samples;
     } catch (e) {
-      warnDev(`HealthKitProvider: readSamples(${scope}) falhou`, e);
+      console.warn(`HealthKitProvider: readSamples(${scope}) falhou`, e);
       return [];
     }
   }
@@ -199,7 +198,7 @@ export class HealthKitProvider implements WearableProvider {
       const status = await Health.checkAuthorization({ read: [dataType] });
       return status.readAuthorized.includes(dataType);
     } catch (e) {
-      warnDev(`HealthKitProvider: checkAuthorization(${scope}) falhou`, e);
+      console.warn(`HealthKitProvider: checkAuthorization(${scope}) falhou`, e);
       return false;
     }
   }

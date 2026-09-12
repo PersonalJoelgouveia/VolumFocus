@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { DAYS_SHORT, isCardioLogEntry } from '../../types/workout';
@@ -26,31 +25,22 @@ export function CardioSessionsCard({ wearable }: CardioSessionsCardProps) {
   const weekLog = useWorkoutStore((s) => s.weekLog);
   const exercises = useExerciseStore((s) => s.exercises);
 
-  const manualSessions = useMemo(() => {
-    const out: { day: number; name: string; duration: number; intensity: number }[] = [];
-    for (let d = 0; d < 7; d++) {
-      for (const e of weekLog[d] ?? []) {
-        if (!isCardioLogEntry(e)) continue;
-        const ex = exercises.find((x) => x.id === e.exId);
-        out.push({ day: d, name: ex ? ex.name : 'Cardio', duration: e.duration || 0, intensity: e.intensity || 0 });
-      }
+  const manualSessions: { day: number; name: string; duration: number; intensity: number }[] = [];
+  for (let d = 0; d < 7; d++) {
+    for (const e of weekLog[d] ?? []) {
+      if (!isCardioLogEntry(e)) continue;
+      const ex = exercises.find((x) => x.id === e.exId);
+      manualSessions.push({ day: d, name: ex ? ex.name : 'Cardio', duration: e.duration || 0, intensity: e.intensity || 0 });
     }
-    return out;
-  }, [weekLog, exercises]);
+  }
 
-  const wearableSessions = useMemo(() => wearable.sessions.filter((s) => !s.isDuplicate), [wearable.sessions]);
+  const wearableSessions = wearable.sessions.filter((s) => !s.isDuplicate);
   const duplicateCount = wearable.sessions.length - wearableSessions.length;
   const isEmpty = manualSessions.length === 0 && wearableSessions.length === 0;
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="card-title">🏃 Sessões de Cardio · Esta Semana</div>
-
-      {wearable.connected && wearable.loading && wearable.sessions.length === 0 && (
-        <div className="cardio-wearable-syncing" role="status" aria-live="polite">
-          <span className="cardio-wearable-syncing-dot" aria-hidden="true" /> Sincronizando wearable…
-        </div>
-      )}
 
       {isEmpty ? (
         <div className="cardio-empty">
@@ -65,9 +55,7 @@ export function CardioSessionsCard({ wearable }: CardioSessionsCardProps) {
                 <div className="cardio-session-info">
                   <div className="cardio-session-name">
                     <span className="cardio-session-name-text">{s.name}</span>
-                    <span className="cardio-source-badge cardio-source-manual">
-                      <span aria-hidden="true">✍️</span> Manual
-                    </span>
+                    <span className="cardio-source-badge cardio-source-manual">✍️ Manual</span>
                   </div>
                   <div className="cardio-session-meta">
                     {s.duration} min · Intensidade {s.intensity}/10
@@ -82,9 +70,7 @@ export function CardioSessionsCard({ wearable }: CardioSessionsCardProps) {
                 <div className="cardio-session-info">
                   <div className="cardio-session-name">
                     <span className="cardio-session-name-text">{s.label}</span>
-                    <span className="cardio-source-badge cardio-source-auto">
-                      <span aria-hidden="true">⌚</span> Auto
-                    </span>
+                    <span className="cardio-source-badge cardio-source-auto">⌚ Auto</span>
                   </div>
                   <div className="cardio-session-meta">
                     {s.durationMin} min
@@ -110,8 +96,7 @@ export function CardioSessionsCard({ wearable }: CardioSessionsCardProps) {
 
           {duplicateCount > 0 && (
             <div className="cardio-wearable-note">
-              <span aria-hidden="true">⌚</span> {duplicateCount} sessão{duplicateCount > 1 ? 'ões' : ''} do wearable já
-              coincide{duplicateCount > 1 ? 'm' : ''} com um registro manual — não contada{duplicateCount > 1 ? 's' : ''} 2x.
+              ⌚ {duplicateCount} sessão{duplicateCount > 1 ? 'ões' : ''} do wearable já coincide{duplicateCount > 1 ? 'm' : ''} com um registro manual — não contada{duplicateCount > 1 ? 's' : ''} 2x.
             </div>
           )}
         </>

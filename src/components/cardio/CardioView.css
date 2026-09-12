@@ -132,22 +132,9 @@
   display: inline-flex; align-items: center; font-size: 0.6rem; font-weight: 700;
   padding: 2px 7px; border-radius: 99px; white-space: nowrap; line-height: 1.4;
 }
-/* Contraste AA verificado nos dois temas: --text-2/--bg-3 (~6.6:1 claro,
-   ~6.9:1 escuro) e texto escuro fixo sobre teal sólido (~9:1 nos dois temas
-   — teal-glow+teal ficava ~2:1 no tema claro, por isso o selo Auto usa fundo
-   sólido em vez de tingido). */
-.cardio-source-manual { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--border-md); }
-.cardio-source-auto { background: var(--teal); color: #0a0a0f; border: 1px solid var(--teal); }
-.cardio-wearable-note { margin-top: 10px; font-size: 0.68rem; color: var(--text-2); text-align: center; }
-.cardio-wearable-syncing {
-  display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-2);
-  padding: 8px 10px; margin-bottom: 10px; background: var(--bg-3); border-radius: var(--rs);
-}
-.cardio-wearable-syncing-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--teal); flex-shrink: 0;
-  animation: cardio-wearable-pulse 1s ease-in-out infinite;
-}
-@keyframes cardio-wearable-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+.cardio-source-manual { background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border); }
+.cardio-source-auto { background: rgba(0, 196, 179, 0.14); color: var(--teal); border: 1px solid var(--teal-border); }
+.cardio-wearable-note { margin-top: 10px; font-size: 0.68rem; color: var(--text-3); text-align: center; }
 
 /* ── Mini tempo-em-zona (por sessão wearable, quando há FC amostrada + teste salvo) ── */
 .cardio-zone-mini { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
