@@ -30,15 +30,18 @@ export interface Anthropometry {
   imc: number;
 }
 
-/** Resultados calculados da avaliação (composição corporal). */
+/** Resultados calculados da avaliação (composição corporal). Nem todo
+ *  protocolo produz todos os campos — ex.: dobras cutâneas (JP7) não
+ *  estima gordura visceral nem TMB, que dependem de outro método
+ *  (bioimpedância). Por isso os dois ficam opcionais. */
 export interface AssessmentResults {
   percentualGordura: number;
   percentualMassaGorda: number;
   massaGordaKg: number;
   percentualMassaLegra: number;
   massaMagraKg: number;
-  gorduraVisceral: number;
-  metabolismoBasal: number;
+  gorduraVisceral?: number;
+  metabolismoBasal?: number;
 }
 
 /** Conjunto de dobras cutâneas do protocolo (7 pontos). */

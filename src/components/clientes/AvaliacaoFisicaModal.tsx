@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
-import type { AssessmentProtocol } from '../../types/assessment';
+import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../types/assessment';
+import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
+import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
 import './ClientesView.css';
 import './AvaliacaoFisicaModal.css';
 
@@ -23,9 +25,9 @@ const PROTOCOL_OPTIONS: Array<{
 interface AvaliacaoFisicaModalProps {
   alunoId: string;
   onClose: () => void;
-  /** Disparado ao escolher um protocolo sem "Em breve" (Dobras/Bioimpedância).
-   *  Hoje é placeholder/log; formulários por protocolo entram depois sem
-   *  tocar neste componente. */
+  /** Disparado ao escolher um protocolo sem formulário próprio ainda
+   *  (Bioimpedância) e sem "Em breve" (Online/Personalizada). Dobras é
+   *  tratado internamente, abrindo o SkinfoldAssessmentForm. */
   onSelectProtocol?: (protocol: AssessmentProtocol) => void;
   /** Navegação para o dashboard de evolução (fora do escopo desta etapa). */
   onVerEvolucao?: () => void;
@@ -47,21 +49,65 @@ export function AvaliacaoFisicaModal({
   readOnly = false,
 }: AvaliacaoFisicaModalProps) {
   const ultimaAvaliacao = useAlunoStore((s) => s.getUltimaAvaliacao(alunoId));
+  const addAvaliacao = useAlunoStore((s) => s.addAvaliacao);
   const temHistorico = !!ultimaAvaliacao;
 
   const dataFormatada = ultimaAvaliacao
     ? new Date(ultimaAvaliacao.date).toLocaleDateString('pt-BR')
     : null;
 
-  const [step, setStep] = useState<'resumo' | 'protocolo'>('resumo');
+  const [step, setStep] = useState<'resumo' | 'protocolo' | 'skinfold-form'>('resumo');
 
   function handleSelectProtocol(protocol: AssessmentProtocol, comingSoon?: boolean) {
     if (comingSoon) return;
+    if (protocol === 'skinfold') {
+      setStep('skinfold-form');
+      return;
+    }
     if (onSelectProtocol) {
       onSelectProtocol(protocol);
     } else {
       console.log('[AvaliacaoFisicaModal] Protocolo selecionado — placeholder', { alunoId, protocol });
     }
+  }
+
+  function handleSaveSkinfold(payload: SkinfoldAssessmentPayload) {
+    const now = new Date().toISOString();
+    const imc = payload.pesoKg / (payload.alturaCm / 100) ** 2;
+
+    const skinfolds = SKINFOLD_SITES.reduce((acc, site) => {
+      const t = payload.triples[site];
+      acc[site] = { measurement1: t.m1, measurement2: t.m2, measurement3: t.m3, average: t.media };
+      return acc;
+    }, {} as SkinfoldSet);
+
+    const assessment: PhysicalAssessment = {
+      id: `af-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      alunoId,
+      date: now,
+      protocol: 'skinfold',
+      anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc },
+      circumferences: {},
+      skinfolds,
+      results: {
+        percentualGordura: payload.resultado.percentualGordura,
+        percentualMassaGorda: payload.resultado.percentualGordura,
+        massaGordaKg: payload.resultado.massaGordaKg,
+        percentualMassaLegra: payload.resultado.percentualMassaMagra,
+        massaMagraKg: payload.resultado.massaMagraKg,
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    addAvaliacao(alunoId, assessment);
+    setStep('resumo');
+  }
+
+  if (step === 'skinfold-form') {
+    return (
+      <SkinfoldAssessmentForm alunoId={alunoId} onCancel={() => setStep('protocolo')} onSave={handleSaveSkinfold} />
+    );
   }
 
   return (
