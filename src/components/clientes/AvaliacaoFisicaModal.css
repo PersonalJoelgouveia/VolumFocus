@@ -13,13 +13,91 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--txt-2, rgba(255, 255, 255, 0.55));
+  color: var(--text-3);
   margin-bottom: 6px;
 }
 
 .af-last-value { font-size: 20px; font-weight: 600; }
 
-.af-empty { font-size: 14px; color: var(--txt-2, rgba(255, 255, 255, 0.5)); }
+.af-empty { font-size: 14px; color: var(--text-2); }
 
 .af-actions { display: flex; gap: 8px; }
 .af-actions .btn { flex: 1; min-height: 44px; }
+.af-actions .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.af-back-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--tr);
+}
+.af-back-btn:active { transform: scale(0.9); }
+
+.af-protocol-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+.af-protocol-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.af-protocol-card:not(:disabled):hover,
+.af-protocol-card:not(:disabled):focus-visible {
+  border-color: var(--teal-border);
+  box-shadow: 0 0 20px var(--teal-glow);
+}
+
+.af-protocol-card:not(:disabled):active { transform: scale(0.97); }
+
+.af-protocol-card--soon { cursor: default; opacity: 0.6; }
+
+.af-protocol-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: var(--bg-3);
+  border-radius: var(--r);
+}
+
+.af-protocol-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.af-protocol-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
+.af-protocol-subtitle { font-size: 0.76rem; color: var(--text-3); line-height: 1.3; }
+
+.af-protocol-chevron { font-size: 1.3rem; color: var(--text-3); flex-shrink: 0; }
+
+.af-protocol-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--bg-3);
+  padding: 4px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
