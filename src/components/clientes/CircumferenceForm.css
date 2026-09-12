@@ -1,0 +1,101 @@
+.cf-wrapper { display: flex; flex-direction: column; gap: 14px; }
+
+.cf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .cf-grid { grid-template-columns: 1fr; }
+}
+
+.cf-row {
+  background: var(--bg-2);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cf-row--erro { border-color: rgba(255, 77, 109, 0.4); }
+
+.cf-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.cf-value-row { display: flex; align-items: center; gap: 8px; }
+
+.cf-value-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
+  padding: 0 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text);
+}
+
+.cf-value-row input:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.cf-unit { font-size: 0.76rem; color: var(--text-3); flex-shrink: 0; }
+
+.cf-custom-header { display: flex; align-items: center; gap: 6px; }
+
+.cf-custom-name {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0 8px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text);
+}
+
+.cf-custom-name:focus-visible,
+.cf-side-select:focus-visible,
+.cf-remove-btn:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.cf-side-select {
+  min-height: 48px;
+  font-size: 0.78rem;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text-2);
+}
+
+.cf-remove-btn {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.cf-remove-btn:active { transform: scale(0.9); }
+
+.cf-error { font-size: 0.72rem; color: var(--red); }
+
+.cf-add-btn { min-height: 48px; width: 100%; }

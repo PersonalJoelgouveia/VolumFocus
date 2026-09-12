@@ -17,8 +17,29 @@ export interface SkinfoldMeasurement {
   average: number;
 }
 
-/** Circunferências corporais (braço, tórax, cintura, abdômen, quadril, coxa, panturrilha, etc.). */
-export type CircumferenceMeasurement = Record<string, number>;
+/** Lado de uma circunferência, quando aplicável. */
+export type CircumferenceSide = 'direito' | 'esquerdo' | 'none';
+
+/** Só 'cm' é suportado hoje — campo existe desde já pra não exigir mudança
+ *  de forma quando outra unidade for necessária. */
+export type CircumferenceUnit = 'cm';
+
+/** Uma circunferência registrada — padrão ou personalizada. `valor` só
+ *  existe pra medidas de fato tiradas (histórico não guarda "não medido"). */
+export interface CircumferenceEntry {
+  id: string;
+  nome: string;
+  valor: number;
+  unidade: CircumferenceUnit;
+  lado: CircumferenceSide;
+  personalizada?: boolean;
+}
+
+/** Conjunto de circunferências de uma avaliação. Array (não mais
+ *  Record<string, number>) pra preservar nome/unidade/lado por medida —
+ *  necessário pra gráficos de evolução por ponto e pra medidas
+ *  personalizadas com nome livre. */
+export type CircumferenceMeasurement = CircumferenceEntry[];
 
 /** Dados brutos de bioimpedância (varia por aparelho/fabricante). */
 export type BioimpedanceData = Record<string, number>;

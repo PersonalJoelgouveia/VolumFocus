@@ -87,7 +87,7 @@ export function AvaliacaoFisicaModal({
       date: now,
       protocol: 'skinfold',
       anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc },
-      circumferences: {},
+      circumferences: [],
       skinfolds,
       results: {
         percentualGordura: payload.resultado.percentualGordura,
