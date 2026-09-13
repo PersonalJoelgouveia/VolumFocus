@@ -4,6 +4,7 @@ import { usePhysicalAssessments } from '../../hooks/usePhysicalAssessments';
 import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../types/assessment';
 import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
 import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
+import { AssessmentTimeline } from './AssessmentTimeline';
 import './ClientesView.css';
 import './AvaliacaoFisicaModal.css';
 
@@ -49,13 +50,9 @@ export function AvaliacaoFisicaModal({
   onVerEvolucao,
   readOnly = false,
 }: AvaliacaoFisicaModalProps) {
-  const ultimaAvaliacao = useAlunoStore((s) => s.getUltimaAvaliacao(alunoId));
-  const temHistorico = !!ultimaAvaliacao;
+  const assessments = useAlunoStore((s) => s.getAvaliacoes(alunoId));
+  const temHistorico = assessments.length > 0;
   const { loading, error, retry, canWrite, salvar, remover } = usePhysicalAssessments(alunoId);
-
-  const dataFormatada = ultimaAvaliacao
-    ? new Date(ultimaAvaliacao.date).toLocaleDateString('pt-BR')
-    : null;
 
   const [step, setStep] = useState<'resumo' | 'protocolo' | 'skinfold-form'>('resumo');
 
@@ -144,42 +141,31 @@ export function AvaliacaoFisicaModal({
             )}
 
             {!loading && !error && (
-              <div className="af-last-card">
-                <div className="af-last-label">Última avaliação</div>
-                {temHistorico ? (
-                  <div className="af-last-value-row">
-                    <div className="af-last-value">{dataFormatada}</div>
-                    {canWrite && (
-                      <button
-                        className="af-delete-btn"
-                        onClick={() => ultimaAvaliacao && remover(ultimaAvaliacao.id)}
-                        aria-label="Remover última avaliação"
-                      >
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="af-empty">Nenhuma avaliação registrada.</div>
-                )}
-              </div>
-            )}
+              <>
+                <div className="af-actions">
+                  <button
+                    className="btn btn-ghost"
+                    disabled={!temHistorico}
+                    onClick={onVerEvolucao}
+                    title={temHistorico ? undefined : 'Registre a primeira avaliação para ver a evolução'}
+                  >
+                    Ver evolução
+                  </button>
+                  {!readOnly && (
+                    <button className="btn btn-primary" onClick={() => setStep('protocolo')}>
+                      + Nova avaliação
+                    </button>
+                  )}
+                </div>
 
-            <div className="af-actions">
-              <button
-                className="btn btn-ghost"
-                disabled={!temHistorico}
-                onClick={onVerEvolucao}
-                title={temHistorico ? undefined : 'Registre a primeira avaliação para ver a evolução'}
-              >
-                Ver evolução
-              </button>
-              {!readOnly && (
-                <button className="btn btn-primary" onClick={() => setStep('protocolo')}>
-                  + Nova avaliação
-                </button>
-              )}
-            </div>
+                <AssessmentTimeline
+                  assessments={assessments}
+                  canWrite={canWrite}
+                  onRemover={remover}
+                  onNovaAvaliacao={readOnly ? undefined : () => setStep('protocolo')}
+                />
+              </>
+            )}
           </>
         ) : (
           <div className="af-protocol-list">
