@@ -7,5 +7,5 @@ export default defineConfig({
   // Repo de projeto (github.com/PersonalJoelgouveia/VolumFocus), não de
   // usuário — o Pages serve em /VolumFocus/, então os assets precisam
   // desse prefixo ou dão 404 em produção.
-  base: '/VolumFocus/',
+  base: './', // <-- Garante que os caminhos das rotas e scripts fiquem relativos
 })
