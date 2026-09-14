@@ -5,6 +5,8 @@ import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../
 import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
 import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
 import { AssessmentTimeline } from './AssessmentTimeline';
+import { CompareAssessmentsModal } from './CompareAssessmentsModal';
+import { PhysicalAssessmentDashboard } from '../../views/PhysicalAssessmentDashboard';
 import './ClientesView.css';
 import './AvaliacaoFisicaModal.css';
 
@@ -31,9 +33,8 @@ interface AvaliacaoFisicaModalProps {
    *  (Bioimpedância) e sem "Em breve" (Online/Personalizada). Dobras é
    *  tratado internamente, abrindo o SkinfoldAssessmentForm. */
   onSelectProtocol?: (protocol: AssessmentProtocol) => void;
-  /** Navegação para o dashboard de evolução (fora do escopo desta etapa). */
-  onVerEvolucao?: () => void;
-  /** Quando true, oculta ações de escrita — mesma view, uso pelo Aluno. */
+  /** Quando true, oculta ações de escrita — mesma view, uso pelo Aluno.
+   *  Bloqueio real de escrita já vem de `canWrite` (role), isto é só UX. */
   readOnly?: boolean;
 }
 
@@ -47,14 +48,14 @@ export function AvaliacaoFisicaModal({
   alunoId,
   onClose,
   onSelectProtocol,
-  onVerEvolucao,
   readOnly = false,
 }: AvaliacaoFisicaModalProps) {
   const assessments = useAlunoStore((s) => s.getAvaliacoes(alunoId));
   const temHistorico = assessments.length > 0;
+  const podeComparar = assessments.length >= 2;
   const { loading, error, retry, canWrite, salvar, remover } = usePhysicalAssessments(alunoId);
 
-  const [step, setStep] = useState<'resumo' | 'protocolo' | 'skinfold-form'>('resumo');
+  const [step, setStep] = useState<'resumo' | 'protocolo' | 'skinfold-form' | 'evolucao' | 'comparar'>('resumo');
 
   function handleSelectProtocol(protocol: AssessmentProtocol, comingSoon?: boolean) {
     if (comingSoon) return;
@@ -108,6 +109,14 @@ export function AvaliacaoFisicaModal({
     );
   }
 
+  if (step === 'evolucao') {
+    return <PhysicalAssessmentDashboard alunoId={alunoId} onClose={() => setStep('resumo')} />;
+  }
+
+  if (step === 'comparar') {
+    return <CompareAssessmentsModal alunoId={alunoId} onClose={() => setStep('resumo')} />;
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="cli-detail-panel af-panel" onClick={(e) => e.stopPropagation()}>
@@ -146,23 +155,29 @@ export function AvaliacaoFisicaModal({
                   <button
                     className="btn btn-ghost"
                     disabled={!temHistorico}
-                    onClick={onVerEvolucao}
+                    onClick={() => setStep('evolucao')}
                     title={temHistorico ? undefined : 'Registre a primeira avaliação para ver a evolução'}
                   >
                     Ver evolução
                   </button>
-                  {!readOnly && (
+                  {!readOnly && canWrite && (
                     <button className="btn btn-primary" onClick={() => setStep('protocolo')}>
                       + Nova avaliação
                     </button>
                   )}
                 </div>
 
+                {podeComparar && (
+                  <button className="btn btn-ghost af-comparar-btn" onClick={() => setStep('comparar')}>
+                    ⇄ Comparar avaliações
+                  </button>
+                )}
+
                 <AssessmentTimeline
                   assessments={assessments}
                   canWrite={canWrite}
                   onRemover={remover}
-                  onNovaAvaliacao={readOnly ? undefined : () => setStep('protocolo')}
+                  onNovaAvaliacao={!readOnly && canWrite ? () => setStep('protocolo') : undefined}
                 />
               </>
             )}

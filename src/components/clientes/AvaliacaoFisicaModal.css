@@ -19,6 +19,8 @@
 .af-actions .btn { flex: 1; min-height: 44px; }
 .af-actions .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.af-comparar-btn { width: 100%; min-height: 44px; margin-bottom: 16px; }
+
 .af-back-btn {
   width: 32px;
   height: 32px;
