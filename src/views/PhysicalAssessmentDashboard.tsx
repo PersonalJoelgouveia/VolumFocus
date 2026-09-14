@@ -62,7 +62,7 @@ function GraficoLinha({ titulo, unidade, pontos }: { titulo: string; unidade: st
             contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 8 }}
             labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
             itemStyle={{ color: 'var(--teal)', fontSize: 12 }}
-            formatter={(value) => [formatarValor(Number(value), unidade), titulo]}
+            formatter={(value: unknown) => [formatarValor(Number(value), unidade), titulo]}
           />
           <Line type="monotone" dataKey="valor" stroke="var(--teal)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
         </LineChart>
@@ -110,7 +110,7 @@ function GraficoMultiSerie({
           <Tooltip
             contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 8 }}
             labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
-            formatter={(value, nome) => [formatarValor(Number(value), unidade), String(nome)]}
+            formatter={(value: unknown, nome: unknown) => [formatarValor(Number(value), unidade), String(nome)]}
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
           {series.map((s, i) => (
