@@ -1,0 +1,315 @@
+import { useState } from 'react';
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import { useAlunoStore } from '../store/useAlunoStore';
+import {
+  CIRCUMFERENCE_GROUPS,
+  METRICAS,
+  METRICAS_EVOLUCAO,
+  buildResumoCards,
+  buildSerieMetrica,
+  buildSeriesCircunferencia,
+  buildSeriesDobras,
+  buildSerieSomaDobras,
+  calcularComparativo,
+  formatarDiferenca,
+  formatarValor,
+  formatarVariacaoPercentual,
+  type ComparativoModo,
+  type MetricKey,
+  type SeriePonto,
+} from '../utils/assessmentDashboard';
+import { formatarDataCurta } from '../utils/timelineDate';
+import '../components/clientes/ClientesView.css';
+import './PhysicalAssessmentDashboard.css';
+
+interface PhysicalAssessmentDashboardProps {
+  alunoId: string;
+  onClose: () => void;
+}
+
+const CORES_SERIE = ['var(--teal)', 'var(--purple)'];
+
+function GraficoLinha({ titulo, unidade, pontos }: { titulo: string; unidade: string; pontos: SeriePonto[] }) {
+  if (pontos.length === 0) {
+    return (
+      <div className="pad-chart-card">
+        <div className="pad-chart-title">{titulo}</div>
+        <div className="pad-chart-empty">Sem dados suficientes ainda.</div>
+      </div>
+    );
+  }
+
+  const dados = pontos.map((p) => ({ data: formatarDataCurta(p.date), valor: p.valor }));
+
+  return (
+    <div className="pad-chart-card">
+      <div className="pad-chart-title">{titulo}</div>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={dados} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
+          <CartesianGrid stroke="var(--border-md)" strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="data" tick={{ fontSize: 10, fill: 'var(--text-3)' }} axisLine={{ stroke: 'var(--border-md)' }} />
+          <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={44} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 8 }}
+            labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
+            itemStyle={{ color: 'var(--teal)', fontSize: 12 }}
+            formatter={(value) => [formatarValor(Number(value), unidade), titulo]}
+          />
+          <Line type="monotone" dataKey="valor" stroke="var(--teal)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function GraficoMultiSerie({
+  titulo,
+  unidade,
+  series,
+}: {
+  titulo: string;
+  unidade: string;
+  series: Array<{ ladoLabel: string; pontos: SeriePonto[] }>;
+}) {
+  if (series.length === 0) {
+    return (
+      <div className="pad-chart-card">
+        <div className="pad-chart-title">{titulo}</div>
+        <div className="pad-chart-empty">Sem dados suficientes ainda.</div>
+      </div>
+    );
+  }
+
+  const datasUnicas = Array.from(new Set(series.flatMap((s) => s.pontos.map((p) => p.date)))).sort();
+  const dados = datasUnicas.map((date) => {
+    const linha: Record<string, string | number> = { data: formatarDataCurta(date) };
+    series.forEach((s) => {
+      const ponto = s.pontos.find((p) => p.date === date);
+      if (ponto) linha[s.ladoLabel] = ponto.valor;
+    });
+    return linha;
+  });
+
+  return (
+    <div className="pad-chart-card">
+      <div className="pad-chart-title">{titulo}</div>
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={dados} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
+          <CartesianGrid stroke="var(--border-md)" strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="data" tick={{ fontSize: 10, fill: 'var(--text-3)' }} axisLine={{ stroke: 'var(--border-md)' }} />
+          <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={44} axisLine={false} tickLine={false} />
+          <Tooltip
+            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 8 }}
+            labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
+            formatter={(value, nome) => [formatarValor(Number(value), unidade), String(nome)]}
+          />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          {series.map((s, i) => (
+            <Line
+              key={s.ladoLabel}
+              type="monotone"
+              dataKey={s.ladoLabel}
+              stroke={CORES_SERIE[i % CORES_SERIE.length]}
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * Dashboard de evolução física — Personal e Aluno (mesma leitura, sem
+ * escrita aqui). Não modifica PerformanceView. Usa recharts (única
+ * biblioteca de gráficos que o projeto tem — precisa ser instalada com
+ * `npm install recharts`, não veio nas dependências existentes).
+ *
+ * Nenhum dado é inventado: métrica/ponto/lado que nenhuma avaliação
+ * registrou simplesmente não aparece (ver utils/assessmentDashboard.ts).
+ */
+export function PhysicalAssessmentDashboard({ alunoId, onClose }: PhysicalAssessmentDashboardProps) {
+  const assessments = useAlunoStore((s) => s.getAvaliacoes(alunoId));
+
+  const [grupoCircIdx, setGrupoCircIdx] = useState(0);
+  const [siteDobraIdx, setSiteDobraIdx] = useState(0);
+  const [metricaComparativo, setMetricaComparativo] = useState<MetricKey>('peso');
+  const [modoComparativo, setModoComparativo] = useState<ComparativoModo>('anterior-atual');
+
+  if (assessments.length === 0) {
+    return (
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="cli-detail-panel pad-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2 style={{ marginBottom: 0 }}>Evolução Física</h2>
+            <button className="modal-close" onClick={onClose} aria-label="Fechar">
+              ×
+            </button>
+          </div>
+          <div className="pad-empty">Este aluno ainda não possui avaliações físicas registradas.</div>
+        </div>
+      </div>
+    );
+  }
+
+  const cards = buildResumoCards(assessments);
+  const seriesDobras = buildSeriesDobras(assessments);
+  const somaDobras = buildSerieSomaDobras(assessments);
+  const grupoCirc = CIRCUMFERENCE_GROUPS[grupoCircIdx];
+  const seriesCirc = buildSeriesCircunferencia(assessments, grupoCirc);
+
+  const metricaAtiva = METRICAS.find((m) => m.key === metricaComparativo)!;
+  const serieComparativo = buildSerieMetrica(assessments, metricaAtiva);
+  const comparativo = calcularComparativo(serieComparativo, modoComparativo, metricaAtiva.unidade);
+
+  const temDobras = assessments.some((a) => a.protocol === 'skinfold');
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="cli-detail-panel pad-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2 style={{ marginBottom: 0 }}>Evolução Física</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Fechar">
+            ×
+          </button>
+        </div>
+
+        {/* Seção 1 — Resumo */}
+        <section className="pad-section">
+          <div className="pad-cards-grid">
+            {cards.map((c) => (
+              <div key={c.key} className="pad-card">
+                <div className="pad-card-label">{c.label}</div>
+                <div className="pad-card-valor">{c.valor != null ? formatarValor(c.valor, c.unidade) : '—'}</div>
+                {c.dataFonte && <div className="pad-card-data">{formatarDataCurta(c.dataFonte)}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Seção 2 — Evolução */}
+        <section className="pad-section">
+          <h3 className="pad-section-title">Evolução</h3>
+          {METRICAS_EVOLUCAO.map((key) => {
+            const metric = METRICAS.find((m) => m.key === key)!;
+            return (
+              <GraficoLinha
+                key={key}
+                titulo={metric.label}
+                unidade={metric.unidade}
+                pontos={buildSerieMetrica(assessments, metric)}
+              />
+            );
+          })}
+        </section>
+
+        {/* Seção 3 — Circunferências */}
+        <section className="pad-section">
+          <h3 className="pad-section-title">Circunferências</h3>
+          <div className="pad-selector-row">
+            {CIRCUMFERENCE_GROUPS.map((g, i) => (
+              <button
+                key={g.label}
+                type="button"
+                className={`pad-chip${i === grupoCircIdx ? ' active' : ''}`}
+                onClick={() => setGrupoCircIdx(i)}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+          <GraficoMultiSerie titulo={grupoCirc.label} unidade="cm" series={seriesCirc} />
+        </section>
+
+        {/* Seção 4 — Dobras cutâneas */}
+        {temDobras && (
+          <section className="pad-section">
+            <h3 className="pad-section-title">Dobras cutâneas</h3>
+            <div className="pad-selector-row">
+              {seriesDobras.map((s, i) => (
+                <button
+                  key={s.site}
+                  type="button"
+                  className={`pad-chip${i === siteDobraIdx ? ' active' : ''}`}
+                  onClick={() => setSiteDobraIdx(i)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <GraficoLinha titulo={seriesDobras[siteDobraIdx].label} unidade="mm" pontos={seriesDobras[siteDobraIdx].pontos} />
+            <GraficoLinha titulo="Soma das 7 dobras" unidade="mm" pontos={somaDobras} />
+          </section>
+        )}
+
+        {/* Seção 5 — Comparativo */}
+        <section className="pad-section">
+          <h3 className="pad-section-title">Comparativo</h3>
+          <div className="pad-selector-row">
+            {METRICAS.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                className={`pad-chip${m.key === metricaComparativo ? ' active' : ''}`}
+                onClick={() => setMetricaComparativo(m.key)}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="pad-toggle-row">
+            <button
+              type="button"
+              className={`pad-toggle-opt${modoComparativo === 'primeira-atual' ? ' active' : ''}`}
+              onClick={() => setModoComparativo('primeira-atual')}
+            >
+              Primeira × Atual
+            </button>
+            <button
+              type="button"
+              className={`pad-toggle-opt${modoComparativo === 'anterior-atual' ? ' active' : ''}`}
+              onClick={() => setModoComparativo('anterior-atual')}
+            >
+              Anterior × Atual
+            </button>
+          </div>
+
+          {comparativo ? (
+            <div className="pad-comparativo-card">
+              <div className="pad-comparativo-row">
+                <span>Valor inicial</span>
+                <strong>{formatarValor(comparativo.valorInicial, comparativo.unidade)}</strong>
+              </div>
+              <div className="pad-comparativo-row">
+                <span>Valor atual</span>
+                <strong>{formatarValor(comparativo.valorAtual, comparativo.unidade)}</strong>
+              </div>
+              <div className="pad-comparativo-row">
+                <span>Diferença</span>
+                <strong>{formatarDiferenca(comparativo.diferenca, comparativo.unidadeDiferenca)}</strong>
+              </div>
+              <div className="pad-comparativo-row">
+                <span>Variação percentual</span>
+                <strong>{formatarVariacaoPercentual(comparativo.variacaoPercentual)}</strong>
+              </div>
+            </div>
+          ) : (
+            <div className="pad-chart-empty">Precisa de pelo menos 2 avaliações com essa métrica pra comparar.</div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
