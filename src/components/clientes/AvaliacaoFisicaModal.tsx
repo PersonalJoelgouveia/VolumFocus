@@ -4,6 +4,7 @@ import { usePhysicalAssessments } from '../../hooks/usePhysicalAssessments';
 import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../types/assessment';
 import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
 import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
+import { BioimpedanceAssessmentForm, type BioimpedanceAssessmentPayload } from './BioimpedanceAssessmentForm';
 import { AssessmentTimeline } from './AssessmentTimeline';
 import { CompareAssessmentsModal } from './CompareAssessmentsModal';
 import { PhysicalAssessmentDashboard } from '../../views/PhysicalAssessmentDashboard';
@@ -55,12 +56,19 @@ export function AvaliacaoFisicaModal({
   const podeComparar = assessments.length >= 2;
   const { loading, error, retry, canWrite, salvar, remover } = usePhysicalAssessments(alunoId);
 
-  const [step, setStep] = useState<'resumo' | 'protocolo' | 'skinfold-form' | 'evolucao' | 'comparar'>('resumo');
+  const [step, setStep] = useState<
+    'resumo' | 'protocolo' | 'skinfold-form' | 'bioimpedance-form' | 'evolucao' | 'comparar'
+  >('resumo');
+  const [modoComparar, setModoComparar] = useState<'primeira-atual' | 'anterior-atual'>('primeira-atual');
 
   function handleSelectProtocol(protocol: AssessmentProtocol, comingSoon?: boolean) {
     if (comingSoon) return;
     if (protocol === 'skinfold') {
       setStep('skinfold-form');
+      return;
+    }
+    if (protocol === 'bioimpedance') {
+      setStep('bioimpedance-form');
       return;
     }
     if (onSelectProtocol) {
@@ -81,12 +89,12 @@ export function AvaliacaoFisicaModal({
     }, {} as SkinfoldSet);
 
     const assessment: PhysicalAssessment = {
-      id: `af-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: payload.assessmentId,
       alunoId,
       date: now,
       protocol: 'skinfold',
       anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc },
-      circumferences: [],
+      circumferences: payload.circunferencias,
       skinfolds,
       results: {
         percentualGordura: payload.resultado.percentualGordura,
@@ -103,18 +111,74 @@ export function AvaliacaoFisicaModal({
     setStep('resumo');
   }
 
+  async function handleSaveBioimpedance(payload: BioimpedanceAssessmentPayload) {
+    const now = new Date().toISOString();
+
+    // Bioimpedância não mede dobras — grava zeros pra satisfazer o formato
+    // do SkinfoldSet, e buildSeriesDobras/compararAvaliacoes já filtram por
+    // `protocol === 'skinfold'`, então esses zeros nunca entram em gráfico
+    // nem em comparação.
+    const skinfolds = SKINFOLD_SITES.reduce((acc, site) => {
+      acc[site] = { measurement1: 0, measurement2: 0, measurement3: 0, average: 0 };
+      return acc;
+    }, {} as SkinfoldSet);
+
+    const assessment: PhysicalAssessment = {
+      id: payload.assessmentId,
+      alunoId,
+      date: now,
+      protocol: 'bioimpedance',
+      anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc: payload.resultado.imc },
+      circumferences: payload.circunferencias,
+      skinfolds,
+      results: {
+        percentualGordura: payload.percentualGordura,
+        percentualMassaGorda: payload.percentualGordura,
+        massaGordaKg: payload.resultado.massaGordaKg,
+        percentualMassaLegra: payload.percentualMassaMagra,
+        massaMagraKg: payload.resultado.massaMagraKg,
+        gorduraVisceral: payload.gorduraVisceral,
+        metabolismoBasal: payload.metabolismoBasal,
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await salvar(assessment);
+    setStep('resumo');
+  }
+
   if (step === 'skinfold-form') {
     return (
       <SkinfoldAssessmentForm alunoId={alunoId} onCancel={() => setStep('protocolo')} onSave={handleSaveSkinfold} />
     );
   }
 
+  if (step === 'bioimpedance-form') {
+    return (
+      <BioimpedanceAssessmentForm
+        alunoId={alunoId}
+        onCancel={() => setStep('protocolo')}
+        onSave={handleSaveBioimpedance}
+      />
+    );
+  }
+
   if (step === 'evolucao') {
-    return <PhysicalAssessmentDashboard alunoId={alunoId} onClose={() => setStep('resumo')} />;
+    return (
+      <PhysicalAssessmentDashboard
+        alunoId={alunoId}
+        onClose={() => setStep('resumo')}
+        onComparar={() => {
+          setModoComparar('anterior-atual');
+          setStep('comparar');
+        }}
+      />
+    );
   }
 
   if (step === 'comparar') {
-    return <CompareAssessmentsModal alunoId={alunoId} onClose={() => setStep('resumo')} />;
+    return <CompareAssessmentsModal alunoId={alunoId} onClose={() => setStep('resumo')} defaultMode={modoComparar} />;
   }
 
   return (
@@ -168,7 +232,13 @@ export function AvaliacaoFisicaModal({
                 </div>
 
                 {podeComparar && (
-                  <button className="btn btn-ghost af-comparar-btn" onClick={() => setStep('comparar')}>
+                    <button
+                    className="btn btn-ghost af-comparar-btn"
+                    onClick={() => {
+                      setModoComparar('primeira-atual');
+                      setStep('comparar');
+                    }}
+                  >
                     ⇄ Comparar avaliações
                   </button>
                 )}

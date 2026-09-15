@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { calcularIdade } from '../../types/aluno';
+import { FotosComparativas } from '../avaliacao/FotosComparativas';
+import { CircumferenceForm } from './CircumferenceForm';
+import {
+  criarCircunferenciasPadrao,
+  paraRegistroHistorico,
+  validarCircunferencias,
+  type CircumferenceEntry,
+} from '../../utils/circumference';
+import { PHOTO_POSES, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
 import {
   SKINFOLD_SITES,
   SKINFOLD_SITE_LABELS,
@@ -22,7 +31,13 @@ interface SkinfoldAssessmentFormProps {
   onCancel: () => void;
   /** Chamado com o payload calculado ao salvar. Sem `onSave`, cai num
    *  console.log — quem renderiza decide como/onde persistir. */
-  onSave?: (payload: SkinfoldAssessmentPayload) => void;
+  onSave?: (payload: SkinfoldAssessmentPayload) => void | Promise<void>;
+  /** Quando true, bloqueia "Salvar" até as 4 poses estarem capturadas. */
+  fotosObrigatorias?: boolean;
+}
+
+function gerarAssessmentId(): string {
+  return `af-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 type TripleInputs = { m1: string; m2: string; m3: string };
@@ -40,17 +55,21 @@ function emptyTriples(): Record<SkinfoldSite, TripleInputs> {
  * utils/pollock7.ts. Sexo/idade vêm do cadastro do aluno quando disponíveis,
  * mas seguem editáveis (dado por avaliação pode divergir do cadastro).
  */
-export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave }: SkinfoldAssessmentFormProps) {
+export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave, fotosObrigatorias = false }: SkinfoldAssessmentFormProps) {
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const idadeCadastro = calcularIdade(aluno?.dataNascimento);
   const sexoCadastro = inferirSexoDoGenero(aluno?.genero);
 
+  const [assessmentId] = useState(gerarAssessmentId);
   const [sexo, setSexo] = useState<Sex | undefined>(sexoCadastro);
   const [idade, setIdade] = useState(idadeCadastro != null ? String(idadeCadastro) : '');
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [triples, setTriples] = useState<Record<SkinfoldSite, TripleInputs>>(emptyTriples);
+  const [circunferencias, setCircunferencias] = useState<CircumferenceEntry[]>(criarCircunferenciasPadrao);
   const [tentouSalvar, setTentouSalvar] = useState(false);
+  const [erroFotos, setErroFotos] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
 
   function setAfericao(site: SkinfoldSite, campo: keyof TripleInputs, valor: string) {
     setTriples((prev) => ({ ...prev, [site]: { ...prev[site], [campo]: valor } }));
@@ -95,11 +114,22 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave }: SkinfoldAs
     return tentouSalvar ? erros.find((e) => e.field === campo)?.message : undefined;
   }
 
-  const podeSalvar = podeCalcular && !erroAltura;
+  const errosCircunferencias = validarCircunferencias(circunferencias);
+  const podeSalvar = podeCalcular && !erroAltura && errosCircunferencias.length === 0;
 
-  function handleSalvar() {
+  async function handleSalvar() {
     setTentouSalvar(true);
+    setErroFotos(null);
     if (!podeSalvar || !resultado || !sexo || idadeNum == null || pesoNum == null || alturaNum == null) return;
+
+    if (fotosObrigatorias) {
+      const referencias = await getPhotosByAssessment(assessmentId);
+      const faltando = PHOTO_POSES.filter((p) => !referencias[p]);
+      if (faltando.length > 0) {
+        setErroFotos('Capture as 4 fotos comparativas antes de salvar.');
+        return;
+      }
+    }
 
     const triplesCompletas = {} as SkinfoldTriples;
     for (const site of SKINFOLD_SITES) {
@@ -111,17 +141,24 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave }: SkinfoldAs
     }
 
     const payload: SkinfoldAssessmentPayload = {
+      assessmentId,
       sexo,
       idade: idadeNum,
       pesoKg: pesoNum,
       alturaCm: alturaNum,
+      circunferencias: paraRegistroHistorico(circunferencias),
       triples: triplesCompletas,
       resultado,
     };
-    if (onSave) {
-      onSave(payload);
-    } else {
-      console.log('[SkinfoldAssessmentForm] Avaliação calculada — placeholder', payload);
+    setSalvando(true);
+    try {
+      if (onSave) {
+        await onSave(payload);
+      } else {
+        console.log('[SkinfoldAssessmentForm] Avaliação calculada — placeholder', payload);
+      }
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -263,6 +300,17 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave }: SkinfoldAs
           </div>
         )}
 
+        <div className="sf-fotos">
+          <div className="sf-fotos-title">Circunferências (opcional)</div>
+          <CircumferenceForm value={circunferencias} onChange={setCircunferencias} mostrarErros={tentouSalvar} />
+        </div>
+
+        <div className="sf-fotos">
+          <div className="sf-fotos-title">Fotos comparativas{fotosObrigatorias ? ' (obrigatórias)' : ' (opcional)'}</div>
+          <FotosComparativas alunoId={alunoId} assessmentId={assessmentId} />
+          {erroFotos && <div className="sf-error">{erroFotos}</div>}
+        </div>
+
         {tentouSalvar && !podeSalvar && (
           <div className="sf-error sf-error-summary">Corrija os campos destacados para calcular o resultado.</div>
         )}
@@ -271,8 +319,8 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave }: SkinfoldAs
           <button className="btn btn-ghost" onClick={onCancel}>
             Cancelar
           </button>
-          <button className="btn btn-primary" onClick={handleSalvar}>
-            Salvar avaliação
+          <button className="btn btn-primary" onClick={handleSalvar} disabled={salvando}>
+            {salvando ? 'Salvando…' : 'Salvar avaliação'}
           </button>
         </div>
       </div>

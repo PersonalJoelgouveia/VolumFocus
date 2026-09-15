@@ -37,6 +37,10 @@ function lerDimensoes(blob: Blob): Promise<{ width: number; height: number }> {
 interface FotosComparativasProps {
   alunoId: string;
   assessmentId: string;
+  /** false = só visualização (Aluno fora do fluxo Online). Default true —
+   *  mantém o comportamento já validado nos formulários atuais, que só o
+   *  Personal alcança. */
+  podeEditar?: boolean;
 }
 
 /**
@@ -50,7 +54,7 @@ interface FotosComparativasProps {
  * próprio (mais simples, mais compatível, e é o mesmo padrão que qualquer
  * app mobile-web usa pra "tirar uma foto rápida").
  */
-export function FotosComparativas({ alunoId, assessmentId }: FotosComparativasProps) {
+export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: FotosComparativasProps) {
   const [urls, setUrls] = useState<Partial<Record<PhotoPose, string>>>({});
   const [carregando, setCarregando] = useState<PhotoPose | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -112,35 +116,45 @@ export function FotosComparativas({ alunoId, assessmentId }: FotosComparativasPr
       <div className="fc-grid">
         {PHOTO_POSES.map((pose) => (
           <div key={pose} className="fc-slot">
-            <input
-              ref={(el) => {
-                inputRefs.current[pose] = el;
-              }}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="fc-input"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) handleCapturar(pose, file);
-              }}
-            />
+            {podeEditar && (
+              <input
+                ref={(el) => {
+                  inputRefs.current[pose] = el;
+                }}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="fc-input"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) handleCapturar(pose, file);
+                }}
+              />
+            )}
             <button
               type="button"
               className="fc-slot-btn"
-              onClick={() => inputRefs.current[pose]?.click()}
-              disabled={carregando === pose}
-              aria-label={urls[pose] ? `Retirar nova foto — ${POSE_LABELS[pose]}` : `Capturar foto — ${POSE_LABELS[pose]}`}
+              onClick={() => podeEditar && inputRefs.current[pose]?.click()}
+              disabled={!podeEditar || carregando === pose}
+              aria-label={
+                urls[pose]
+                  ? podeEditar
+                    ? `Retirar nova foto — ${POSE_LABELS[pose]}`
+                    : `Foto — ${POSE_LABELS[pose]}`
+                  : `Capturar foto — ${POSE_LABELS[pose]}`
+              }
             >
               {urls[pose] ? (
                 <img src={urls[pose]} alt={`Foto — ${POSE_LABELS[pose]}`} className="fc-thumb" />
               ) : (
-                <span className="fc-placeholder">{carregando === pose ? 'Salvando…' : '📷'}</span>
+                <span className="fc-placeholder">
+                  {carregando === pose ? 'Salvando…' : podeEditar ? '📷' : 'Sem foto'}
+                </span>
               )}
             </button>
             <div className="fc-slot-label">{POSE_LABELS[pose]}</div>
-            {urls[pose] && (
+            {podeEditar && urls[pose] && (
               <button type="button" className="fc-remove-btn" onClick={() => handleRemover(pose)}>
                 Remover
               </button>

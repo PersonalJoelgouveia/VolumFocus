@@ -1,4 +1,14 @@
 import { useState } from 'react';
+import { FotosComparativas } from '../avaliacao/FotosComparativas';
+import { CircumferenceForm } from './CircumferenceForm';
+import {
+  criarCircunferenciasPadrao,
+  paraRegistroHistorico,
+  validarCircunferencias,
+  type CircumferenceEntry,
+} from '../../utils/circumference';
+import { PHOTO_POSES, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
+import type { CircumferenceMeasurement } from '../../types/assessment';
 import {
   calcIMC,
   calcMassaGorda,
@@ -12,8 +22,10 @@ import './ClientesView.css';
 import './BioimpedanceAssessmentForm.css';
 
 export interface BioimpedanceAssessmentPayload {
+  assessmentId: string;
   pesoKg: number;
   alturaCm: number;
+  circunferencias: CircumferenceMeasurement;
   percentualGordura: number;
   percentualMassaMagra: number;
   gorduraVisceral: number;
@@ -24,10 +36,17 @@ export interface BioimpedanceAssessmentPayload {
 }
 
 interface BioimpedanceAssessmentFormProps {
+  alunoId: string;
   onCancel: () => void;
   /** Chamado com o payload confirmado na etapa de revisão. Sem `onSave`,
    *  cai num console.log — quem renderiza decide como/onde persistir. */
-  onSave?: (payload: BioimpedanceAssessmentPayload) => void;
+  onSave?: (payload: BioimpedanceAssessmentPayload) => void | Promise<void>;
+  /** Quando true, bloqueia a confirmação final até as 4 poses estarem capturadas. */
+  fotosObrigatorias?: boolean;
+}
+
+function gerarAssessmentId(): string {
+  return `af-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /**
@@ -42,13 +61,15 @@ interface BioimpedanceAssessmentFormProps {
  * kg) — editar o campo direto muda o modo pra "manual" e a auto-atualização
  * pára pra aquele campo até o usuário voltar pro modo calculado.
  */
-export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAssessmentFormProps) {
+export function BioimpedanceAssessmentForm({ alunoId, onCancel, onSave, fotosObrigatorias = false }: BioimpedanceAssessmentFormProps) {
+  const [assessmentId] = useState(gerarAssessmentId);
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [percentualGordura, setPercentualGordura] = useState('');
   const [percentualMassaMagra, setPercentualMassaMagra] = useState('');
   const [gorduraVisceral, setGorduraVisceral] = useState('');
   const [metabolismoBasal, setMetabolismoBasal] = useState('');
+  const [circunferencias, setCircunferencias] = useState<CircumferenceEntry[]>(criarCircunferenciasPadrao);
 
   const [massaGordaModo, setMassaGordaModo] = useState<OrigemValor>('calculado');
   const [massaGordaManual, setMassaGordaManual] = useState('');
@@ -57,6 +78,8 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
 
   const [etapa, setEtapa] = useState<'formulario' | 'confirmacao'>('formulario');
   const [tentouRevisar, setTentouRevisar] = useState(false);
+  const [erroFotos, setErroFotos] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   const pesoNum = peso === '' ? undefined : Number(peso);
   const alturaNum = altura === '' ? undefined : Number(altura);
@@ -87,7 +110,7 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
     massaGordaKg: massaGordaEfetiva,
     massaMagraKg: massaMagraEfetiva,
   });
-  const podeRevisar = erros.length === 0;
+  const podeRevisar = erros.length === 0 && validarCircunferencias(circunferencias).length === 0;
 
   function erroDoCampo(campo: string) {
     return tentouRevisar ? erros.find((e) => e.field === campo)?.message : undefined;
@@ -109,7 +132,7 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
     setEtapa('confirmacao');
   }
 
-  function handleConfirmar() {
+  async function handleConfirmar() {
     if (
       pesoNum == null ||
       alturaNum == null ||
@@ -123,14 +146,26 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
       return;
     }
 
+    setErroFotos(null);
+    if (fotosObrigatorias) {
+      const referencias = await getPhotosByAssessment(assessmentId);
+      const faltando = PHOTO_POSES.filter((p) => !referencias[p]);
+      if (faltando.length > 0) {
+        setErroFotos('Capture as 4 fotos comparativas antes de confirmar.');
+        return;
+      }
+    }
+
     const resultado = calcularBioimpedancia(pesoNum, alturaNum, percentualGorduraNum, percentualMassaMagraNum, {
       massaGordaKg: massaGordaModo === 'manual' ? massaGordaEfetiva : undefined,
       massaMagraKg: massaMagraModo === 'manual' ? massaMagraEfetiva : undefined,
     });
 
     const payload: BioimpedanceAssessmentPayload = {
+      assessmentId,
       pesoKg: pesoNum,
       alturaCm: alturaNum,
+      circunferencias: paraRegistroHistorico(circunferencias),
       percentualGordura: percentualGorduraNum,
       percentualMassaMagra: percentualMassaMagraNum,
       gorduraVisceral: gorduraVisceralNum,
@@ -140,10 +175,15 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
       resultado,
     };
 
-    if (onSave) {
-      onSave(payload);
-    } else {
-      console.log('[BioimpedanceAssessmentForm] Avaliação confirmada — placeholder', payload);
+    setConfirmando(true);
+    try {
+      if (onSave) {
+        await onSave(payload);
+      } else {
+        console.log('[BioimpedanceAssessmentForm] Avaliação confirmada — placeholder', payload);
+      }
+    } finally {
+      setConfirmando(false);
     }
   }
 
@@ -197,12 +237,20 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
             </div>
           </div>
 
+          <div className="bf-fotos">
+            <div className="bf-fotos-title">
+              Fotos comparativas{fotosObrigatorias ? ' (obrigatórias)' : ' (opcional)'}
+            </div>
+            <FotosComparativas alunoId={alunoId} assessmentId={assessmentId} />
+            {erroFotos && <div className="bf-error">{erroFotos}</div>}
+          </div>
+
           <div className="bf-actions">
             <button type="button" className="btn btn-ghost" onClick={() => setEtapa('formulario')}>
               Voltar e editar
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleConfirmar}>
-              Confirmar e salvar
+            <button type="button" className="btn btn-primary" onClick={handleConfirmar} disabled={confirmando}>
+              {confirmando ? 'Salvando…' : 'Confirmar e salvar'}
             </button>
           </div>
         </div>
@@ -377,6 +425,11 @@ export function BioimpedanceAssessmentForm({ onCancel, onSave }: BioimpedanceAss
             />
             {erroDoCampo('metabolismoBasal') && <div className="bf-error">{erroDoCampo('metabolismoBasal')}</div>}
           </div>
+        </div>
+
+        <div className="bf-fotos">
+          <div className="bf-fotos-title">Circunferências (opcional)</div>
+          <CircumferenceForm value={circunferencias} onChange={setCircunferencias} mostrarErros={tentouRevisar} />
         </div>
 
         {tentouRevisar && !podeRevisar && (

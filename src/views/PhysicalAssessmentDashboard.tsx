@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CartesianGrid,
   Legend,
@@ -10,6 +10,8 @@ import {
   YAxis,
 } from 'recharts';
 import { useAlunoStore } from '../store/useAlunoStore';
+import type { PhysicalAssessment } from '../types/assessment';
+import { PHOTO_POSES, getPhotoObjectUrl, getPhotosByAssessment, type PhotoPose } from '../lib/assessmentPhotoStore';
 import {
   CIRCUMFERENCE_GROUPS,
   METRICAS,
@@ -34,6 +36,8 @@ import './PhysicalAssessmentDashboard.css';
 interface PhysicalAssessmentDashboardProps {
   alunoId: string;
   onClose: () => void;
+  /** Abre a comparação (seletor de 2 avaliações) — botão da seção de Fotos. */
+  onComparar?: () => void;
 }
 
 const CORES_SERIE = ['var(--teal)', 'var(--purple)'];
@@ -130,6 +134,52 @@ function GraficoMultiSerie({
   );
 }
 
+function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
+  const [urls, setUrls] = useState<Partial<Record<PhotoPose, string>>>({});
+  const [carregado, setCarregado] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const referencias = await getPhotosByAssessment(assessment.id);
+      const novasUrls: Partial<Record<PhotoPose, string>> = {};
+      for (const pose of PHOTO_POSES) {
+        if (referencias[pose]) {
+          const url = await getPhotoObjectUrl(assessment.id, pose);
+          if (url) novasUrls[pose] = url;
+        }
+      }
+      if (!cancelado) {
+        setUrls(novasUrls);
+        setCarregado(true);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [assessment.id]);
+
+  const temFoto = Object.keys(urls).length > 0;
+
+  return (
+    <div className="pad-fotos-col">
+      <div className="pad-fotos-data">{formatarDataCurta(assessment.date)}</div>
+      {!carregado ? (
+        <div className="pad-chart-empty">Carregando…</div>
+      ) : temFoto ? (
+        <div className="pad-fotos-thumbs">
+          {PHOTO_POSES.filter((p) => urls[p]).map((pose) => (
+            <img key={pose} src={urls[pose]} alt="Foto comparativa" className="pad-foto-thumb" />
+          ))}
+        </div>
+      ) : (
+        <div className="pad-chart-empty">Esta avaliação não possui fotos comparativas.</div>
+      )}
+    </div>
+  );
+}
+
+
 /**
  * Dashboard de evolução física — Personal e Aluno (mesma leitura, sem
  * escrita aqui). Não modifica PerformanceView. Usa recharts (única
@@ -139,7 +189,7 @@ function GraficoMultiSerie({
  * Nenhum dado é inventado: métrica/ponto/lado que nenhuma avaliação
  * registrou simplesmente não aparece (ver utils/assessmentDashboard.ts).
  */
-export function PhysicalAssessmentDashboard({ alunoId, onClose }: PhysicalAssessmentDashboardProps) {
+export function PhysicalAssessmentDashboard({ alunoId, onClose, onComparar }: PhysicalAssessmentDashboardProps) {
   const assessments = useAlunoStore((s) => s.getAvaliacoes(alunoId));
 
   const [grupoCircIdx, setGrupoCircIdx] = useState(0);
@@ -307,6 +357,29 @@ export function PhysicalAssessmentDashboard({ alunoId, onClose }: PhysicalAssess
             </div>
           ) : (
             <div className="pad-chart-empty">Precisa de pelo menos 2 avaliações com essa métrica pra comparar.</div>
+          )}
+        </section>
+
+        {/* Seção 6 — Fotos Comparativas */}
+        <section className="pad-section">
+          <h3 className="pad-section-title">Fotos Comparativas</h3>
+          <div className="pad-fotos-row">
+            {(() => {
+              const porDataAsc = [...assessments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              const ultima = porDataAsc[porDataAsc.length - 1];
+              const anterior = porDataAsc[porDataAsc.length - 2] ?? ultima;
+              return (
+                <>
+                  <MiniaturasFotos assessment={anterior} />
+                  <MiniaturasFotos assessment={ultima} />
+                </>
+              );
+            })()}
+          </div>
+          {assessments.length >= 2 && onComparar && (
+            <button type="button" className="btn btn-ghost pad-comparar-btn" onClick={onComparar}>
+              ⇄ Comparar fotos
+            </button>
           )}
         </section>
       </div>

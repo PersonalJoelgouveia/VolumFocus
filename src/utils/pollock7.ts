@@ -62,14 +62,21 @@ export interface Pollock7Result {
   percentualMassaMagra: number;
 }
 
+import type { CircumferenceMeasurement } from '../types/assessment';
+
 /** Payload completo pronto para persistência — inputs originais + resultado.
  *  `alturaCm` não entra em nenhuma fórmula do JP7; vai junto só porque quem
- *  persiste a avaliação (Anthropometry) precisa dela. */
+ *  persiste a avaliação (Anthropometry) precisa dela. `assessmentId` é
+ *  gerado no formulário (não em quem salva) pra fotos capturadas durante o
+ *  preenchimento usarem o mesmo id da avaliação final. `circunferencias`
+ *  idem: não entra no cálculo, só é coletada junto e repassada. */
 export interface SkinfoldAssessmentPayload {
+  assessmentId: string;
   sexo: Sex;
   idade: number;
   pesoKg: number;
   alturaCm: number;
+  circunferencias: CircumferenceMeasurement;
   triples: SkinfoldTriples;
   resultado: Pollock7Result;
 }

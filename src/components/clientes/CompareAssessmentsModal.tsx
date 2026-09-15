@@ -8,12 +8,17 @@ import {
   type DirecaoIndicador,
 } from '../../utils/compareAssessments';
 import { formatarDataCurta } from '../../utils/timelineDate';
+import { PhotoComparisonView } from './PhotoComparisonView';
 import './ClientesView.css';
 import './CompareAssessmentsModal.css';
 
 interface CompareAssessmentsModalProps {
   alunoId: string;
   onClose: () => void;
+  /** Preseleção inicial dos dois seletores. 'primeira-atual' (padrão, como
+   *  já era) ou 'anterior-atual' (usado pelo botão "Comparar fotos" do
+   *  Dashboard, que quer as duas mais recentes por padrão). */
+  defaultMode?: 'primeira-atual' | 'anterior-atual';
 }
 
 const PROTOCOL_LABELS: Record<AssessmentProtocol, string> = {
@@ -37,11 +42,13 @@ const LABELS_RESUMO = ['Peso', '% Gordura', 'Massa magra'];
  *
  * Isolado: só lê de useAlunoStore (nenhuma escrita, nenhum outro módulo tocado).
  */
-export function CompareAssessmentsModal({ alunoId, onClose }: CompareAssessmentsModalProps) {
+export function CompareAssessmentsModal({ alunoId, onClose, defaultMode = 'primeira-atual' }: CompareAssessmentsModalProps) {
   const assessments = useAlunoStore((s) => s.getAvaliacoes(alunoId));
   const ordenadas = [...assessments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const [idA, setIdA] = useState(ordenadas[0]?.id ?? '');
+  const [idA, setIdA] = useState(
+    defaultMode === 'anterior-atual' ? (ordenadas[ordenadas.length - 2]?.id ?? ordenadas[0]?.id ?? '') : (ordenadas[0]?.id ?? '')
+  );
   const [idB, setIdB] = useState(ordenadas[ordenadas.length - 1]?.id ?? '');
 
   if (ordenadas.length < 2) {
@@ -160,6 +167,13 @@ export function CompareAssessmentsModal({ alunoId, onClose }: CompareAssessments
                 avaliação profissional.
               </p>
             </div>
+
+            {inicial && atual && (
+              <div className="cmp-fotos">
+                <h3 className="cmp-section-title">Fotos comparativas</h3>
+                <PhotoComparisonView anterior={inicial} atual={atual} />
+              </div>
+            )}
           </>
         )}
       </div>

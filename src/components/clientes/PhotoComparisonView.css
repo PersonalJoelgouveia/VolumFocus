@@ -1,0 +1,100 @@
+.pcv-wrapper { display: flex; flex-direction: column; gap: 12px; }
+
+.pcv-datas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pcv-datas-vs { color: var(--text-3); font-weight: 400; }
+
+.pcv-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pcv-tab {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.pcv-tab.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal); }
+.pcv-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.pcv-empty { font-size: 0.82rem; color: var(--text-3); text-align: center; padding: 24px 8px; }
+
+.pcv-grid { display: flex; flex-direction: column; gap: 14px; }
+
+/* "Todas": grid responsivo — 2 colunas quando houver espaço, 1 no mobile. */
+.pcv-grid--todas {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 560px) {
+  .pcv-grid--todas { grid-template-columns: 1fr 1fr; }
+}
+
+.pcv-par {
+  background: var(--bg-2);
+  border: 1px solid var(--border-md);
+  border-radius: var(--r);
+  padding: 10px;
+}
+
+.pcv-par-titulo { font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-align: center; margin-bottom: 8px; }
+
+/* Desktop: 2 colunas (Anterior | Atual) lado a lado. Mobile: empilhado. */
+.pcv-par-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+@media (max-width: 420px) {
+  .pcv-par-fotos { grid-template-columns: 1fr; }
+}
+
+.pcv-foto-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.pcv-foto-col img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--rs);
+  cursor: zoom-in;
+}
+
+.pcv-foto-vazia {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-3);
+  border-radius: var(--rs);
+  color: var(--text-3);
+  font-size: 0.74rem;
+}
+
+.pcv-foto-legenda { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
+
+.pcv-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  cursor: zoom-out;
+}
+
+.pcv-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: var(--r); }
