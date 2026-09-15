@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useSyncStore } from '../../store/useSyncStore';
+import { MinhaAvaliacaoFisicaView } from '../../views/MinhaAvaliacaoFisicaView';
 import './UserMenu.css';
 
 const CLOUD_TITLES: Record<string, string> = {
@@ -29,7 +31,9 @@ export function UserMenu() {
   const busy = useAuthStore((s) => s.busy);
   const logout = useAuthStore((s) => s.logout);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
+  const isAlunoMode = useUIStore((s) => s.isAlunoMode);
   const setActiveView = useUIStore((s) => s.setActiveView);
+  const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
 
   const syncStatus = useSyncStore((s) => s.status);
   const reconnect = useSyncStore((s) => s.reconnect);
@@ -55,6 +59,19 @@ export function UserMenu() {
           PERSONAL ATIVO
         </span>
       )}
+
+      {isAlunoMode && (
+        <button
+          className="btn btn-ghost btn-icon btn-sm"
+          onClick={() => setAvaliacaoOpen(true)}
+          title="Minha Avaliação Física"
+          aria-label="Abrir minha avaliação física"
+        >
+          📋
+        </button>
+      )}
+
+      {avaliacaoOpen && <MinhaAvaliacaoFisicaView onClose={() => setAvaliacaoOpen(false)} />}
 
       <button
         className="btn btn-ghost btn-icon btn-sm"
