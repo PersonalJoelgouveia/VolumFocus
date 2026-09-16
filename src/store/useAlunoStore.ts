@@ -4,6 +4,14 @@ import type { Aluno, AlunoExercicio, AlunoRotinaDia } from '../types/aluno';
 import { criarRotinaVazia } from '../types/aluno';
 import type { PhysicalAssessment } from '../types/assessment';
 
+/** Referência estável — nunca criar `[]` novo dentro de um selector (ver
+ *  `getAvaliacoes` abaixo): React (useSyncExternalStore) trata cada `[]`
+ *  novo como "o estado mudou" e re-renderiza sem parar ("Maximum update
+ *  depth exceeded" / erro #185) sempre que `avaliacoes[alunoId]` ainda não
+ *  existe — ex.: aluno novo, ou fetch do Firestore que nunca populinha
+ *  por falha de permissão. */
+const AVALIACOES_VAZIAS: PhysicalAssessment[] = [];
+
 interface AlunoState {
   /** Alunos ativos do Personal. Equivale a `cli_dados_alunos` (jg3_alunos).
    *  Sem seed fictício — a lista começa vazia, populada pelo Personal. */
@@ -154,7 +162,7 @@ export const useAlunoStore = create<AlunoState>()(
 
       avaliacoes: {},
 
-      getAvaliacoes: (alunoId) => get().avaliacoes[alunoId] ?? [],
+      getAvaliacoes: (alunoId) => get().avaliacoes[alunoId] ?? AVALIACOES_VAZIAS,
 
       getUltimaAvaliacao: (alunoId) => {
         const lista = get().avaliacoes[alunoId] ?? [];
