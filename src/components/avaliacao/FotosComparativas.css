@@ -70,10 +70,10 @@
 
 .fc-slot-instrucao { font-size: 0.68rem; color: var(--text-3); line-height: 1.35; margin: 0; }
 
-.fc-slot-acoes { display: flex; gap: 6px; margin-top: 2px; }
+.fc-slot-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 
 .fc-acao-btn {
-  flex: 1;
+  flex: 1 1 30%;
   min-height: 44px;
   font-size: 0.74rem;
   font-weight: 700;
@@ -121,7 +121,14 @@
   color: var(--text);
 }
 
-.fc-camera-fechar {
+.fc-camera-topo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fc-camera-fechar,
+.fc-camera-trocar {
   width: 44px;
   height: 44px;
   border-radius: 50%;

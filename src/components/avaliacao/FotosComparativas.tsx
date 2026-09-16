@@ -72,10 +72,15 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
   /** Pose em captura (null = nenhuma). `revisao` guarda o frame ainda não salvo. */
   const [poseEmCaptura, setPoseEmCaptura] = useState<PhotoPose | null>(null);
   const [revisao, setRevisao] = useState<{ blob: Blob; url: string } | null>(null);
+  /** Câmera atual do visor — começa na traseira (melhor pra fotos de corpo inteiro). */
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  /** Pose alvo do upload de uma foto já existente na galeria (fluxo separado da câmera). */
+  const [poseParaUpload, setPoseParaUpload] = useState<PhotoPose | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const urlsRef = useRef(urls);
   urlsRef.current = urls;
 
@@ -122,7 +127,7 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
   }
 
   /** Permissão só é pedida aqui — nunca na montagem do componente. */
-  async function handleAbrirCamera(pose: PhotoPose) {
+  async function handleAbrirCamera(pose: PhotoPose, modo: 'user' | 'environment' = facingMode) {
     setErro(null);
     setPoseEmCaptura(pose);
 
@@ -133,7 +138,7 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 1707 } },
+        video: { facingMode: modo, width: { ideal: 1280 }, height: { ideal: 1707 } },
         audio: false,
       });
       streamRef.current = stream;
@@ -146,6 +151,15 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
       pararCamera();
       fileInputRef.current?.click(); // fallback: câmera nativa
     }
+  }
+
+  /** Alterna entre câmera frontal e traseira, reabrindo o visor na mesma pose. */
+  function handleTrocarCamera() {
+    if (!poseEmCaptura) return;
+    const proximoModo = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(proximoModo);
+    pararCamera();
+    handleAbrirCamera(poseEmCaptura, proximoModo);
   }
 
   /** Congela o frame atual do visor pra revisão (ainda não grava). */
@@ -209,6 +223,13 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
     }
   }
 
+  /** Abre o seletor de arquivos da galeria (sem `capture`, então não força a câmera). */
+  function handleAbrirUpload(pose: PhotoPose) {
+    setErro(null);
+    setPoseParaUpload(pose);
+    uploadInputRef.current?.click();
+  }
+
   async function handleExcluir(pose: PhotoPose) {
     try {
       await deletePhoto(assessmentId, pose);
@@ -240,6 +261,22 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
             e.target.value = '';
             if (file && poseEmCaptura) persistir(poseEmCaptura, file);
             else setPoseEmCaptura(null);
+          }}
+        />
+      )}
+
+      {podeEditar && (
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept="image/*"
+          className="fc-input"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            const pose = poseParaUpload;
+            setPoseParaUpload(null);
+            if (file && pose) persistir(pose, file);
           }}
         />
       )}
@@ -283,6 +320,14 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
                   >
                     {capturada ? 'Refazer' : 'Capturar'}
                   </button>
+                  <button
+                    type="button"
+                    className="fc-acao-btn"
+                    onClick={() => handleAbrirUpload(pose)}
+                    disabled={salvandoPose === pose}
+                  >
+                    Enviar da galeria
+                  </button>
                   {capturada && (
                     <button
                       type="button"
@@ -309,9 +354,22 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
         <div className="fc-camera" role="dialog" aria-label={`Capturar ${POSE_LABELS[poseEmCaptura]}`}>
           <div className="fc-camera-topo">
             <span>{POSE_LABELS[poseEmCaptura]}</span>
-            <button type="button" className="fc-camera-fechar" onClick={fecharCaptura} aria-label="Fechar câmera">
-              ×
-            </button>
+            <div className="fc-camera-topo-acoes">
+              {!revisao && (
+                <button
+                  type="button"
+                  className="fc-camera-trocar"
+                  onClick={handleTrocarCamera}
+                  aria-label="Trocar câmera"
+                  title="Trocar câmera"
+                >
+                  🔄
+                </button>
+              )}
+              <button type="button" className="fc-camera-fechar" onClick={fecharCaptura} aria-label="Fechar câmera">
+                ×
+              </button>
+            </div>
           </div>
 
           <p className="fc-camera-instrucao">{POSE_INSTRUCOES[poseEmCaptura]}</p>
