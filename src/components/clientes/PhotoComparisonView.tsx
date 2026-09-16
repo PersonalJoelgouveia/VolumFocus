@@ -45,17 +45,22 @@ export function PhotoComparisonView({ anterior, atual }: PhotoComparisonViewProp
     let cancelado = false;
     setCarregando(true);
     (async () => {
-      const pares = await Promise.all(
-        PHOTO_POSES.flatMap((pose) => [
-          getPhotoObjectUrl(anterior.id, pose).then((u) => [chave(anterior.id, pose), u] as const),
-          getPhotoObjectUrl(atual.id, pose).then((u) => [chave(atual.id, pose), u] as const),
-        ])
-      );
-      if (cancelado) return;
-      const mapa: Record<string, string> = {};
-      for (const [k, url] of pares) if (url) mapa[k] = url;
-      setUrls(mapa);
-      setCarregando(false);
+      try {
+        const pares = await Promise.all(
+          PHOTO_POSES.flatMap((pose) => [
+            getPhotoObjectUrl(anterior.id, pose).then((u) => [chave(anterior.id, pose), u] as const),
+            getPhotoObjectUrl(atual.id, pose).then((u) => [chave(atual.id, pose), u] as const),
+          ])
+        );
+        if (cancelado) return;
+        const mapa: Record<string, string> = {};
+        for (const [k, url] of pares) if (url) mapa[k] = url;
+        setUrls(mapa);
+      } catch (e) {
+        console.error('PhotoComparisonView: falha ao carregar fotos', e);
+      } finally {
+        if (!cancelado) setCarregando(false);
+      }
     })();
     return () => {
       cancelado = true;

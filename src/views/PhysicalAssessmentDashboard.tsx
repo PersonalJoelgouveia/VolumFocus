@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CartesianGrid,
   Legend,
@@ -63,7 +63,7 @@ function GraficoLinha({ titulo, unidade, pontos }: { titulo: string; unidade: st
           <XAxis dataKey="data" tick={{ fontSize: 10, fill: 'var(--text-3)' }} axisLine={{ stroke: 'var(--border-md)' }} />
           <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={44} axisLine={false} tickLine={false} />
           <Tooltip
-            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 8 }}
+            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 'var(--rs)' }}
             labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
             itemStyle={{ color: 'var(--teal)', fontSize: 12 }}
             formatter={(value: unknown) => [formatarValor(Number(value), unidade), titulo]}
@@ -112,7 +112,7 @@ function GraficoMultiSerie({
           <XAxis dataKey="data" tick={{ fontSize: 10, fill: 'var(--text-3)' }} axisLine={{ stroke: 'var(--border-md)' }} />
           <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} width={44} axisLine={false} tickLine={false} />
           <Tooltip
-            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 8 }}
+            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 'var(--rs)' }}
             labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
             formatter={(value: unknown, nome: unknown) => [formatarValor(Number(value), unidade), String(nome)]}
           />
@@ -141,17 +141,20 @@ function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const referencias = await getPhotosByAssessment(assessment.id);
-      const novasUrls: Partial<Record<PhotoPose, string>> = {};
-      for (const pose of PHOTO_POSES) {
-        if (referencias[pose]) {
-          const url = await getPhotoObjectUrl(assessment.id, pose);
-          if (url) novasUrls[pose] = url;
+      try {
+        const referencias = await getPhotosByAssessment(assessment.id);
+        const novasUrls: Partial<Record<PhotoPose, string>> = {};
+        for (const pose of PHOTO_POSES) {
+          if (referencias[pose]) {
+            const url = await getPhotoObjectUrl(assessment.id, pose);
+            if (url) novasUrls[pose] = url;
+          }
         }
-      }
-      if (!cancelado) {
-        setUrls(novasUrls);
-        setCarregado(true);
+        if (!cancelado) setUrls(novasUrls);
+      } catch (e) {
+        console.error('PhysicalAssessmentDashboard: falha ao carregar miniaturas', e);
+      } finally {
+        if (!cancelado) setCarregado(true);
       }
     })();
     return () => {
@@ -197,6 +200,32 @@ export function PhysicalAssessmentDashboard({ alunoId, onClose, onComparar }: Ph
   const [metricaComparativo, setMetricaComparativo] = useState<MetricKey>('peso');
   const [modoComparativo, setModoComparativo] = useState<ComparativoModo>('anterior-atual');
 
+  // Memoizado por dependência específica — trocar de aba de circunferência,
+  // por exemplo, não deve recalcular dobras/cards/comparativo de novo.
+  // Antes do early-return de "sem avaliações" de propósito (hooks não podem
+  // ser condicionais).
+  const cards = useMemo(() => buildResumoCards(assessments), [assessments]);
+  const seriesDobras = useMemo(() => buildSeriesDobras(assessments), [assessments]);
+  const somaDobras = useMemo(() => buildSerieSomaDobras(assessments), [assessments]);
+  const seriesEvolucao = useMemo(
+    () => METRICAS_EVOLUCAO.map((key) => METRICAS.find((m) => m.key === key)!).map((metric) => ({
+      metric,
+      pontos: buildSerieMetrica(assessments, metric),
+    })),
+    [assessments]
+  );
+  const grupoCirc = CIRCUMFERENCE_GROUPS[grupoCircIdx];
+  const seriesCirc = useMemo(() => buildSeriesCircunferencia(assessments, grupoCirc), [assessments, grupoCirc]);
+
+  const metricaAtiva = METRICAS.find((m) => m.key === metricaComparativo)!;
+  const serieComparativo = useMemo(() => buildSerieMetrica(assessments, metricaAtiva), [assessments, metricaAtiva]);
+  const comparativo = useMemo(
+    () => calcularComparativo(serieComparativo, modoComparativo, metricaAtiva.unidade),
+    [serieComparativo, modoComparativo, metricaAtiva]
+  );
+
+  const temDobras = useMemo(() => assessments.some((a) => a.protocol === 'skinfold'), [assessments]);
+
   if (assessments.length === 0) {
     return (
       <div className="modal-backdrop" onClick={onClose}>
@@ -212,18 +241,6 @@ export function PhysicalAssessmentDashboard({ alunoId, onClose, onComparar }: Ph
       </div>
     );
   }
-
-  const cards = buildResumoCards(assessments);
-  const seriesDobras = buildSeriesDobras(assessments);
-  const somaDobras = buildSerieSomaDobras(assessments);
-  const grupoCirc = CIRCUMFERENCE_GROUPS[grupoCircIdx];
-  const seriesCirc = buildSeriesCircunferencia(assessments, grupoCirc);
-
-  const metricaAtiva = METRICAS.find((m) => m.key === metricaComparativo)!;
-  const serieComparativo = buildSerieMetrica(assessments, metricaAtiva);
-  const comparativo = calcularComparativo(serieComparativo, modoComparativo, metricaAtiva.unidade);
-
-  const temDobras = assessments.some((a) => a.protocol === 'skinfold');
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -251,17 +268,9 @@ export function PhysicalAssessmentDashboard({ alunoId, onClose, onComparar }: Ph
         {/* Seção 2 — Evolução */}
         <section className="pad-section">
           <h3 className="pad-section-title">Evolução</h3>
-          {METRICAS_EVOLUCAO.map((key) => {
-            const metric = METRICAS.find((m) => m.key === key)!;
-            return (
-              <GraficoLinha
-                key={key}
-                titulo={metric.label}
-                unidade={metric.unidade}
-                pontos={buildSerieMetrica(assessments, metric)}
-              />
-            );
-          })}
+          {seriesEvolucao.map(({ metric, pontos }) => (
+            <GraficoLinha key={metric.key} titulo={metric.label} unidade={metric.unidade} pontos={pontos} />
+          ))}
         </section>
 
         {/* Seção 3 — Circunferências */}

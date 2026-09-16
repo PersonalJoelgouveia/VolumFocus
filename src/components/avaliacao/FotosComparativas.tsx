@@ -13,8 +13,8 @@ import './FotosComparativas.css';
 const POSE_LABELS: Record<PhotoPose, string> = {
   front: 'Frente',
   back: 'Costas',
-  rightSide: 'Perfil direito',
-  leftSide: 'Perfil esquerdo',
+  rightSide: 'Perfil D',
+  leftSide: 'Perfil E',
 };
 
 /** Orientação de postura por pose — texto curto, sem análise corporal. */
@@ -83,15 +83,22 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const referencias = await getPhotosByAssessment(assessmentId);
-      const novasUrls: Partial<Record<PhotoPose, string>> = {};
-      for (const pose of PHOTO_POSES) {
-        if (referencias[pose]) {
-          const url = await getPhotoObjectUrl(assessmentId, pose);
-          if (url) novasUrls[pose] = url;
+      try {
+        const referencias = await getPhotosByAssessment(assessmentId);
+        const novasUrls: Partial<Record<PhotoPose, string>> = {};
+        for (const pose of PHOTO_POSES) {
+          if (referencias[pose]) {
+            const url = await getPhotoObjectUrl(assessmentId, pose);
+            if (url) novasUrls[pose] = url;
+          }
+        }
+        if (!cancelado) setUrls(novasUrls);
+      } catch (e) {
+        console.error('FotosComparativas: falha ao carregar fotos salvas', e);
+        if (!cancelado) {
+          setErro('Não foi possível acessar o armazenamento local de fotos neste navegador.');
         }
       }
-      if (!cancelado) setUrls(novasUrls);
     })();
     return () => {
       cancelado = true;
@@ -144,7 +151,10 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
   /** Congela o frame atual do visor pra revisão (ainda não grava). */
   function handleDisparar() {
     const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
+    if (!video || !video.videoWidth) {
+      setErro('A câmera ainda não está pronta. Aguarde um instante e tente novamente.');
+      return;
+    }
 
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -200,13 +210,18 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
   }
 
   async function handleExcluir(pose: PhotoPose) {
-    await deletePhoto(assessmentId, pose);
-    setUrls((prev) => {
-      if (prev[pose]) URL.revokeObjectURL(prev[pose] as string);
-      const resto = { ...prev };
-      delete resto[pose];
-      return resto;
-    });
+    try {
+      await deletePhoto(assessmentId, pose);
+      setUrls((prev) => {
+        if (prev[pose]) URL.revokeObjectURL(prev[pose] as string);
+        const resto = { ...prev };
+        delete resto[pose];
+        return resto;
+      });
+    } catch (e) {
+      console.error('FotosComparativas: falha ao excluir foto', e);
+      setErro('Não foi possível excluir a foto. Tente novamente.');
+    }
   }
 
   const concluidas = PHOTO_POSES.filter((p) => urls[p]).length;
@@ -300,6 +315,12 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
           </div>
 
           <p className="fc-camera-instrucao">{POSE_INSTRUCOES[poseEmCaptura]}</p>
+
+          {erro && (
+            <div className="fc-error fc-error--camera" role="alert">
+              {erro}
+            </div>
+          )}
 
           <div className="fc-camera-palco">
             {revisao ? (

@@ -93,6 +93,13 @@
 
 .fc-error { font-size: 0.78rem; color: var(--red); text-align: center; }
 
+.fc-error--camera {
+  background: var(--red-bg);
+  border: 1px solid rgba(255, 77, 109, 0.3);
+  border-radius: var(--rs);
+  padding: 8px 10px;
+}
+
 /* ----- Visor da câmera (tela cheia) ----- */
 .fc-camera {
   position: fixed;
@@ -135,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--bg-1);
   border-radius: var(--r);
   overflow: hidden;
 }
