@@ -32,7 +32,9 @@ export type MetricKey =
   | 'percentualMassaMagra'
   | 'massaMagraKg'
   | 'gorduraVisceral'
-  | 'metabolismoBasal';
+  | 'metabolismoBasal'
+  | 'relacaoCinturaQuadril'
+  | 'relacaoCinturaEstatura';
 
 export interface MetricDef {
   key: MetricKey;
@@ -61,6 +63,18 @@ export const METRICAS: MetricDef[] = [
     label: 'Metabolismo basal',
     unidade: 'kcal/dia',
     getValor: (a) => a.results.metabolismoBasal,
+  },
+  {
+    key: 'relacaoCinturaQuadril',
+    label: 'RCQ',
+    unidade: '',
+    getValor: (a) => a.results.relacaoCinturaQuadril,
+  },
+  {
+    key: 'relacaoCinturaEstatura',
+    label: 'RCE',
+    unidade: '',
+    getValor: (a) => a.results.relacaoCinturaEstatura,
   },
 ];
 
@@ -147,6 +161,10 @@ export const CIRCUMFERENCE_GROUPS: CircumferenceGroupDef[] = [
       { id: 'panturrilhaEsquerda', ladoLabel: 'Esquerda' },
     ],
   },
+  // Só populado por avaliações do protocolo Online (é o único que coleta
+  // pescoço hoje) — segue o mesmo padrão "só aparece se tiver dado" dos
+  // demais grupos, então não quebra nada pras avaliações antigas.
+  { label: 'Pescoço', pontos: [{ id: 'pescoco', ladoLabel: 'Pescoço' }] },
 ];
 
 export interface CircumferenceSerie {

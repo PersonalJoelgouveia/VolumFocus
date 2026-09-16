@@ -7,7 +7,10 @@ import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
 import { BioimpedanceAssessmentForm, type BioimpedanceAssessmentPayload } from './BioimpedanceAssessmentForm';
 import { AssessmentTimeline } from './AssessmentTimeline';
 import { CompareAssessmentsModal } from './CompareAssessmentsModal';
+import { OnlineAssessmentForm } from './OnlineAssessmentForm';
+import { OnlineReview } from './OnlineReview';
 import { PhysicalAssessmentDashboard } from '../../views/PhysicalAssessmentDashboard';
+import { useAuthStore } from '../../store/useAuthStore';
 import './ClientesView.css';
 import './AvaliacaoFisicaModal.css';
 
@@ -23,7 +26,7 @@ const PROTOCOL_OPTIONS: Array<{
 }> = [
   { key: 'skinfold', icon: '📏', title: 'Dobras', subtitle: 'Avaliação corporal através de medidas manuais' },
   { key: 'bioimpedance', icon: '⚡', title: 'Bioimpedância', subtitle: 'Dados de composição corporal obtidos por bioimpedância' },
-  { key: 'online', icon: '☁️', title: 'Online', subtitle: 'Dados enviados/preenchidos pelo aluno', comingSoon: true },
+  { key: 'online', icon: '☁️', title: 'Online', subtitle: 'Autoavaliação remota preenchida pelo aluno' },
   { key: 'custom', icon: '🛠️', title: 'Personalizada', subtitle: 'Modelo de avaliação adaptável', comingSoon: true },
 ];
 
@@ -54,12 +57,14 @@ export function AvaliacaoFisicaModal({
   const assessments = useAlunoStore((s) => s.getAvaliacoes(alunoId));
   const temHistorico = assessments.length > 0;
   const podeComparar = assessments.length >= 2;
-  const { loading, error, retry, canWrite, salvar, remover } = usePhysicalAssessments(alunoId);
+  const { loading, error, retry, canWrite, podeEnviarOnline, salvar, editar, remover } = usePhysicalAssessments(alunoId);
+  const personalEmail = useAuthStore((s) => s.user?.email);
 
   const [step, setStep] = useState<
-    'resumo' | 'protocolo' | 'skinfold-form' | 'bioimpedance-form' | 'evolucao' | 'comparar'
+    'resumo' | 'protocolo' | 'skinfold-form' | 'bioimpedance-form' | 'online-form' | 'revisar-online' | 'evolucao' | 'comparar'
   >('resumo');
   const [modoComparar, setModoComparar] = useState<'primeira-atual' | 'anterior-atual'>('primeira-atual');
+  const [revisandoId, setRevisandoId] = useState<string | null>(null);
 
   function handleSelectProtocol(protocol: AssessmentProtocol, comingSoon?: boolean) {
     if (comingSoon) return;
@@ -69,6 +74,10 @@ export function AvaliacaoFisicaModal({
     }
     if (protocol === 'bioimpedance') {
       setStep('bioimpedance-form');
+      return;
+    }
+    if (protocol === 'online') {
+      setStep('online-form');
       return;
     }
     if (onSelectProtocol) {
@@ -164,6 +173,55 @@ export function AvaliacaoFisicaModal({
     );
   }
 
+  if (step === 'online-form') {
+    return (
+      <OnlineAssessmentForm
+        alunoId={alunoId}
+        onCancel={() => setStep('resumo')}
+        onSave={async (assessment) => {
+          const ok = await salvar(assessment);
+          if (ok) setStep('resumo');
+          return ok;
+        }}
+      />
+    );
+  }
+
+  if (step === 'revisar-online' && revisandoId) {
+    const alvo = assessments.find((a) => a.id === revisandoId);
+    if (!alvo) {
+      setStep('resumo');
+      return null;
+    }
+    return (
+      <div className="modal-backdrop" onClick={() => setStep('resumo')}>
+        <div className="cli-detail-panel af-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2 style={{ marginBottom: 0 }}>Avaliação Física</h2>
+            <button className="modal-close" onClick={() => setStep('resumo')} aria-label="Fechar">
+              ×
+            </button>
+          </div>
+          <OnlineReview
+            assessment={alvo}
+            mode="personal"
+            onMarcarRevisada={async (nota) => {
+              await editar(alvo.id, {
+                status: 'revisada',
+                review: {
+                  reviewedBy: personalEmail ?? 'Personal',
+                  reviewedAt: new Date().toISOString(),
+                  reviewNote: nota || undefined,
+                },
+              });
+              setStep('resumo');
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'evolucao') {
     return (
       <PhysicalAssessmentDashboard
@@ -229,6 +287,11 @@ export function AvaliacaoFisicaModal({
                       + Nova avaliação
                     </button>
                   )}
+                  {podeEnviarOnline && !canWrite && (
+                    <button className="btn btn-primary" onClick={() => setStep('online-form')}>
+                      Fazer minha autoavaliação
+                    </button>
+                  )}
                 </div>
 
                 {podeComparar && (
@@ -248,6 +311,14 @@ export function AvaliacaoFisicaModal({
                   canWrite={canWrite}
                   onRemover={remover}
                   onNovaAvaliacao={!readOnly && canWrite ? () => setStep('protocolo') : undefined}
+                  onRevisar={
+                    canWrite
+                      ? (id) => {
+                          setRevisandoId(id);
+                          setStep('revisar-online');
+                        }
+                      : undefined
+                  }
                 />
               </>
             )}

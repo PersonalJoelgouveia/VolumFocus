@@ -31,6 +31,21 @@ import type { PhysicalAssessment } from '../types/assessment';
  * PT_EMAILS aqui deve ser a mesma lista hardcoded nas regras publicadas
  * para `alunos` (não dá pra referenciar useAuthStore.PT_EMAILS do client
  * dentro das regras — são mundos separados).
+ *
+ * ATUALIZAÇÃO — protocolo Online (autoavaliação remota, setembro 2026):
+ * o próprio Aluno agora precisa poder CRIAR sua própria avaliação (as
+ * demais continuam exclusivas do Personal). A regra `create` acima
+ * precisa ser ampliada — ainda NÃO publicada, então o código já libera a
+ * escrita do lado do cliente (usePhysicalAssessments.podeEnviarOnline),
+ * mas o Firestore vai recusar até a regra ser atualizada:
+ *
+ *   allow create: if request.auth != null
+ *     && (request.auth.token.email.lower() in PT_EMAILS
+ *         || (request.auth.token.email.lower() == email
+ *             && request.resource.data.protocol == 'online'
+ *             && request.resource.data.submittedBy == 'aluno'));
+ *   allow update: if request.auth != null
+ *     && request.auth.token.email.lower() in PT_EMAILS; // revisão continua só do Personal
  */
 
 function assessmentsCol(email: string) {

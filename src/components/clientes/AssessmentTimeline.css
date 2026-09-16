@@ -108,3 +108,24 @@
   .at-metrics { grid-template-columns: 1fr 1fr; }
   .at-detail-grid { grid-template-columns: 1fr; }
 }
+
+.at-badge--status-enviada {
+  background: var(--teal);
+  color: var(--bg-1);
+}
+
+.at-badge--status-revisada {
+  background: none;
+  border: 1px solid var(--teal);
+  color: var(--teal);
+}
+
+.at-badge--status-rascunho,
+.at-badge--status-em_preenchimento {
+  background: var(--bg-2);
+  color: var(--text-3);
+}
+
+.at-revisar-btn {
+  margin-left: auto;
+}

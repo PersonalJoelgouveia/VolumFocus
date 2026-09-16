@@ -22,7 +22,16 @@ interface AssessmentTimelineProps {
   onEditar?: (assessment: PhysicalAssessment) => void;
   /** CTA de dentro do estado vazio. */
   onNovaAvaliacao?: () => void;
+  /** Abre a revisão do Personal — só relevante para avaliações Online com status 'enviada'. */
+  onRevisar?: (assessmentId: string) => void;
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  rascunho: 'Rascunho',
+  em_preenchimento: 'Em preenchimento',
+  enviada: 'Enviada pelo aluno',
+  revisada: 'Revisada',
+};
 
 /**
  * Timeline visual do histórico de Avaliação Física. Só apresentação —
@@ -30,7 +39,7 @@ interface AssessmentTimelineProps {
  * confirmação de exclusão e sincronização com o Firestore continuam no
  * hook (não duplicadas aqui).
  */
-export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar, onNovaAvaliacao }: AssessmentTimelineProps) {
+export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar, onNovaAvaliacao, onRevisar }: AssessmentTimelineProps) {
   const [expandidoId, setExpandidoId] = useState<string | null>(null);
   const showToast = useUIStore((s) => s.showToast);
 
@@ -75,6 +84,7 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
               <div className="at-card-header">
                 <span className="at-date">{formatarDataCurta(a.date)}</span>
                 <span className="at-badge">{PROTOCOL_LABELS[a.protocol]}</span>
+                {a.status && <span className={`at-badge at-badge--status-${a.status}`}>{STATUS_LABELS[a.status]}</span>}
               </div>
 
               <div className="at-metrics">
@@ -82,14 +92,30 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
                   <span>Peso</span>
                   <strong>{a.anthropometry.peso.toFixed(1)} kg</strong>
                 </div>
-                <div className="at-metric">
-                  <span>% Gordura</span>
-                  <strong>{a.results.percentualGordura.toFixed(1)}%</strong>
-                </div>
-                <div className="at-metric">
-                  <span>Massa magra</span>
-                  <strong>{a.results.massaMagraKg.toFixed(1)} kg</strong>
-                </div>
+                {a.results.percentualGordura != null && (
+                  <div className="at-metric">
+                    <span>% Gordura</span>
+                    <strong>{a.results.percentualGordura.toFixed(1)}%</strong>
+                  </div>
+                )}
+                {a.results.massaMagraKg != null && (
+                  <div className="at-metric">
+                    <span>Massa magra</span>
+                    <strong>{a.results.massaMagraKg.toFixed(1)} kg</strong>
+                  </div>
+                )}
+                {a.results.relacaoCinturaQuadril != null && (
+                  <div className="at-metric">
+                    <span>RCQ</span>
+                    <strong>{a.results.relacaoCinturaQuadril.toFixed(2)}</strong>
+                  </div>
+                )}
+                {a.results.relacaoCinturaEstatura != null && (
+                  <div className="at-metric">
+                    <span>RCE</span>
+                    <strong>{a.results.relacaoCinturaEstatura.toFixed(2)}</strong>
+                  </div>
+                )}
                 <div className="at-metric">
                   <span>IMC</span>
                   <strong>{a.anthropometry.imc.toFixed(1)}</strong>
@@ -163,6 +189,11 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
                 >
                   {expandido ? 'Ocultar' : 'Ver avaliação'}
                 </button>
+                {canWrite && a.status === 'enviada' && onRevisar && (
+                  <button type="button" className="btn btn-primary at-revisar-btn" onClick={() => onRevisar(a.id)}>
+                    Revisar
+                  </button>
+                )}
                 {canWrite && (
                   <>
                     <button

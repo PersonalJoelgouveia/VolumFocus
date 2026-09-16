@@ -7,9 +7,13 @@ import { AvaliacaoFisicaModal } from '../components/clientes/AvaliacaoFisicaModa
  * Avaliação Física do Aluno. Zero componente de UI novo: reusa
  * AvaliacaoFisicaModal (que já carrega Timeline, Dashboard de Evolução e
  * Comparar Avaliações) em `readOnly`. Bloqueio de escrita é redundante de
- * propósito — `readOnly` esconde os botões, mas quem garante de verdade é
- * `canWrite` (role==='personal') dentro do próprio AvaliacaoFisicaModal/
- * usePhysicalAssessments, então nada aqui depende de esconder botão certo.
+ * propósito — `readOnly` esconde os botões de Dobras/Bioimpedância
+ * (exclusivos do Personal), mas quem garante de verdade é `canWrite`
+ * (role==='personal') dentro do próprio AvaliacaoFisicaModal/
+ * usePhysicalAssessments. O protocolo Online é a exceção: o botão
+ * "Fazer minha autoavaliação" aparece mesmo com `readOnly`, porque o
+ * Aluno pode (e deve) enviar sua própria autoavaliação — gate real é
+ * `podeEnviarOnline` no hook, não este prop.
  *
  * `useAlunoStore.alunos` começa vazio numa sessão de Aluno (nunca carregou
  * o roster do Personal). O hook de avaliações resolve e-mail via

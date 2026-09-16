@@ -13,6 +13,13 @@ export interface UsePhysicalAssessments {
   /** true só para o Personal (role === 'personal') — trava de UX; a
    *  garantia de verdade são as regras do Firestore. */
   canWrite: boolean;
+  /** true pro Personal OU pro próprio Aluno enviando SUA autoavaliação
+   *  Online (o único protocolo que o Aluno pode criar — Dobras e
+   *  Bioimpedância continuam exclusivos do Personal). Regra real também
+   *  precisa existir no Firestore (`create` em avaliacoesFisicas com
+   *  protocol=='online' liberado pro próprio e-mail) — documentado no
+   *  physicalAssessmentRepository.ts. */
+  podeEnviarOnline: boolean;
   salvar: (assessment: PhysicalAssessment) => Promise<boolean>;
   editar: (assessmentId: string, patch: Partial<PhysicalAssessment>) => Promise<boolean>;
   /** Pede confirmação (useConfirmStore) antes de remover. */
@@ -37,6 +44,8 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
   const removeAvaliacao = useAlunoStore((s) => s.removeAvaliacao);
 
   const canWrite = useAuthStore((s) => s.role === 'personal');
+  const role = useAuthStore((s) => s.role);
+  const userEmail = useAuthStore((s) => s.user?.email);
   const showToast = useUIStore((s) => s.showToast);
   const ask = useConfirmStore((s) => s.ask);
 
@@ -45,6 +54,8 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
   const [tentativa, setTentativa] = useState(0);
 
   const email = aluno?.email;
+  const isSelfAluno = role === 'aluno' && !!userEmail && !!email && userEmail.toLowerCase() === email.toLowerCase();
+  const podeEnviarOnline = canWrite || isSelfAluno;
 
   useEffect(() => {
     if (!email) return;
@@ -73,7 +84,8 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
 
   const salvar = useCallback(
     async (assessment: PhysicalAssessment): Promise<boolean> => {
-      if (!canWrite) {
+      const permitido = assessment.protocol === 'online' ? podeEnviarOnline : canWrite;
+      if (!permitido) {
         showToast('Só o Personal Trainer pode registrar avaliações.', 'error');
         return false;
       }
@@ -95,7 +107,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
         return false;
       }
     },
-    [canWrite, email, alunoId, addAvaliacao, removeAvaliacao, showToast]
+    [podeEnviarOnline, canWrite, email, alunoId, addAvaliacao, removeAvaliacao, showToast]
   );
 
   const editar = useCallback(
@@ -147,5 +159,5 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
     [canWrite, email, alunoId, assessments, ask, removeAvaliacao, addAvaliacao, showToast]
   );
 
-  return { loading, error, retry, canWrite, salvar, editar, remover };
+  return { loading, error, retry, canWrite, podeEnviarOnline, salvar, editar, remover };
 }
