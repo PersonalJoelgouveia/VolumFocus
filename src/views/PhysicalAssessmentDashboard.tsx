@@ -29,6 +29,7 @@ import {
   type MetricKey,
   type SeriePonto,
 } from '../utils/assessmentDashboard';
+import { SKINFOLD_SITES, SKINFOLD_SITE_LABELS } from '../utils/pollock7';
 import { formatarDataCurta } from '../utils/timelineDate';
 import '../components/clientes/ClientesView.css';
 import './PhysicalAssessmentDashboard.css';
@@ -131,6 +132,158 @@ function GraficoMultiSerie({
         </LineChart>
       </ResponsiveContainer>
     </div>
+  );
+}
+
+const COMPOSICAO_KEYS: MetricKey[] = ['peso', 'percentualGordura', 'massaGordaKg', 'percentualMassaMagra', 'massaMagraKg'];
+const INDICADORES_KEYS: MetricKey[] = ['imc', 'relacaoCinturaQuadril'];
+type EvolucaoCategoria = 'composicao' | 'indicadores' | 'perimetria' | 'dobras';
+const EVOLUCAO_CATEGORIAS: Array<{ key: EvolucaoCategoria; label: string }> = [
+  { key: 'composicao', label: 'Composição corporal' },
+  { key: 'indicadores', label: 'Indicadores' },
+  { key: 'perimetria', label: 'Perimetria' },
+  { key: 'dobras', label: 'Dobras' },
+];
+
+/**
+ * Seção "Evolução da Avaliação" — diferente da Seção 2 (que já mostra a
+ * evolução completa com TODAS as avaliações). Aqui o Personal/Aluno
+ * escolhe 2 ou 3 avaliações específicas pra comparar, agrupadas por
+ * categoria de unidade (nunca combina kg/%% no mesmo eixo — cada métrica
+ * de Composição corporal e Indicadores continua em gráfico próprio;
+ * só Perimetria/Dobras combinam séries, pois todas usam a mesma unidade).
+ * Reaproveita os mesmos `buildSerieX` de assessmentDashboard.ts — só
+ * alimentados com o subconjunto selecionado em vez do histórico inteiro.
+ */
+function EvolucaoAvaliacaoSection({ assessments }: { assessments: PhysicalAssessment[] }) {
+  const porDataDesc = useMemo(
+    () => [...assessments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [assessments]
+  );
+
+  // Padrão: as 2 avaliações mais recentes já vêm selecionadas — evita tela
+  // vazia no primeiro carregamento.
+  const [selecionadosIds, setSelecionadosIds] = useState<string[]>(() => porDataDesc.slice(0, 2).map((a) => a.id));
+  const [categoria, setCategoria] = useState<EvolucaoCategoria>('composicao');
+  const [grupoCircIdx, setGrupoCircIdx] = useState(0);
+  const [siteDobraIdx, setSiteDobraIdx] = useState(0);
+
+  const selecionadas = useMemo(
+    () => assessments.filter((a) => selecionadosIds.includes(a.id)),
+    [assessments, selecionadosIds]
+  );
+  const temDobrasSelecionadas = useMemo(() => selecionadas.some((a) => a.protocol === 'skinfold'), [selecionadas]);
+
+  function alternarSelecao(id: string) {
+    setSelecionadosIds((atual) => {
+      if (atual.includes(id)) return atual.filter((x) => x !== id);
+      if (atual.length >= 3) return atual; // máximo 3 — não substitui silenciosamente
+      return [...atual, id];
+    });
+  }
+
+  if (assessments.length < 2) {
+    return (
+      <section className="pad-section">
+        <h3 className="pad-section-title">Evolução da Avaliação</h3>
+        <div className="pad-chart-empty">Realize outra avaliação para acompanhar sua evolução.</div>
+      </section>
+    );
+  }
+
+  const metricasCategoria = categoria === 'composicao' ? COMPOSICAO_KEYS : categoria === 'indicadores' ? INDICADORES_KEYS : [];
+  const grupoCirc = CIRCUMFERENCE_GROUPS[grupoCircIdx];
+  const seriesCircSelecionadas = buildSeriesCircunferencia(selecionadas, grupoCirc);
+  const seriesDobrasSelecionadas = buildSeriesDobras(selecionadas);
+  const somaDobrasSelecionadas = buildSerieSomaDobras(selecionadas);
+
+  return (
+    <section className="pad-section">
+      <h3 className="pad-section-title">Evolução da Avaliação</h3>
+
+      <div className="pad-evo-picker">
+        {porDataDesc.map((a) => {
+          const marcado = selecionadosIds.includes(a.id);
+          const desabilitado = !marcado && selecionadosIds.length >= 3;
+          return (
+            <label key={a.id} className={`pad-evo-check${marcado ? ' active' : ''}${desabilitado ? ' disabled' : ''}`}>
+              <input type="checkbox" checked={marcado} disabled={desabilitado} onChange={() => alternarSelecao(a.id)} />
+              {formatarDataCurta(a.date)}
+            </label>
+          );
+        })}
+      </div>
+
+      {selecionadosIds.length < 2 ? (
+        <div className="pad-chart-empty">Selecione pelo menos 2 avaliações para comparar.</div>
+      ) : (
+        <>
+          <div className="pad-selector-row">
+            {EVOLUCAO_CATEGORIAS.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                className={`pad-chip${c.key === categoria ? ' active' : ''}`}
+                onClick={() => setCategoria(c.key)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          {(categoria === 'composicao' || categoria === 'indicadores') &&
+            metricasCategoria.map((key) => {
+              const metric = METRICAS.find((m) => m.key === key)!;
+              const pontos = buildSerieMetrica(selecionadas, metric);
+              return <GraficoLinha key={key} titulo={metric.label} unidade={metric.unidade} pontos={pontos} />;
+            })}
+
+          {categoria === 'perimetria' && (
+            <>
+              <div className="pad-selector-row">
+                {CIRCUMFERENCE_GROUPS.map((g, i) => (
+                  <button
+                    key={g.label}
+                    type="button"
+                    className={`pad-chip${i === grupoCircIdx ? ' active' : ''}`}
+                    onClick={() => setGrupoCircIdx(i)}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+              <GraficoMultiSerie titulo={grupoCirc.label} unidade="cm" series={seriesCircSelecionadas} />
+            </>
+          )}
+
+          {categoria === 'dobras' &&
+            (temDobrasSelecionadas ? (
+              <>
+                <div className="pad-selector-row">
+                  {SKINFOLD_SITES.map((site, i) => (
+                    <button
+                      key={site}
+                      type="button"
+                      className={`pad-chip${i === siteDobraIdx ? ' active' : ''}`}
+                      onClick={() => setSiteDobraIdx(i)}
+                    >
+                      {SKINFOLD_SITE_LABELS[site]}
+                    </button>
+                  ))}
+                </div>
+                <GraficoLinha
+                  titulo={seriesDobrasSelecionadas[siteDobraIdx].label}
+                  unidade="mm"
+                  pontos={seriesDobrasSelecionadas[siteDobraIdx].pontos}
+                />
+                <GraficoLinha titulo="Soma das 7 dobras" unidade="mm" pontos={somaDobrasSelecionadas} />
+              </>
+            ) : (
+              <div className="pad-chart-empty">Nenhuma das avaliações selecionadas usou o protocolo de Dobras.</div>
+            ))}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -264,6 +417,9 @@ export function PhysicalAssessmentDashboard({ alunoId, onClose, onComparar }: Ph
             ))}
           </div>
         </section>
+
+        {/* Seção nova — Evolução da Avaliação (2 ou 3 avaliações escolhidas) */}
+        <EvolucaoAvaliacaoSection assessments={assessments} />
 
         {/* Seção 2 — Evolução */}
         <section className="pad-section">

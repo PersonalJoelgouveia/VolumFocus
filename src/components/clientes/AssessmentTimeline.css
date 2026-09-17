@@ -154,3 +154,36 @@
   background: var(--red-bg);
   color: var(--red);
 }
+
+.at-doughnut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.at-doughnut-wrap > div:first-child {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+.at-doughnut-legenda {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.at-doughnut-legenda-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-2);
+}
+
+.at-doughnut-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

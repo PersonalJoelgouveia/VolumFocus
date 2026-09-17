@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { useUIStore } from '../../store/useUIStore';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import type { AssessmentProtocol, PhysicalAssessment } from '../../types/assessment';
@@ -38,6 +39,45 @@ const STATUS_LABELS: Record<string, string> = {
   enviada: 'Enviada pelo aluno',
   revisada: 'Revisada',
 };
+
+/** Doughnut Massa magra × Gordura (%) — só renderiza quando a avaliação
+ *  de fato produziu os dois percentuais (Dobras/Bioimpedância; Online não
+ *  estima composição corporal, então some sem quebrar nada). Valores reais
+ *  da avaliação — nada calculado/estimado aqui. */
+function ComposicaoDoughnut({ percentualMassaMagra, percentualGordura }: { percentualMassaMagra: number; percentualGordura: number }) {
+  const dados = [
+    { nome: 'Massa magra', valor: percentualMassaMagra, cor: 'var(--teal)' },
+    { nome: 'Gordura', valor: percentualGordura, cor: 'var(--purple)' },
+  ];
+
+  return (
+    <div className="at-doughnut-wrap">
+      <ResponsiveContainer width="100%" height={160}>
+        <PieChart>
+          <Pie data={dados} dataKey="valor" nameKey="nome" innerRadius={42} outerRadius={64} paddingAngle={2} stroke="none">
+            {dados.map((d) => (
+              <Cell key={d.nome} fill={d.cor} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 'var(--rs)' }}
+            labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
+            formatter={(value: unknown, nome: unknown) => [`${Number(value).toFixed(1)}%`, String(nome)]}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="at-doughnut-legenda">
+        {dados.map((d) => (
+          <div key={d.nome} className="at-doughnut-legenda-item">
+            <span className="at-doughnut-dot" style={{ background: d.cor }} />
+            <span>{d.nome}</span>
+            <strong>{d.valor.toFixed(1)}%</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Timeline visual do histórico de Avaliação Física. Só apresentação —
@@ -100,10 +140,26 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
                   <span>Peso</span>
                   <strong>{a.anthropometry.peso.toFixed(1)} kg</strong>
                 </div>
+                <div className="at-metric">
+                  <span>Altura</span>
+                  <strong>{a.anthropometry.altura.toFixed(1)} cm</strong>
+                </div>
                 {a.results.percentualGordura != null && (
                   <div className="at-metric">
                     <span>% Gordura</span>
                     <strong>{a.results.percentualGordura.toFixed(1)}%</strong>
+                  </div>
+                )}
+                {a.results.massaGordaKg != null && (
+                  <div className="at-metric">
+                    <span>Massa gorda</span>
+                    <strong>{a.results.massaGordaKg.toFixed(1)} kg</strong>
+                  </div>
+                )}
+                {a.results.percentualMassaLegra != null && (
+                  <div className="at-metric">
+                    <span>% Massa magra</span>
+                    <strong>{a.results.percentualMassaLegra.toFixed(1)}%</strong>
                   </div>
                 )}
                 {a.results.massaMagraKg != null && (
@@ -144,6 +200,13 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
 
               {expandido && (
                 <div className="at-detail">
+                  {a.results.percentualMassaLegra != null && a.results.percentualGordura != null && (
+                    <div className="at-detail-section">
+                      <div className="at-detail-title">Composição corporal</div>
+                      <ComposicaoDoughnut percentualMassaMagra={a.results.percentualMassaLegra} percentualGordura={a.results.percentualGordura} />
+                    </div>
+                  )}
+
                   {a.protocol === 'skinfold' && (
                     <div className="at-detail-section">
                       <div className="at-detail-title">Dobras (mm)</div>

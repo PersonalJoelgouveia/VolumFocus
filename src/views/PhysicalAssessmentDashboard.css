@@ -124,3 +124,30 @@
 .pad-foto-thumb { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: var(--rs); }
 
 .pad-comparar-btn { width: 100%; min-height: 44px; margin-top: 10px; }
+
+.pad-evo-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pad-evo-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-md);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.pad-evo-check.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal); }
+.pad-evo-check.disabled { opacity: 0.4; cursor: not-allowed; }
+.pad-evo-check input { min-height: auto; width: 16px; height: 16px; accent-color: var(--teal); }
