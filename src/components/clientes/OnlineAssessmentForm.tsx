@@ -9,10 +9,12 @@ import {
   type OnlineAssessmentDraft,
 } from '../../lib/onlineAssessmentDraftStore';
 import { inferirSexoDoGenero } from '../../utils/pollock7';
+import { hojeISODate, paraDateInputValue } from '../../utils/timelineDate';
 import {
   INSTRUCOES_GERAIS,
   criarPontosCircunferenciaOnline,
   montarAvaliacaoOnline,
+  pontosCircunferenciaDoRegistro,
   validarAltura,
   validarPeso,
   validarValorCircunferencia,
@@ -41,6 +43,7 @@ const STEP_LABELS: Record<Step, string> = {
 };
 
 interface OnlineFormState {
+  data: string;
   maoDominante: 'direita' | 'esquerda' | '';
   objetivoPrincipal: string;
   nivelExperiencia: string;
@@ -52,6 +55,7 @@ interface OnlineFormState {
 
 function estadoInicial(): OnlineFormState {
   return {
+    data: hojeISODate(),
     maoDominante: '',
     objetivoPrincipal: '',
     nivelExperiencia: '',
@@ -59,6 +63,21 @@ function estadoInicial(): OnlineFormState {
     altura: '',
     pontosCircunferencia: criarPontosCircunferenciaOnline(),
     questionario: {},
+  };
+}
+
+/** Reconstrói o estado do wizard a partir de uma avaliação já salva —
+ *  usado só no modo edição (`assessmentExistente`). */
+function estadoDoRegistro(assessment: PhysicalAssessment): OnlineFormState {
+  return {
+    data: paraDateInputValue(assessment.date),
+    maoDominante: assessment.questionnaire?.maoDominante ?? '',
+    objetivoPrincipal: assessment.questionnaire?.objetivoPrincipal ?? '',
+    nivelExperiencia: assessment.questionnaire?.nivelExperiencia ?? '',
+    peso: String(assessment.anthropometry.peso),
+    altura: String(assessment.anthropometry.altura),
+    pontosCircunferencia: pontosCircunferenciaDoRegistro(assessment.circumferences),
+    questionario: assessment.questionnaire ?? {},
   };
 }
 
@@ -70,6 +89,10 @@ interface OnlineAssessmentFormProps {
   alunoId: string;
   onCancel: () => void;
   onSave: (assessment: PhysicalAssessment) => Promise<boolean> | boolean;
+  /** Presente = modo edição (só o Personal chega aqui, via "Editar" na
+   *  timeline). Status/quem enviou/revisão originais são preservados —
+   *  editar só corrige o conteúdo, nunca o histórico de quem fez o quê. */
+  assessmentExistente?: PhysicalAssessment;
 }
 
 /**
@@ -80,19 +103,22 @@ interface OnlineAssessmentFormProps {
  * avaliação") o registro vira `PhysicalAssessment` de verdade e é
  * persistido — o rascunho nunca vai pro Firestore.
  */
-export function OnlineAssessmentForm({ alunoId, onCancel, onSave }: OnlineAssessmentFormProps) {
+export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExistente }: OnlineAssessmentFormProps) {
+  const editando = !!assessmentExistente;
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const idadeCadastro = calcularIdade(aluno?.dataNascimento);
   const sexoCadastro = inferirSexoDoGenero(aluno?.genero);
 
-  const [assessmentId, setAssessmentId] = useState(gerarAssessmentId);
-  const [step, setStep] = useState<Step>('instrucoes');
-  const [form, setForm] = useState<OnlineFormState>(estadoInicial);
+  const [assessmentId, setAssessmentId] = useState(() => assessmentExistente?.id ?? gerarAssessmentId());
+  const [step, setStep] = useState<Step>(editando ? 'dados' : 'instrucoes');
+  const [form, setForm] = useState<OnlineFormState>(() => (assessmentExistente ? estadoDoRegistro(assessmentExistente) : estadoInicial()));
   const [tentouAvancar, setTentouAvancar] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  // Carrega rascunho salvo (se houver) uma única vez, ao abrir.
+  // Carrega rascunho salvo (se houver) uma única vez, ao abrir — só faz
+  // sentido no fluxo de autoavaliação do próprio Aluno, nunca ao editar.
   useEffect(() => {
+    if (editando) return;
     const rascunho = carregarRascunhoOnline<OnlineFormState>(alunoId);
     if (rascunho) {
       setAssessmentId(rascunho.assessmentId);
@@ -103,6 +129,7 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave }: OnlineAssess
   }, [alunoId]);
 
   function salvarRascunho(proximoStep: Step, dadosAtualizados?: OnlineFormState) {
+    if (editando) return; // edição não usa rascunho local
     const draft: OnlineAssessmentDraft<OnlineFormState> = {
       assessmentId,
       step: proximoStep,
@@ -142,25 +169,40 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave }: OnlineAssess
     else onCancel();
   }
 
+  function montar(status: PhysicalAssessment['status']) {
+    const built = montarAvaliacaoOnline(
+      alunoId,
+      {
+        assessmentId,
+        data: form.data,
+        maoDominante: form.maoDominante,
+        objetivoPrincipal: form.objetivoPrincipal,
+        nivelExperiencia: form.nivelExperiencia,
+        peso: form.peso,
+        altura: form.altura,
+        pontosCircunferencia: form.pontosCircunferencia,
+        questionario: form.questionario ?? {},
+      },
+      status ?? 'enviada'
+    );
+    // Editar corrige conteúdo, não reescreve quem enviou/revisou/quando foi criada.
+    return assessmentExistente
+      ? {
+          ...built,
+          createdAt: assessmentExistente.createdAt,
+          status: assessmentExistente.status,
+          submittedBy: assessmentExistente.submittedBy,
+          review: assessmentExistente.review,
+        }
+      : built;
+  }
+
   async function handleEnviar() {
     setEnviando(true);
     try {
-      const assessment = montarAvaliacaoOnline(
-        alunoId,
-        {
-          assessmentId,
-          maoDominante: form.maoDominante,
-          objetivoPrincipal: form.objetivoPrincipal,
-          nivelExperiencia: form.nivelExperiencia,
-          peso: form.peso,
-          altura: form.altura,
-          pontosCircunferencia: form.pontosCircunferencia,
-          questionario: form.questionario ?? {},
-        },
-        'enviada'
-      );
+      const assessment = montar(editando ? assessmentExistente!.status : 'enviada');
       const ok = await onSave(assessment);
-      if (ok !== false) {
+      if (ok !== false && !editando) {
         limparRascunhoOnline(alunoId);
       }
     } finally {
@@ -173,29 +215,13 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave }: OnlineAssess
 
   // Objeto de preview (sem persistir) — usado nas etapas de Indicadores e
   // Revisão pra mostrar os valores calculados até aqui.
-  const preview =
-    pesoNum != null && alturaNum != null && !erroAntropometria
-      ? montarAvaliacaoOnline(
-          alunoId,
-          {
-            assessmentId,
-            maoDominante: form.maoDominante,
-            objetivoPrincipal: form.objetivoPrincipal,
-            nivelExperiencia: form.nivelExperiencia,
-            peso: form.peso,
-            altura: form.altura,
-            pontosCircunferencia: form.pontosCircunferencia,
-            questionario: form.questionario ?? {},
-          },
-          'em_preenchimento'
-        )
-      : null;
+  const preview = pesoNum != null && alturaNum != null && !erroAntropometria ? montar('em_preenchimento') : null;
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="cli-detail-panel oa-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 style={{ marginBottom: 0 }}>Avaliação Online</h2>
+          <h2 style={{ marginBottom: 0 }}>{editando ? 'Editar Avaliação Online' : 'Avaliação Online'}</h2>
           <button className="modal-close" onClick={onCancel} aria-label="Fechar">
             ×
           </button>
@@ -227,6 +253,10 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave }: OnlineAssess
         {step === 'dados' && (
           <div className="oa-step">
             <h3 className="oa-step-title">Dados básicos</h3>
+            <div className="oa-field">
+              <label>Data da avaliação</label>
+              <input type="date" value={form.data} max={hojeISODate()} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+            </div>
             <div className="oa-field">
               <label>Nome{aluno?.nome && <span className="oa-auto-tag">cadastro</span>}</label>
               <input type="text" value={aluno?.nome ?? ''} readOnly />
@@ -310,7 +340,14 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave }: OnlineAssess
 
         {step === 'revisao' &&
           (preview ? (
-            <OnlineReview assessment={preview} mode="aluno" onVoltar={handleVoltar} onEnviar={handleEnviar} enviando={enviando} />
+            <OnlineReview
+              assessment={preview}
+              mode="aluno"
+              onVoltar={handleVoltar}
+              onEnviar={handleEnviar}
+              enviando={enviando}
+              labelEnviar={editando ? 'Salvar alterações' : 'Enviar avaliação'}
+            />
           ) : (
             <p className="oa-note">Volte e preencha peso e altura antes de enviar.</p>
           ))}

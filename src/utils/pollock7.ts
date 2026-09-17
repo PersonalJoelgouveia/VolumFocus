@@ -72,6 +72,9 @@ import type { CircumferenceMeasurement } from '../types/assessment';
  *  idem: não entra no cálculo, só é coletada junto e repassada. */
 export interface SkinfoldAssessmentPayload {
   assessmentId: string;
+  /** Data em que a avaliação foi realizada — 'YYYY-MM-DD' (valor de
+   *  `<input type="date">`), não a data em que foi salva no app. */
+  data: string;
   sexo: Sex;
   idade: number;
   pesoKg: number;

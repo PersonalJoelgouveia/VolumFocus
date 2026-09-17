@@ -7,8 +7,9 @@ import {
   validarCircunferencias,
   type CircumferenceEntry,
 } from '../../utils/circumference';
+import { hojeISODate, paraDateInputValue } from '../../utils/timelineDate';
 import { PHOTO_POSES, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
-import type { CircumferenceMeasurement } from '../../types/assessment';
+import type { CircumferenceMeasurement, PhysicalAssessment } from '../../types/assessment';
 import {
   calcIMC,
   calcMassaGorda,
@@ -23,6 +24,9 @@ import './BioimpedanceAssessmentForm.css';
 
 export interface BioimpedanceAssessmentPayload {
   assessmentId: string;
+  /** Data em que a avaliação foi realizada — 'YYYY-MM-DD' (valor de
+   *  `<input type="date">`), não a data em que foi salva no app. */
+  data: string;
   pesoKg: number;
   alturaCm: number;
   circunferencias: CircumferenceMeasurement;
@@ -43,6 +47,10 @@ interface BioimpedanceAssessmentFormProps {
   onSave?: (payload: BioimpedanceAssessmentPayload) => void | Promise<void>;
   /** Quando true, bloqueia a confirmação final até as 4 poses estarem capturadas. */
   fotosObrigatorias?: boolean;
+  /** Presente = modo edição, com todos os campos pré-preenchidos a partir
+   *  do registro salvo. O modo manual/calculado de massa gorda/magra não é
+   *  persistido — reabre sempre como 'calculado' a partir do %gordura. */
+  assessmentExistente?: PhysicalAssessment;
 }
 
 function gerarAssessmentId(): string {
@@ -61,15 +69,33 @@ function gerarAssessmentId(): string {
  * kg) — editar o campo direto muda o modo pra "manual" e a auto-atualização
  * pára pra aquele campo até o usuário voltar pro modo calculado.
  */
-export function BioimpedanceAssessmentForm({ alunoId, onCancel, onSave, fotosObrigatorias = false }: BioimpedanceAssessmentFormProps) {
-  const [assessmentId] = useState(gerarAssessmentId);
-  const [peso, setPeso] = useState('');
-  const [altura, setAltura] = useState('');
-  const [percentualGordura, setPercentualGordura] = useState('');
-  const [percentualMassaMagra, setPercentualMassaMagra] = useState('');
-  const [gorduraVisceral, setGorduraVisceral] = useState('');
-  const [metabolismoBasal, setMetabolismoBasal] = useState('');
-  const [circunferencias, setCircunferencias] = useState<CircumferenceEntry[]>(criarCircunferenciasPadrao);
+export function BioimpedanceAssessmentForm({
+  alunoId,
+  onCancel,
+  onSave,
+  fotosObrigatorias = false,
+  assessmentExistente,
+}: BioimpedanceAssessmentFormProps) {
+  const editando = !!assessmentExistente;
+  const [assessmentId] = useState(() => assessmentExistente?.id ?? gerarAssessmentId());
+  const [data, setData] = useState(() => (assessmentExistente ? paraDateInputValue(assessmentExistente.date) : hojeISODate()));
+  const [peso, setPeso] = useState(() => (assessmentExistente ? String(assessmentExistente.anthropometry.peso) : ''));
+  const [altura, setAltura] = useState(() => (assessmentExistente ? String(assessmentExistente.anthropometry.altura) : ''));
+  const [percentualGordura, setPercentualGordura] = useState(() =>
+    assessmentExistente?.results.percentualGordura != null ? String(assessmentExistente.results.percentualGordura) : ''
+  );
+  const [percentualMassaMagra, setPercentualMassaMagra] = useState(() =>
+    assessmentExistente?.results.percentualMassaLegra != null ? String(assessmentExistente.results.percentualMassaLegra) : ''
+  );
+  const [gorduraVisceral, setGorduraVisceral] = useState(() =>
+    assessmentExistente?.results.gorduraVisceral != null ? String(assessmentExistente.results.gorduraVisceral) : ''
+  );
+  const [metabolismoBasal, setMetabolismoBasal] = useState(() =>
+    assessmentExistente?.results.metabolismoBasal != null ? String(assessmentExistente.results.metabolismoBasal) : ''
+  );
+  const [circunferencias, setCircunferencias] = useState<CircumferenceEntry[]>(
+    () => assessmentExistente?.circumferences ?? criarCircunferenciasPadrao()
+  );
 
   const [massaGordaModo, setMassaGordaModo] = useState<OrigemValor>('calculado');
   const [massaGordaManual, setMassaGordaManual] = useState('');
@@ -163,6 +189,7 @@ export function BioimpedanceAssessmentForm({ alunoId, onCancel, onSave, fotosObr
 
     const payload: BioimpedanceAssessmentPayload = {
       assessmentId,
+      data,
       pesoKg: pesoNum,
       alturaCm: alturaNum,
       circunferencias: paraRegistroHistorico(circunferencias),
@@ -199,6 +226,10 @@ export function BioimpedanceAssessmentForm({ alunoId, onCancel, onSave, fotosObr
           </div>
 
           <div className="bf-summary">
+            <div className="bf-summary-row">
+              <span>Data</span>
+              <strong>{new Date(`${data}T12:00:00`).toLocaleDateString('pt-BR')}</strong>
+            </div>
             <div className="bf-summary-row">
               <span>Peso</span>
               <strong>{pesoNum?.toFixed(1)} kg</strong>
@@ -250,7 +281,7 @@ export function BioimpedanceAssessmentForm({ alunoId, onCancel, onSave, fotosObr
               Voltar e editar
             </button>
             <button type="button" className="btn btn-primary" onClick={handleConfirmar} disabled={confirmando}>
-              {confirmando ? 'Salvando…' : 'Confirmar e salvar'}
+              {confirmando ? 'Salvando…' : editando ? 'Confirmar alterações' : 'Confirmar e salvar'}
             </button>
           </div>
         </div>
@@ -262,13 +293,18 @@ export function BioimpedanceAssessmentForm({ alunoId, onCancel, onSave, fotosObr
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="cli-detail-panel bf-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 style={{ marginBottom: 0 }}>Bioimpedância</h2>
+          <h2 style={{ marginBottom: 0 }}>{editando ? 'Editar avaliação — Bioimpedância' : 'Bioimpedância'}</h2>
           <button className="modal-close" onClick={onCancel} aria-label="Fechar">
             ×
           </button>
         </div>
 
         <div className="bf-fields">
+          <div className="bf-field">
+            <label htmlFor="bf-data">Data da avaliação</label>
+            <input id="bf-data" type="date" value={data} max={hojeISODate()} onChange={(e) => setData(e.target.value)} />
+          </div>
+
           <div className="bf-field">
             <label htmlFor="bf-peso">Peso (kg)</label>
             <input

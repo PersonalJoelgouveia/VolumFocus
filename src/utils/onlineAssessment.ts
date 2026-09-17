@@ -320,6 +320,7 @@ export function validarValorCircunferencia(valor: number | undefined): string | 
 }
 
 import { SKINFOLD_SITES } from './pollock7';
+import { dateInputParaISO } from './timelineDate';
 
 /* ============================================================
  * Montagem do registro final (PhysicalAssessment) — protocolo Online
@@ -327,6 +328,9 @@ import { SKINFOLD_SITES } from './pollock7';
 
 export interface OnlineWizardData {
   assessmentId: string;
+  /** 'YYYY-MM-DD' (valor de `<input type="date">`) — data em que a
+   *  autoavaliação foi realizada, não a data de envio. */
+  data: string;
   maoDominante: 'direita' | 'esquerda' | '';
   objetivoPrincipal: string;
   nivelExperiencia: string;
@@ -345,11 +349,49 @@ function montarNotasBasicas(wizard: OnlineWizardData): string {
 }
 
 /**
+ * Reconstrói o estado de formulário a partir de um registro já salvo —
+ * usado só ao abrir uma avaliação Online existente pra edição. Como só a
+ * MÉDIA final é persistida (não a 1ª/2ª medida originais), a edição
+ * reabre com as duas medidas iguais à média salva — limitação conhecida,
+ * não uma perda de dado nova introduzida aqui.
+ */
+export function pontosCircunferenciaDoRegistro(circumferences: CircumferenceMeasurement): OnlinePointFormState[] {
+  const base = criarPontosCircunferenciaOnline();
+  const porId = new Map(base.map((p) => [p.id, p]));
+  const extras: OnlinePointFormState[] = [];
+
+  for (const c of circumferences) {
+    const valorStr = String(c.valor);
+    const existente = porId.get(c.id);
+    if (existente) {
+      existente.m1 = valorStr;
+      existente.m2 = valorStr;
+    } else {
+      extras.push({
+        id: c.id,
+        nome: c.nome,
+        lado: c.lado,
+        padronizada: false,
+        measurementMethod: c.measurementMethod,
+        m1: valorStr,
+        m2: valorStr,
+        personalizada: true,
+      });
+    }
+  }
+
+  return [...base, ...extras];
+}
+
+/**
  * Monta o `PhysicalAssessment` completo a partir do estado do wizard.
  * Nome/data de nascimento/sexo NÃO são duplicados aqui — já vivem no
  * cadastro do Aluno (seção 3 do pedido: "não duplicar informações
  * desnecessariamente"). RCQ/RCE só entram quando cintura (e quadril, no
- * caso da RCQ) foram de fato medidos — nunca inventados.
+ * caso da RCQ) foram de fato medidos — nunca inventados. Mão dominante/
+ * objetivo/nível de experiência vão tanto pro texto legível de `notes`
+ * quanto, de forma estruturada, pra `questionnaire` — assim reabrir a
+ * avaliação pra edição não precisa reinterpretar texto livre.
  */
 export function montarAvaliacaoOnline(
   alunoId: string,
@@ -379,7 +421,7 @@ export function montarAvaliacaoOnline(
   return {
     id: wizard.assessmentId,
     alunoId,
-    date: now,
+    date: dateInputParaISO(wizard.data),
     protocol: 'online',
     notes: notas || undefined,
     anthropometry: { peso: pesoNum, altura: alturaNum, imc },
@@ -390,7 +432,12 @@ export function montarAvaliacaoOnline(
     updatedAt: now,
     status,
     submittedBy: 'aluno',
-    questionnaire: wizard.questionario,
+    questionnaire: {
+      ...wizard.questionario,
+      maoDominante: wizard.maoDominante || undefined,
+      objetivoPrincipal: wizard.objetivoPrincipal || undefined,
+      nivelExperiencia: wizard.nivelExperiencia || undefined,
+    },
   };
 }
 

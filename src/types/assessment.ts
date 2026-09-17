@@ -55,6 +55,12 @@ export interface Anthropometry {
   peso: number;
   altura: number;
   imc: number;
+  /** Só o protocolo Dobras usa (entra na fórmula de Pollock 7). Opcional —
+   *  os demais protocolos não preenchem. Guardado aqui (e não só derivado
+   *  do cadastro do Aluno) pra edição de uma avaliação antiga não puxar a
+   *  idade/sexo *atuais* do cadastro por engano. */
+  sexoBiologico?: 'M' | 'F';
+  idadeAnos?: number;
 }
 
 /** Resultados calculados da avaliação (composição corporal). Nem todo
@@ -122,6 +128,13 @@ export interface OnlineQuestionnaireData {
   frequenciaAerobica?: string;
   historicoTreinamento?: string;
   observacoes?: string;
+  /** Dados básicos coletados fora do "Contexto da avaliação" (seção 3 do
+   *  protocolo), mas guardados aqui pra edição de uma avaliação existente
+   *  conseguir pré-preencher esses 3 campos sem precisar reinterpretar o
+   *  texto livre de `notes`. */
+  maoDominante?: 'direita' | 'esquerda' | '';
+  objetivoPrincipal?: string;
+  nivelExperiencia?: string;
   /** Triagem inicial simples (seção "Saúde e Segurança"). Nunca gera
    *  diagnóstico automático — só sinaliza, com linguagem neutra, que uma
    *  conversa com um profissional de saúde pode ser recomendável. */

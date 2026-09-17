@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { calcularIdade } from '../../types/aluno';
+import type { PhysicalAssessment } from '../../types/assessment';
 import { FotosComparativas } from '../avaliacao/FotosComparativas';
 import { CircumferenceForm } from './CircumferenceForm';
 import {
@@ -9,6 +10,7 @@ import {
   validarCircunferencias,
   type CircumferenceEntry,
 } from '../../utils/circumference';
+import { hojeISODate, paraDateInputValue } from '../../utils/timelineDate';
 import { PHOTO_POSES, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
 import {
   SKINFOLD_SITES,
@@ -34,6 +36,11 @@ interface SkinfoldAssessmentFormProps {
   onSave?: (payload: SkinfoldAssessmentPayload) => void | Promise<void>;
   /** Quando true, bloqueia "Salvar" até as 4 poses estarem capturadas. */
   fotosObrigatorias?: boolean;
+  /** Presente = modo edição. Todos os campos vêm pré-preenchidos e o
+   *  `assessmentId`/data de criação originais são preservados — quem
+   *  chama `onSave` decide se isso vira um `salvar` (novo) ou `editar`
+   *  (atualização) no Firestore. */
+  assessmentExistente?: PhysicalAssessment;
 }
 
 function gerarAssessmentId(): string {
@@ -49,24 +56,52 @@ function emptyTriples(): Record<SkinfoldSite, TripleInputs> {
   );
 }
 
+/** Reconstrói os inputs de 3 aferições a partir do `SkinfoldSet` salvo —
+ *  usado só ao abrir uma avaliação existente pra edição. */
+function triplesDoRegistro(assessment: PhysicalAssessment): Record<SkinfoldSite, TripleInputs> {
+  return SKINFOLD_SITES.reduce(
+    (acc, site) => {
+      const s = assessment.skinfolds[site];
+      acc[site] = { m1: String(s.measurement1), m2: String(s.measurement2), m3: String(s.measurement3) };
+      return acc;
+    },
+    {} as Record<SkinfoldSite, TripleInputs>
+  );
+}
+
 /**
  * Formulário do protocolo "Dobras" (Jackson & Pollock 7 dobras).
  * Isolado por design: só orquestra estado de UI e delega todo o cálculo a
  * utils/pollock7.ts. Sexo/idade vêm do cadastro do aluno quando disponíveis,
  * mas seguem editáveis (dado por avaliação pode divergir do cadastro).
  */
-export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave, fotosObrigatorias = false }: SkinfoldAssessmentFormProps) {
+export function SkinfoldAssessmentForm({
+  alunoId,
+  onCancel,
+  onSave,
+  fotosObrigatorias = false,
+  assessmentExistente,
+}: SkinfoldAssessmentFormProps) {
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const idadeCadastro = calcularIdade(aluno?.dataNascimento);
   const sexoCadastro = inferirSexoDoGenero(aluno?.genero);
+  const editando = !!assessmentExistente;
 
-  const [assessmentId] = useState(gerarAssessmentId);
-  const [sexo, setSexo] = useState<Sex | undefined>(sexoCadastro);
-  const [idade, setIdade] = useState(idadeCadastro != null ? String(idadeCadastro) : '');
-  const [peso, setPeso] = useState('');
-  const [altura, setAltura] = useState('');
-  const [triples, setTriples] = useState<Record<SkinfoldSite, TripleInputs>>(emptyTriples);
-  const [circunferencias, setCircunferencias] = useState<CircumferenceEntry[]>(criarCircunferenciasPadrao);
+  const [assessmentId] = useState(() => assessmentExistente?.id ?? gerarAssessmentId());
+  const [data, setData] = useState(() => (assessmentExistente ? paraDateInputValue(assessmentExistente.date) : hojeISODate()));
+  const [sexo, setSexo] = useState<Sex | undefined>(assessmentExistente?.anthropometry.sexoBiologico ?? sexoCadastro);
+  const [idade, setIdade] = useState(() => {
+    const inicial = assessmentExistente?.anthropometry.idadeAnos ?? idadeCadastro;
+    return inicial != null ? String(inicial) : '';
+  });
+  const [peso, setPeso] = useState(() => (assessmentExistente ? String(assessmentExistente.anthropometry.peso) : ''));
+  const [altura, setAltura] = useState(() => (assessmentExistente ? String(assessmentExistente.anthropometry.altura) : ''));
+  const [triples, setTriples] = useState<Record<SkinfoldSite, TripleInputs>>(() =>
+    assessmentExistente ? triplesDoRegistro(assessmentExistente) : emptyTriples()
+  );
+  const [circunferencias, setCircunferencias] = useState<CircumferenceEntry[]>(
+    () => assessmentExistente?.circumferences ?? criarCircunferenciasPadrao()
+  );
   const [tentouSalvar, setTentouSalvar] = useState(false);
   const [erroFotos, setErroFotos] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -142,6 +177,7 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave, fotosObrigat
 
     const payload: SkinfoldAssessmentPayload = {
       assessmentId,
+      data,
       sexo,
       idade: idadeNum,
       pesoKg: pesoNum,
@@ -166,13 +202,18 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave, fotosObrigat
     <div className="modal-backdrop" onClick={onCancel}>
       <div className="cli-detail-panel sf-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 style={{ marginBottom: 0 }}>Dobras Cutâneas (JP7)</h2>
+          <h2 style={{ marginBottom: 0 }}>{editando ? 'Editar avaliação — Dobras Cutâneas (JP7)' : 'Dobras Cutâneas (JP7)'}</h2>
           <button className="modal-close" onClick={onCancel} aria-label="Fechar">
             ×
           </button>
         </div>
 
         <div className="sf-basics">
+          <div className="sf-field">
+            <label>Data da avaliação</label>
+            <input type="date" value={data} max={hojeISODate()} onChange={(e) => setData(e.target.value)} />
+          </div>
+
           <div className="sf-field">
             <label>Sexo biológico{sexoCadastro && <span className="sf-auto-tag">cadastro</span>}</label>
             <div className="sf-toggle-row">
@@ -320,7 +361,7 @@ export function SkinfoldAssessmentForm({ alunoId, onCancel, onSave, fotosObrigat
             Cancelar
           </button>
           <button className="btn btn-primary" onClick={handleSalvar} disabled={salvando}>
-            {salvando ? 'Salvando…' : 'Salvar avaliação'}
+            {salvando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Salvar avaliação'}
           </button>
         </div>
       </div>

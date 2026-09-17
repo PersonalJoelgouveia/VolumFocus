@@ -3,6 +3,7 @@ import { useAlunoStore } from '../../store/useAlunoStore';
 import { usePhysicalAssessments } from '../../hooks/usePhysicalAssessments';
 import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../types/assessment';
 import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
+import { dateInputParaISO } from '../../utils/timelineDate';
 import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
 import { BioimpedanceAssessmentForm, type BioimpedanceAssessmentPayload } from './BioimpedanceAssessmentForm';
 import { AssessmentTimeline } from './AssessmentTimeline';
@@ -65,6 +66,22 @@ export function AvaliacaoFisicaModal({
   >('resumo');
   const [modoComparar, setModoComparar] = useState<'primeira-atual' | 'anterior-atual'>('primeira-atual');
   const [revisandoId, setRevisandoId] = useState<string | null>(null);
+  /** Presente = os formulários de Dobras/Bioimpedância/Online abrem em
+   *  modo edição, pré-preenchidos, e o save vira `editar()` em vez de
+   *  `salvar()`. Só o Personal chega aqui (botão "Editar" na timeline). */
+  const [editando, setEditando] = useState<PhysicalAssessment | null>(null);
+
+  function handleEditar(assessment: PhysicalAssessment) {
+    setEditando(assessment);
+    if (assessment.protocol === 'skinfold') setStep('skinfold-form');
+    else if (assessment.protocol === 'bioimpedance') setStep('bioimpedance-form');
+    else if (assessment.protocol === 'online') setStep('online-form');
+  }
+
+  function handleCancelarEdicao() {
+    setEditando(null);
+    setStep('resumo');
+  }
 
   function handleSelectProtocol(protocol: AssessmentProtocol, comingSoon?: boolean) {
     if (comingSoon) return;
@@ -100,9 +117,9 @@ export function AvaliacaoFisicaModal({
     const assessment: PhysicalAssessment = {
       id: payload.assessmentId,
       alunoId,
-      date: now,
+      date: dateInputParaISO(payload.data),
       protocol: 'skinfold',
-      anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc },
+      anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc, sexoBiologico: payload.sexo, idadeAnos: payload.idade },
       circumferences: payload.circunferencias,
       skinfolds,
       results: {
@@ -112,11 +129,16 @@ export function AvaliacaoFisicaModal({
         percentualMassaLegra: payload.resultado.percentualMassaMagra,
         massaMagraKg: payload.resultado.massaMagraKg,
       },
-      createdAt: now,
+      createdAt: editando?.createdAt ?? now,
       updatedAt: now,
     };
 
-    await salvar(assessment);
+    if (editando) {
+      await editar(assessment.id, assessment);
+    } else {
+      await salvar(assessment);
+    }
+    setEditando(null);
     setStep('resumo');
   }
 
@@ -135,7 +157,7 @@ export function AvaliacaoFisicaModal({
     const assessment: PhysicalAssessment = {
       id: payload.assessmentId,
       alunoId,
-      date: now,
+      date: dateInputParaISO(payload.data),
       protocol: 'bioimpedance',
       anthropometry: { peso: payload.pesoKg, altura: payload.alturaCm, imc: payload.resultado.imc },
       circumferences: payload.circunferencias,
@@ -149,17 +171,27 @@ export function AvaliacaoFisicaModal({
         gorduraVisceral: payload.gorduraVisceral,
         metabolismoBasal: payload.metabolismoBasal,
       },
-      createdAt: now,
+      createdAt: editando?.createdAt ?? now,
       updatedAt: now,
     };
 
-    await salvar(assessment);
+    if (editando) {
+      await editar(assessment.id, assessment);
+    } else {
+      await salvar(assessment);
+    }
+    setEditando(null);
     setStep('resumo');
   }
 
   if (step === 'skinfold-form') {
     return (
-      <SkinfoldAssessmentForm alunoId={alunoId} onCancel={() => setStep('protocolo')} onSave={handleSaveSkinfold} />
+      <SkinfoldAssessmentForm
+        alunoId={alunoId}
+        onCancel={editando ? handleCancelarEdicao : () => setStep('protocolo')}
+        onSave={handleSaveSkinfold}
+        assessmentExistente={editando ?? undefined}
+      />
     );
   }
 
@@ -167,8 +199,9 @@ export function AvaliacaoFisicaModal({
     return (
       <BioimpedanceAssessmentForm
         alunoId={alunoId}
-        onCancel={() => setStep('protocolo')}
+        onCancel={editando ? handleCancelarEdicao : () => setStep('protocolo')}
         onSave={handleSaveBioimpedance}
+        assessmentExistente={editando ?? undefined}
       />
     );
   }
@@ -177,10 +210,14 @@ export function AvaliacaoFisicaModal({
     return (
       <OnlineAssessmentForm
         alunoId={alunoId}
-        onCancel={() => setStep('resumo')}
+        onCancel={editando ? handleCancelarEdicao : () => setStep('resumo')}
+        assessmentExistente={editando ?? undefined}
         onSave={async (assessment) => {
-          const ok = await salvar(assessment);
-          if (ok) setStep('resumo');
+          const ok = editando ? await editar(assessment.id, assessment) : await salvar(assessment);
+          if (ok) {
+            setEditando(null);
+            setStep('resumo');
+          }
           return ok;
         }}
       />
@@ -283,7 +320,7 @@ export function AvaliacaoFisicaModal({
                     Ver evolução
                   </button>
                   {!readOnly && canWrite && (
-                    <button className="btn btn-primary" onClick={() => setStep('protocolo')}>
+                    <button className="btn btn-primary" onClick={() => { setEditando(null); setStep('protocolo'); }}>
                       + Nova avaliação
                     </button>
                   )}
@@ -310,7 +347,8 @@ export function AvaliacaoFisicaModal({
                   assessments={assessments}
                   canWrite={canWrite}
                   onRemover={remover}
-                  onNovaAvaliacao={!readOnly && canWrite ? () => setStep('protocolo') : undefined}
+                  onEditar={canWrite ? handleEditar : undefined}
+                  onNovaAvaliacao={!readOnly && canWrite ? () => { setEditando(null); setStep('protocolo'); } : undefined}
                   onRevisar={
                     canWrite
                       ? (id) => {

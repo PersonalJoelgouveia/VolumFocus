@@ -11,12 +11,14 @@ import {
   criarPontosCircunferenciaOnline,
   montarAvaliacaoOnline,
   paraRegistroHistoricoOnline,
+  pontosCircunferenciaDoRegistro,
   precisaOrientacaoProfissional,
   temDiscrepanciaSignificativa,
   validarAltura,
   validarPeso,
   validarValorCircunferencia,
 } from '../onlineAssessment';
+import { paraDateInputValue } from '../timelineDate';
 
 describe('calcularIMC', () => {
   it('calcula peso/altura²', () => {
@@ -173,6 +175,7 @@ describe('montarAvaliacaoOnline', () => {
       'aluno-1',
       {
         assessmentId: 'af-teste-1',
+        data: '2026-05-10',
         maoDominante: 'direita',
         objetivoPrincipal: 'Emagrecimento',
         nivelExperiencia: 'Iniciante',
@@ -192,6 +195,24 @@ describe('montarAvaliacaoOnline', () => {
     expect(assessment.results.relacaoCinturaEstatura).toBeCloseTo(0.5, 6);
     expect(assessment.results.percentualGordura).toBeUndefined();
     expect(assessment.notes).toContain('Mão dominante: Direita');
+    expect(assessment.questionnaire?.objetivoPrincipal).toBe('Emagrecimento');
+    expect(paraDateInputValue(assessment.date)).toBe('2026-05-10');
+  });
+});
+
+describe('pontosCircunferenciaDoRegistro', () => {
+  it('reconstrói m1=m2=média salva pros pontos padrão e cria extras pra personalizadas', () => {
+    const pontos = pontosCircunferenciaDoRegistro([
+      { id: 'cintura', nome: 'Cintura', valor: 81, unidade: 'cm', lado: 'none', measurementMethod: 'WHO_STEPS' },
+      { id: 'circ-custom-1', nome: 'Punho', valor: 17, unidade: 'cm', lado: 'none', personalizada: true },
+    ]);
+    const cintura = pontos.find((p) => p.id === 'cintura')!;
+    expect(cintura.m1).toBe('81');
+    expect(cintura.m2).toBe('81');
+    const punho = pontos.find((p) => p.id === 'circ-custom-1')!;
+    expect(punho.personalizada).toBe(true);
+    expect(punho.nome).toBe('Punho');
+    expect(punho.m1).toBe('17');
   });
 });
 

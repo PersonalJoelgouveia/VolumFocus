@@ -12,6 +12,9 @@ interface OnlineReviewProps {
   onEnviar?: () => void;
   onMarcarRevisada?: (nota: string) => void;
   enviando?: boolean;
+  /** Texto do botão de confirmação no modo 'aluno' — "Enviar avaliação"
+   *  por padrão, ou "Salvar alterações" quando o Personal está editando. */
+  labelEnviar?: string;
 }
 
 /** Uma linha de dado com a origem explícita — seção 18: diferenciar
@@ -28,7 +31,7 @@ function LinhaOrigem({ label, valor, origem }: { label: string; valor: string; o
   );
 }
 
-export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRevisada, enviando }: OnlineReviewProps) {
+export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRevisada, enviando, labelEnviar }: OnlineReviewProps) {
   const [nota, setNota] = useState('');
   const imcClass = classificarIMC(assessment.anthropometry.imc);
   const rceClass =
@@ -98,7 +101,7 @@ export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRev
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={onEnviar} disabled={enviando}>
-            {enviando ? 'Enviando…' : 'Enviar avaliação'}
+            {enviando ? 'Enviando…' : (labelEnviar ?? 'Enviar avaliação')}
           </button>
         </div>
       )}
