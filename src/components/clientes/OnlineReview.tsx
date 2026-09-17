@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { PhysicalAssessment } from '../../types/assessment';
-import { classificarIMC, classificarRCE, TRIAGEM_SAUDE_ITENS } from '../../utils/onlineAssessment';
+import { classificarIMC, classificarRCE, classificarRCQ, TRIAGEM_SAUDE_ITENS } from '../../utils/onlineAssessment';
+import { inferirSexoDoGenero } from '../../utils/pollock7';
+import { useAlunoStore } from '../../store/useAlunoStore';
 import './OnlineAssessmentForm.css';
 
 interface OnlineReviewProps {
@@ -38,6 +40,14 @@ export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRev
     assessment.results.relacaoCinturaEstatura != null
       ? classificarRCE(assessment.results.relacaoCinturaEstatura, assessment.anthropometry.imc)
       : null;
+  // Online não duplica sexo biológico do cadastro do aluno (ver
+  // montarAvaliacaoOnline) — usado só pra classificar a RCQ nesta tela.
+  const aluno = useAlunoStore((s) => s.getAluno(assessment.alunoId));
+  const sexoBiologico = assessment.anthropometry.sexoBiologico ?? inferirSexoDoGenero(aluno?.genero);
+  const rcqClass =
+    assessment.results.relacaoCinturaQuadril != null
+      ? classificarRCQ(assessment.results.relacaoCinturaQuadril, sexoBiologico)
+      : null;
 
   const respostasPositivas = TRIAGEM_SAUDE_ITENS.filter((item) => assessment.questionnaire?.triagemSaude?.[item.key]);
 
@@ -66,7 +76,11 @@ export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRev
         <div className="oa-review-section">
           <div className="oa-review-title">Indicadores derivados</div>
           {assessment.results.relacaoCinturaQuadril != null && (
-            <LinhaOrigem label="RCQ" valor={assessment.results.relacaoCinturaQuadril.toFixed(2)} origem="calculado" />
+            <LinhaOrigem
+              label="RCQ"
+              valor={`${assessment.results.relacaoCinturaQuadril.toFixed(2)}${rcqClass ? ` — ${rcqClass.label}` : ''}`}
+              origem="calculado"
+            />
           )}
           {assessment.results.relacaoCinturaEstatura != null && rceClass && (
             <LinhaOrigem label="RCE" valor={`${assessment.results.relacaoCinturaEstatura.toFixed(2)} — ${rceClass.label}`} origem="calculado" />

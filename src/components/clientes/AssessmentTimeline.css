@@ -129,3 +129,28 @@
 .at-revisar-btn {
   margin-left: auto;
 }
+
+.at-rcq-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: var(--rs, 4px);
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.at-rcq-badge--baixo {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.at-rcq-badge--moderado {
+  background: var(--yellow-bg);
+  color: var(--yellow);
+}
+
+.at-rcq-badge--alto {
+  background: var(--red-bg);
+  color: var(--red);
+}

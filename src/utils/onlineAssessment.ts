@@ -22,9 +22,13 @@
  *   using a 'matrix' based on BMI and waist circumference", BMJ Open,
  *   2016) — usa-se aqui só a leitura "< 0,50 / 0,50–0,59 / ≥ 0,60" já
  *   exigida no pedido, sem inventar novo ponto de corte.
- * - RCQ (relação cintura-quadril): apresentado apenas como valor numérico
- *   e evolução temporal — nenhuma classificação universal é aplicada
- *   (ver `INSTRUCAO_RCQ`), como pedido explicitamente.
+ * - RCQ (relação cintura-quadril): classificação de risco de DCNTs (Doenças
+ *   Crônicas Não Transmissíveis) por sexo biológico — pontos de corte da
+ *   OMS ("Waist Circumference and Waist-Hip Ratio: Report of a WHO Expert
+ *   Consultation", 2008): Homens ≤0,90 baixo / 0,90–0,99 moderado / ≥1,00
+ *   alto; Mulheres ≤0,80 baixo / 0,80–0,84 moderado / ≥0,85 alto. Só é
+ *   aplicada quando o sexo biológico é conhecido — sem sexo, mostra-se
+ *   apenas o valor numérico (ver `classificarRCQ`/`INSTRUCAO_RCQ`).
  *
  * IMPORTANTE — o que este módulo NÃO faz:
  * - Não estima percentual de gordura a partir de peso/circunferências.
@@ -91,6 +95,22 @@ export function calcularRCE(cinturaCm: number, alturaCm: number): number {
   return cinturaCm / alturaCm;
 }
 
+/**
+ * Deriva a RCQ a partir das circunferências já registradas na avaliação
+ * (procura pelos ids padrão `cintura`/`quadril` — ver `STANDARD_CIRCUMFERENCES`
+ * em utils/circumference.ts). Retorna `undefined` quando cintura e/ou
+ * quadril não foram medidos nesta avaliação — nunca inventa o valor.
+ * Usado pelos protocolos Dobras/Bioimpedância, que já coletam
+ * circunferências via `CircumferenceForm` mas não calculavam RCQ (só o
+ * protocolo Online calculava, com seus próprios pontos).
+ */
+export function derivarRCQDeCircunferencias(circumferences: CircumferenceMeasurement): number | undefined {
+  const cintura = circumferences.find((c) => c.id === 'cintura')?.valor;
+  const quadril = circumferences.find((c) => c.id === 'quadril')?.valor;
+  if (cintura == null || quadril == null) return undefined;
+  return calcularRCQ(cintura, quadril);
+}
+
 export interface ClassificacaoRCE {
   label: string;
   /** Presente quando a classificação não deve ser usada como principal
@@ -118,12 +138,35 @@ export function classificarRCE(rce: number, imc?: number): ClassificacaoRCE {
   return { label, limitacao };
 }
 
-/** RCQ é mostrada só como valor numérico + evolução — nenhum ponto de
- *  corte universal é aplicado (não inventar classificação). Texto fixo
- *  pronto pra UI, caso algum dia um ponto de corte com sexo/população/
- *  fonte explícitos seja adicionado. */
+export interface ClassificacaoRCQ {
+  label: 'Baixo' | 'Moderado' | 'Alto';
+  fonte: string;
+}
+
+/**
+ * Classifica o risco de DCNTs (Doenças Crônicas Não Transmissíveis) a
+ * partir da RCQ, por sexo biológico — pontos de corte da OMS (2008).
+ * Sem sexo biológico conhecido não há como classificar (não inventar):
+ * o chamador deve tratar `undefined` mostrando só o valor numérico da RCQ.
+ */
+export function classificarRCQ(rcq: number, sexoBiologico?: 'M' | 'F'): ClassificacaoRCQ | undefined {
+  if (sexoBiologico == null) return undefined;
+  const fonte = 'OMS (2008) — risco de DCNTs por RCQ, faixas por sexo biológico';
+  if (sexoBiologico === 'M') {
+    if (rcq <= 0.9) return { label: 'Baixo', fonte };
+    if (rcq <= 0.99) return { label: 'Moderado', fonte };
+    return { label: 'Alto', fonte };
+  }
+  // sexoBiologico === 'F'
+  if (rcq <= 0.8) return { label: 'Baixo', fonte };
+  if (rcq <= 0.84) return { label: 'Moderado', fonte };
+  return { label: 'Alto', fonte };
+}
+
+/** Texto de apoio pra UI — usado quando o sexo biológico não está
+ *  disponível na avaliação, então só o valor numérico é exibido. */
 export const INSTRUCAO_RCQ =
-  'A Relação Cintura-Quadril é mostrada como valor numérico e evolução ao longo do tempo. Pontos de corte variam por sexo e população — nenhuma classificação universal é aplicada aqui.';
+  'A Relação Cintura-Quadril é classificada em risco Baixo/Moderado/Alto de DCNTs por sexo biológico (OMS, 2008). Sem o sexo biológico informado, mostramos só o valor numérico.';
 
 /* ============================================================
  * Qualidade da autoaferição — 1ª/2ª medida, discrepância

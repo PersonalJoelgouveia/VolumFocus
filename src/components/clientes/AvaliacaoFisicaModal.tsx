@@ -4,6 +4,7 @@ import { usePhysicalAssessments } from '../../hooks/usePhysicalAssessments';
 import type { AssessmentProtocol, PhysicalAssessment, SkinfoldSet } from '../../types/assessment';
 import { SKINFOLD_SITES, type SkinfoldAssessmentPayload } from '../../utils/pollock7';
 import { dateInputParaISO } from '../../utils/timelineDate';
+import { derivarRCQDeCircunferencias } from '../../utils/onlineAssessment';
 import { SkinfoldAssessmentForm } from './SkinfoldAssessmentForm';
 import { BioimpedanceAssessmentForm, type BioimpedanceAssessmentPayload } from './BioimpedanceAssessmentForm';
 import { AssessmentTimeline } from './AssessmentTimeline';
@@ -128,6 +129,10 @@ export function AvaliacaoFisicaModal({
         massaGordaKg: payload.resultado.massaGordaKg,
         percentualMassaLegra: payload.resultado.percentualMassaMagra,
         massaMagraKg: payload.resultado.massaMagraKg,
+        // RCQ derivada das circunferências desta avaliação (cintura/quadril),
+        // quando ambas foram medidas — protocolo de cálculo já existente,
+        // só agora também aplicado fora do protocolo Online.
+        relacaoCinturaQuadril: derivarRCQDeCircunferencias(payload.circunferencias),
       },
       createdAt: editando?.createdAt ?? now,
       updatedAt: now,
@@ -170,6 +175,7 @@ export function AvaliacaoFisicaModal({
         massaMagraKg: payload.resultado.massaMagraKg,
         gorduraVisceral: payload.gorduraVisceral,
         metabolismoBasal: payload.metabolismoBasal,
+        relacaoCinturaQuadril: derivarRCQDeCircunferencias(payload.circunferencias),
       },
       createdAt: editando?.createdAt ?? now,
       updatedAt: now,
@@ -345,6 +351,7 @@ export function AvaliacaoFisicaModal({
 
                 <AssessmentTimeline
                   assessments={assessments}
+                  alunoId={alunoId}
                   canWrite={canWrite}
                   onRemover={remover}
                   onEditar={canWrite ? handleEditar : undefined}

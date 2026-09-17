@@ -8,7 +8,9 @@ import {
   calcularRCQ,
   classificarIMC,
   classificarRCE,
+  classificarRCQ,
   criarPontosCircunferenciaOnline,
+  derivarRCQDeCircunferencias,
   montarAvaliacaoOnline,
   paraRegistroHistoricoOnline,
   pontosCircunferenciaDoRegistro,
@@ -50,6 +52,46 @@ describe('calcularRCQ / calcularRCE', () => {
 
   it('RCE = cintura/altura (mesma unidade)', () => {
     expect(calcularRCE(80, 175)).toBeCloseTo(80 / 175, 6);
+  });
+});
+
+describe('classificarRCQ', () => {
+  it('classifica homens pelas faixas da OMS (2008)', () => {
+    expect(classificarRCQ(0.85, 'M')?.label).toBe('Baixo');
+    expect(classificarRCQ(0.9, 'M')?.label).toBe('Baixo');
+    expect(classificarRCQ(0.95, 'M')?.label).toBe('Moderado');
+    expect(classificarRCQ(0.99, 'M')?.label).toBe('Moderado');
+    expect(classificarRCQ(1.0, 'M')?.label).toBe('Alto');
+    expect(classificarRCQ(1.1, 'M')?.label).toBe('Alto');
+  });
+
+  it('classifica mulheres pelas faixas da OMS (2008)', () => {
+    expect(classificarRCQ(0.75, 'F')?.label).toBe('Baixo');
+    expect(classificarRCQ(0.8, 'F')?.label).toBe('Baixo');
+    expect(classificarRCQ(0.82, 'F')?.label).toBe('Moderado');
+    expect(classificarRCQ(0.84, 'F')?.label).toBe('Moderado');
+    expect(classificarRCQ(0.85, 'F')?.label).toBe('Alto');
+    expect(classificarRCQ(0.95, 'F')?.label).toBe('Alto');
+  });
+
+  it('sem sexo biológico conhecido, não classifica (não inventa)', () => {
+    expect(classificarRCQ(0.95, undefined)).toBeUndefined();
+  });
+});
+
+describe('derivarRCQDeCircunferencias', () => {
+  it('calcula RCQ quando cintura e quadril estão presentes', () => {
+    const rcq = derivarRCQDeCircunferencias([
+      { id: 'cintura', nome: 'Cintura', valor: 80, unidade: 'cm', lado: 'none' },
+      { id: 'quadril', nome: 'Quadril', valor: 100, unidade: 'cm', lado: 'none' },
+      { id: 'torax', nome: 'Tórax', valor: 95, unidade: 'cm', lado: 'none' },
+    ]);
+    expect(rcq).toBeCloseTo(0.8, 6);
+  });
+
+  it('retorna undefined quando falta cintura ou quadril — nunca inventa', () => {
+    expect(derivarRCQDeCircunferencias([{ id: 'quadril', nome: 'Quadril', valor: 100, unidade: 'cm', lado: 'none' }])).toBeUndefined();
+    expect(derivarRCQDeCircunferencias([])).toBeUndefined();
   });
 });
 

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useUIStore } from '../../store/useUIStore';
+import { useAlunoStore } from '../../store/useAlunoStore';
 import type { AssessmentProtocol, PhysicalAssessment } from '../../types/assessment';
-import { SKINFOLD_SITES, SKINFOLD_SITE_LABELS } from '../../utils/pollock7';
+import { SKINFOLD_SITES, SKINFOLD_SITE_LABELS, inferirSexoDoGenero } from '../../utils/pollock7';
+import { classificarRCQ } from '../../utils/onlineAssessment';
 import { formatarDataCurta } from '../../utils/timelineDate';
 import './AssessmentTimeline.css';
 
@@ -14,6 +16,10 @@ const PROTOCOL_LABELS: Record<AssessmentProtocol, string> = {
 
 interface AssessmentTimelineProps {
   assessments: PhysicalAssessment[];
+  /** Usado só como fallback pra classificar a RCQ quando a própria
+   *  avaliação não guardou `sexoBiologico` (Bioimpedância/Online não
+   *  persistem — só Dobras). Sem isso, mostra-se só o valor numérico. */
+  alunoId?: string;
   /** true só pro Personal — Aluno vê a timeline, mas sem editar/remover. */
   canWrite: boolean;
   /** Já cuida de confirmação + atualização otimista + toast (usePhysicalAssessments). */
@@ -39,9 +45,11 @@ const STATUS_LABELS: Record<string, string> = {
  * confirmação de exclusão e sincronização com o Firestore continuam no
  * hook (não duplicadas aqui).
  */
-export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar, onNovaAvaliacao, onRevisar }: AssessmentTimelineProps) {
+export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar, onNovaAvaliacao, onRevisar, alunoId }: AssessmentTimelineProps) {
   const [expandidoId, setExpandidoId] = useState<string | null>(null);
   const showToast = useUIStore((s) => s.showToast);
+  const aluno = useAlunoStore((s) => (alunoId ? s.getAluno(alunoId) : undefined));
+  const sexoFallback = inferirSexoDoGenero(aluno?.genero);
 
   function handleEditar(assessment: PhysicalAssessment) {
     if (onEditar) {
@@ -104,12 +112,24 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
                     <strong>{a.results.massaMagraKg.toFixed(1)} kg</strong>
                   </div>
                 )}
-                {a.results.relacaoCinturaQuadril != null && (
-                  <div className="at-metric">
-                    <span>RCQ</span>
-                    <strong>{a.results.relacaoCinturaQuadril.toFixed(2)}</strong>
-                  </div>
-                )}
+                {a.results.relacaoCinturaQuadril != null && (() => {
+                  const sexo = a.anthropometry.sexoBiologico ?? sexoFallback;
+                  const classificacao = classificarRCQ(a.results.relacaoCinturaQuadril, sexo);
+                  return (
+                    <div className="at-metric">
+                      <span>RCQ</span>
+                      <strong>
+                        {a.results.relacaoCinturaQuadril.toFixed(2)}
+                        {classificacao && (
+                          <span className={`at-rcq-badge at-rcq-badge--${classificacao.label.toLowerCase()}`} title={classificacao.fonte}>
+                            {' '}
+                            {classificacao.label}
+                          </span>
+                        )}
+                      </strong>
+                    </div>
+                  );
+                })()}
                 {a.results.relacaoCinturaEstatura != null && (
                   <div className="at-metric">
                     <span>RCE</span>
