@@ -1,8 +1,9 @@
 import { useNotificationStore, selectUnreadCount } from '../../store/useNotificationStore';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useUIStore } from '../../store/useUIStore';
-import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON } from '../../types/view';
+import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV } from '../../types/view';
 import type { ViewId } from '../../types/view';
+import { NavIconGraphic } from '../../icons';
 import { useT } from '../../i18n/useT';
 import { NavItem } from './NavItem';
 import logoAzul from '../../assets/branding/JoelGouveia_Simbolo_Azul.png';
@@ -66,7 +67,7 @@ export function MobileSidebar() {
           {items.map((view) => (
             <NavItem
               key={view}
-              icon={VIEW_ICON[view] ?? '•'}
+              icon={<NavIconGraphic view={view} />}
               label={t(`nav.view.${view}.title`)}
               isActive={activeView === view}
               expanded={expanded}
@@ -78,7 +79,7 @@ export function MobileSidebar() {
 
         <div className="msb-footer">
           <NavItem
-            icon="⚙️"
+            icon={<NavIconGraphic view="settings" />}
             label={t('nav.view.settings.title')}
             isActive={activeView === 'settings'}
             expanded={expanded}

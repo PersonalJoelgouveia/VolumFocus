@@ -182,6 +182,7 @@
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
+  color: var(--text-2);
   transition: var(--tr);
 }
 
@@ -189,6 +190,7 @@
   background: var(--teal-glow);
   border-color: var(--teal-border);
   box-shadow: 0 0 12px rgba(0, 196, 179, 0.12);
+  color: var(--teal);
 }
 
 .msb-label {

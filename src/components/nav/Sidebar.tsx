@@ -1,7 +1,8 @@
 import { useUIStore } from '../../store/useUIStore';
 import { useNotificationStore, selectUnreadCount } from '../../store/useNotificationStore';
-import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV, VIEW_ICON } from '../../types/view';
+import { ALUNO_NAV, PRIMARY_NAV, PT_NAV, TOOLS_NAV } from '../../types/view';
 import type { ViewId } from '../../types/view';
+import { NavIconGraphic } from '../../icons';
 import { useT } from '../../i18n/useT';
 import '../feedback/Notifications.css';
 import './Sidebar.css';
@@ -21,7 +22,7 @@ function NavButton({ view }: { view: ViewId }) {
       aria-current={isActive ? 'page' : undefined}
     >
       <div className="ni-icon">
-        {VIEW_ICON[view] ?? '•'}
+        <NavIconGraphic view={view} />
         {badgeCount > 0 && <span className="ntf-badge">{badgeCount > 99 ? '99+' : badgeCount}</span>}
       </div>
       <span className="ni-label">{t(`nav.view.${view}.title`)}</span>

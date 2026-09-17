@@ -25,13 +25,11 @@ export interface ViewMeta {
   alunoOnly?: boolean;
 }
 
-/** Ícones por view — usado pela Sidebar desktop e pela MobileSidebar (rail mobile). */
-export const VIEW_ICON: Partial<Record<ViewId, string>> = {
-  conquistas: '🏆',
-  banco: '🏋️',
-  'nova-semana': '🔄',
-  saude: '⌚',
-};
+/**
+ * Ícones por view: ver `src/icons/iconMap.tsx` (VIEW_ICON_MAP, ícones Lucide).
+ * O antigo `VIEW_ICON` (emojis) foi removido; Sidebar/MobileSidebar consomem
+ * o mapa novo diretamente.
+ */
 
 export const VIEW_META: Record<ViewId, ViewMeta> = {
   registro: { title: 'Treinos', sub: 'Semana Atual' },
