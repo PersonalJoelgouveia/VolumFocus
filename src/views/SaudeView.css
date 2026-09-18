@@ -1,3 +1,110 @@
+/* ========== Hub Saúde (SaudeView.tsx) ========== */
+.sh-view { max-width: 880px; margin: 0 auto; }
+
+.sh-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--rs) var(--rs) 0 0;
+  background: none;
+  color: var(--text-2);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--tr);
+}
+
+.sh-tab:hover { color: var(--text); }
+.sh-tab.active { color: var(--teal); border-bottom-color: var(--teal); }
+.sh-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* ---------- Visão Geral ---------- */
+.sh-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.sh-overview-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 18px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: var(--tr);
+  font-family: inherit;
+  color: inherit;
+}
+
+.sh-overview-card:hover { border-color: var(--teal-border); background: var(--teal-glow); }
+.sh-overview-card:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.sh-overview-ico { font-size: 1.6rem; }
+.sh-overview-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.sh-overview-desc { font-size: 0.78rem; color: var(--text-3); line-height: 1.4; }
+
+/* ---------- Stub (Exames Médicos) / redirecionamento (PT em Avaliação Física) ---------- */
+.sh-stub-card,
+.sh-redirect-card {
+  background: var(--bg-2);
+  border: 1px dashed var(--border-md);
+  border-radius: var(--rl);
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.sh-stub-ico, .sh-redirect-ico { font-size: 1.8rem; }
+.sh-stub-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.sh-stub-txt, .sh-redirect-txt { font-size: 0.85rem; color: var(--text-2); }
+.sh-redirect-card .btn { margin-top: 4px; }
+
+/* ---------- Avaliação Física embutida (não-modal) ----------
+   AvaliacaoFisicaModal/PhysicalAssessmentDashboard/CompareAssessmentsModal
+   continuam usando .modal-backdrop/.cli-detail-panel por baixo (mesmos
+   componentes do fluxo PT em Clientes, que continua modal de propósito).
+   Aqui só a apresentação é sobrescrita: sem overlay fixo, ocupando a
+   largura do workspace — zero lógica ou markup desses componentes foi
+   alterado. */
+.sh-af-embed .modal-backdrop {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  background: none;
+  padding: 0;
+}
+
+.sh-af-embed .cli-detail-panel {
+  max-width: none;
+  width: 100%;
+  max-height: none;
+  overflow-y: visible;
+}
+
 .sd-view { max-width: 720px; margin: 0 auto; }
 
 /* ---------- Card de conexão ---------- */

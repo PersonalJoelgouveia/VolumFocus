@@ -39,7 +39,7 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
   cardio: { title: 'Cardio VO2', sub: 'VO2 Máx & Zonas de Treinamento' },
   performance: { title: 'Performance', sub: 'Testes de Força & Capacidade Aeróbica' },
   'nova-semana': { title: 'Nova Semana', sub: 'Reset de Ciclo' },
-  saude: { title: 'Saúde', sub: 'Wearables & Sincronização' },
+  saude: { title: 'Saúde', sub: 'Avaliação Física, Exames & Wearables' },
   conquistas: { title: 'Conquistas', sub: 'Badges & Recordes Pessoais' },
   clientes: { title: 'Clientes', sub: 'Gestão de Alunos & Rotinas', ptOnly: true },
   notifications: {
