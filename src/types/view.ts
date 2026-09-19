@@ -12,6 +12,7 @@ export type ViewId =
   | 'performance'
   | 'nova-semana'
   | 'saude'
+  | 'ferramentas'
   | 'conquistas'
   | 'clientes'
   | 'notifications'
@@ -40,6 +41,7 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
   performance: { title: 'Performance', sub: 'Testes de Força & Capacidade Aeróbica' },
   'nova-semana': { title: 'Nova Semana', sub: 'Reset de Ciclo' },
   saude: { title: 'Saúde', sub: 'Avaliação Física, Exames & Wearables' },
+  ferramentas: { title: 'Ferramentas', sub: 'Timer, Agenda & Utilitários' },
   conquistas: { title: 'Conquistas', sub: 'Badges & Recordes Pessoais' },
   clientes: { title: 'Clientes', sub: 'Gestão de Alunos & Rotinas', ptOnly: true },
   notifications: {
@@ -55,4 +57,4 @@ export const PRIMARY_NAV: ViewId[] = ['registro', 'dashboard', 'performance', 'c
 export const PT_NAV: ViewId[] = ['banco', 'clientes', 'notifications'];
 /** Sem views exclusivas de aluno hoje — "Minha Rotina" foi fundida em Treinos. */
 export const ALUNO_NAV: ViewId[] = [];
-export const TOOLS_NAV: ViewId[] = ['nova-semana', 'saude'];
+export const TOOLS_NAV: ViewId[] = ['nova-semana', 'saude', 'ferramentas'];

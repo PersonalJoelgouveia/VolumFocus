@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Circle,
+  Toolbox,
   type LucideIcon,
 } from 'lucide-react';
 import type { ViewId } from '../types/view';
@@ -34,6 +35,7 @@ export const VIEW_ICON_MAP: Record<ViewId, LucideIcon> = {
   notifications: Bell,
   'nova-semana': CalendarSync,
   saude: HeartPulse,
+  ferramentas: Toolbox,
   forca: Dumbbell,
   cardio: HeartPulse,
   settings: Settings,

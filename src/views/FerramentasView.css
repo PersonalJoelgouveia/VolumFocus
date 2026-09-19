@@ -1,0 +1,48 @@
+/* ========== Hub Ferramentas (FerramentasView.tsx) ========== */
+.ft-view { max-width: 880px; margin: 0 auto; }
+
+.ft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.ft-card {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 18px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: inherit;
+  color: inherit;
+  min-height: 44px;
+}
+
+.ft-card-active { cursor: pointer; transition: var(--tr); }
+.ft-card-active:hover { border-color: var(--teal-border); background: var(--teal-glow); }
+.ft-card-active:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.ft-card-soon { opacity: 0.55; cursor: default; }
+
+.ft-card-ico { font-size: 1.6rem; }
+.ft-card-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.ft-card-desc { font-size: 0.78rem; color: var(--text-3); line-height: 1.4; }
+
+.ft-soon-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 2px 7px;
+}

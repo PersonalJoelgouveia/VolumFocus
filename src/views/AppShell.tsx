@@ -26,6 +26,7 @@ import { CardioView } from '../views/CardioView';
 import { PerformanceView } from '../views/PerformanceView';
 import { NovaSemanaView } from '../views/NovaSemanaView';
 import { SaudeView } from '../views/SaudeView';
+import { FerramentasView } from '../views/FerramentasView';
 import { ConquistasView } from '../views/ConquistasView';
 import { ClientesView } from '../views/ClientesView';
 import { NotificationsView } from '../views/NotificationsView';
@@ -51,6 +52,7 @@ const VIEW_COMPONENTS = {
   performance: PerformanceView,
   'nova-semana': NovaSemanaView,
   saude: SaudeView,
+  ferramentas: FerramentasView,
   conquistas: ConquistasView,
   clientes: ClientesView,
   notifications: NotificationsView,
