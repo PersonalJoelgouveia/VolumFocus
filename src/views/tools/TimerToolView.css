@@ -70,9 +70,52 @@
   padding: 10px 12px;
   text-align: center;
 }
+.itv-stimulus-current { border-color: var(--teal-border); background: var(--teal-glow); }
 .itv-stimulus-tag { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-3); margin-bottom: 2px; }
 .itv-stimulus-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
 .itv-stimulus-next .itv-stimulus-name { color: var(--text-2); }
+.itv-stimulus-time { font-family: var(--font-mono); font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+.itv-stimulus-next .itv-stimulus-time { color: var(--text-3); font-weight: 600; }
+
+/* ---------- Lista da sequência (execução) ---------- */
+.itv-seq-list {
+  width: 100%;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 2px;
+}
+.itv-seq-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--rs);
+  border: 1px solid transparent;
+  font-size: 0.82rem;
+}
+.itv-seq-icon { width: 16px; text-align: center; flex-shrink: 0; font-size: 0.8rem; }
+.itv-seq-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.itv-seq-time { font-family: var(--font-mono); color: var(--text-3); flex-shrink: 0; }
+
+.itv-seq-done { opacity: 0.55; }
+.itv-seq-done .itv-seq-icon { color: var(--teal); }
+.itv-seq-done .itv-seq-name { text-decoration: line-through; }
+
+.itv-seq-atual {
+  background: var(--teal-glow);
+  border-color: var(--teal-border);
+}
+.itv-seq-atual .itv-seq-icon { color: var(--teal); }
+.itv-seq-atual .itv-seq-name { color: var(--text); font-weight: 700; }
+.itv-seq-atual .itv-seq-time { color: var(--teal); font-weight: 700; }
+
+.itv-seq-proximo .itv-seq-icon { color: var(--text-2); }
+.itv-seq-proximo .itv-seq-name { color: var(--text); font-weight: 600; }
+
+.itv-seq-futuro .itv-seq-icon { color: var(--text-3); }
 
 /* ---------- Controles ---------- */
 .itv-controls { display: flex; gap: 10px; justify-content: center; width: 100%; }
@@ -82,6 +125,9 @@
   .itv-card { padding: 20px 14px 16px; }
   .itv-ring-time { font-size: 2rem; }
   .itv-stimulus-name { font-size: 0.8rem; }
+  .itv-stimulus-time { font-size: 0.9rem; }
+  .itv-seq-row { font-size: 0.76rem; padding: 6px 8px; }
+  .itv-seq-list { max-height: 220px; }
 }
 
 /* ---------- Área "Configurar Timer" (TimerConfigForm.tsx) ---------- */

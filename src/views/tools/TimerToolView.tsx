@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   getRemainingMs,
   useIntervalTimerStore,
@@ -16,6 +16,22 @@ const TYPE_LABEL: Record<StimulusType, string> = {
   exercicio: 'Exercício',
   descanso: 'Descanso',
   outro: 'Outro',
+};
+
+type SeqStatus = 'done' | 'atual' | 'proximo' | 'futuro';
+
+const SEQ_ICON: Record<SeqStatus, string> = {
+  done: '✓',
+  atual: '▶',
+  proximo: '→',
+  futuro: '○',
+};
+
+const SEQ_STATUS_LABEL: Record<SeqStatus, string> = {
+  done: 'Concluído',
+  atual: 'Atual',
+  proximo: 'Próximo',
+  futuro: 'Futuro',
 };
 
 function fmt(ms: number) {
@@ -41,9 +57,13 @@ type ToolScreen = 'ring' | 'config';
  *
  * A sequência (`config.stimuli`) é executada exatamente na ordem
  * cadastrada em "Configurar Timer" (`TimerConfigForm`), do primeiro ao
- * último item, uma única vez — cada item já carrega seu próprio nome,
- * tipo (Preparação/Exercício/Descanso/Outro) e duração, então não há mais
- * lógica implícita de "rounds"/"séries" fixas aqui.
+ * último item, uma única vez. Abaixo do anel: os cards "Estímulo atual"
+ * (nome + tempo restante, ao vivo) e "Próximo" (nome + duração própria), e
+ * a lista completa da sequência com status por item (✓ concluído /
+ * ▶ atual / → próximo / ○ futuro) — tudo derivado só de `currentIndex`,
+ * `finished` e `config.stimuli`, então atualiza sozinho a cada tick, sem
+ * estado próprio duplicado. A linha "atual" tem scrollIntoView pra manter
+ * leitura rápida mesmo em sequências longas/telas pequenas.
  */
 export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   const config = useIntervalTimerStore((s) => s.config);
@@ -57,6 +77,7 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   const saveAndStart = useIntervalTimerStore((s) => s.saveAndStart);
 
   const [screen, setScreen] = useState<ToolScreen>('ring');
+  const activeRowRef = useRef<HTMLDivElement | null>(null);
 
   const isIdle = currentIndex === null && !finished;
   const isRunning = currentIndex !== null && !pausedAt && !finished;
@@ -84,6 +105,12 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
     return () => clearInterval(id);
   }, [isRunning]);
 
+  // Mantém a linha "atual" (ou a próxima, em preview) visível na lista da
+  // sequência conforme o Timer avança — sem exigir scroll manual.
+  useEffect(() => {
+    activeRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [currentIndex]);
+
   if (screen === 'config') {
     return (
       <div className="itv-view">
@@ -103,8 +130,9 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   }
 
   const total = config.stimuli.length;
-  const current = currentIndex !== null ? config.stimuli[currentIndex] : (config.stimuli[0] ?? null);
-  const next = currentIndex !== null ? config.stimuli[currentIndex + 1] : undefined;
+  const previewIndex = currentIndex ?? 0;
+  const current = config.stimuli[previewIndex] ?? null;
+  const next = finished ? undefined : config.stimuli[previewIndex + 1];
 
   const remainingMs = currentIndex !== null ? getRemainingMs(useIntervalTimerStore.getState()) : 0;
   const durationMs = current ? current.durationSeconds * 1000 : 0;
@@ -112,18 +140,29 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
 
   const stateLabel = finished ? 'Concluído' : current ? TYPE_LABEL[current.type] : 'Pronto pra começar';
   const currentLabel = current?.name ?? '—';
-  const nextLabel = finished ? '—' : next ? next.name : total > 0 ? 'Fim' : '—';
-  const centerTime = isIdle
-    ? fmt((config.stimuli[0]?.durationSeconds ?? 0) * 1000)
+  const nextLabel = next ? next.name : total > 0 ? 'Fim' : '—';
+  const currentTimeLabel = isIdle
+    ? fmt((current?.durationSeconds ?? 0) * 1000)
     : finished
       ? '00:00'
       : fmt(remainingMs);
+  const nextTimeLabel = next ? fmt(next.durationSeconds * 1000) : '—';
+  const centerTime = currentTimeLabel;
 
   const ringPhaseClass = finished
     ? 'itv-ring-finished'
     : current
       ? `itv-ring-${current.type}`
       : 'itv-ring-idle';
+
+  function statusFor(i: number): SeqStatus {
+    if (finished) return 'done';
+    if (currentIndex === null) return i === 0 ? 'proximo' : 'futuro';
+    if (i < currentIndex) return 'done';
+    if (i === currentIndex) return 'atual';
+    if (i === currentIndex + 1) return 'proximo';
+    return 'futuro';
+  }
 
   return (
     <div className="itv-view">
@@ -139,7 +178,7 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
       <div className="itv-card">
         <div className="itv-name">{config.name}</div>
         <div className="itv-round-badge">
-          Estímulo {Math.min((currentIndex ?? 0) + 1, total)} de {total}
+          Estímulo {Math.min(previewIndex + 1, total)} de {total}
         </div>
 
         <div className={`itv-ring ${ringPhaseClass}`}>
@@ -169,15 +208,40 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
         </div>
 
         <div className="itv-stimuli-row">
-          <div className="itv-stimulus-block">
+          <div className="itv-stimulus-block itv-stimulus-current">
             <div className="itv-stimulus-tag">Estímulo atual</div>
             <div className="itv-stimulus-name">{currentLabel}</div>
+            <div className="itv-stimulus-time">{currentTimeLabel}</div>
           </div>
           <div className="itv-stimulus-block itv-stimulus-next">
             <div className="itv-stimulus-tag">Próximo</div>
             <div className="itv-stimulus-name">{nextLabel}</div>
+            <div className="itv-stimulus-time">{nextTimeLabel}</div>
           </div>
         </div>
+
+        {total > 0 && (
+          <div className="itv-seq-list">
+            {config.stimuli.map((stim, i) => {
+              const status = statusFor(i);
+              const isActiveRow = status === 'atual' || (isIdle && status === 'proximo');
+              return (
+                <div
+                  key={stim.id}
+                  ref={isActiveRow ? activeRowRef : undefined}
+                  className={`itv-seq-row itv-seq-${status}`}
+                  aria-label={`${SEQ_STATUS_LABEL[status]}: ${stim.name}, ${fmt(stim.durationSeconds * 1000)}`}
+                >
+                  <span className="itv-seq-icon" aria-hidden="true">
+                    {SEQ_ICON[status]}
+                  </span>
+                  <span className="itv-seq-name">{stim.name}</span>
+                  <span className="itv-seq-time">{fmt(stim.durationSeconds * 1000)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className="itv-controls">
           {isIdle && (
