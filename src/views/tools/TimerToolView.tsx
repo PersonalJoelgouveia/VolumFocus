@@ -5,7 +5,10 @@ import {
   type StimulusType,
   type TimerConfig,
 } from '../../store/useIntervalTimerStore';
+import { useTimerAudioStore } from '../../store/useTimerAudioStore';
+import { playSound } from '../../utils/timerSounds';
 import { TimerConfigForm } from './TimerConfigForm';
+import { TimerAudioSettings } from './TimerAudioSettings';
 import './TimerToolView.css';
 
 const RING_R = 88;
@@ -41,7 +44,7 @@ function fmt(ms: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-type ToolScreen = 'ring' | 'config';
+type ToolScreen = 'ring' | 'config' | 'audio';
 
 /**
  * Timer de intervalos com sequência livre de estímulos — sucessor
@@ -64,6 +67,15 @@ type ToolScreen = 'ring' | 'config';
  * `finished` e `config.stimuli`, então atualiza sozinho a cada tick, sem
  * estado próprio duplicado. A linha "atual" tem scrollIntoView pra manter
  * leitura rápida mesmo em sequências longas/telas pequenas.
+ *
+ * Áudio/vibração (`useTimerAudioStore`, configurado em
+ * `TimerAudioSettings`): ao entrar num novo estímulo, toca o som de
+ * "Início" se o tipo não for Descanso, ou o de "Final/Descanso" se for
+ * (marca o fim do estímulo anterior); nos últimos 3s de qualquer estímulo,
+ * toca o bipe de contagem regressiva se habilitado. Vibração acompanha os
+ * mesmos gatilhos quando suportada (`navigator.vibrate`). Sons gerados via
+ * Web Audio API nativa (ver utils/timerSounds.ts) — sem arquivos de áudio
+ * nem libs novas.
  */
 export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   const config = useIntervalTimerStore((s) => s.config);
@@ -78,10 +90,20 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
 
   const [screen, setScreen] = useState<ToolScreen>('ring');
   const activeRowRef = useRef<HTMLDivElement | null>(null);
+  const lastCountdownSecondRef = useRef<number | null>(null);
 
   const isIdle = currentIndex === null && !finished;
   const isRunning = currentIndex !== null && !pausedAt && !finished;
   const isPaused = currentIndex !== null && !!pausedAt && !finished;
+
+  function vibrate(pattern: number | number[]) {
+    if (!useTimerAudioStore.getState().vibrationEnabled || !navigator.vibrate) return;
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      /* vibração indisponível */
+    }
+  }
 
   // Tick local por timestamp — mesmo padrão do useCooperTimerStore (ver
   // CardioTestPanel), escopado à vida desta tela, sem setInterval global.
@@ -90,15 +112,30 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
     if (!isRunning) return;
     const id = setInterval(() => {
       const remaining = getRemainingMs(useIntervalTimerStore.getState());
+      const audio = useTimerAudioStore.getState();
+
+      if (remaining > 0 && audio.finalCountdownEnabled) {
+        const remainingSec = Math.ceil(remaining / 1000);
+        if (remainingSec <= 3 && lastCountdownSecondRef.current !== remainingSec) {
+          lastCountdownSecondRef.current = remainingSec;
+          playSound('tick', audio.volume);
+          vibrate(40);
+        }
+      }
+
       if (remaining <= 0) {
         useIntervalTimerStore.getState().advance();
-        if (navigator.vibrate) {
-          try {
-            navigator.vibrate(120);
-          } catch {
-            /* vibração indisponível */
+        lastCountdownSecondRef.current = null;
+        const newState = useIntervalTimerStore.getState();
+        const newCurrent = newState.currentIndex !== null ? newState.config.stimuli[newState.currentIndex] : null;
+        if (newCurrent) {
+          if (newCurrent.type === 'descanso') {
+            if (audio.endEnabled) playSound(audio.endSound, audio.volume);
+          } else if (audio.startEnabled) {
+            playSound(audio.startSound, audio.volume);
           }
         }
+        vibrate(120);
       }
       forceTick((n) => n + 1);
     }, 250);
@@ -110,6 +147,17 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   useEffect(() => {
     activeRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [currentIndex]);
+
+  if (screen === 'audio') {
+    return (
+      <div className="itv-view">
+        <button type="button" className="btn btn-ghost itv-back" onClick={() => setScreen('ring')}>
+          ← Voltar
+        </button>
+        <TimerAudioSettings onVoltar={() => setScreen('ring')} />
+      </div>
+    );
+  }
 
   if (screen === 'config') {
     return (
@@ -170,9 +218,14 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
         <button type="button" className="btn btn-ghost itv-back" onClick={onVoltar}>
           ← Voltar
         </button>
-        <button type="button" className="btn btn-ghost itv-config-btn" onClick={() => setScreen('config')}>
-          ⚙ Configurar Timer
-        </button>
+        <div className="itv-header-actions">
+          <button type="button" className="btn btn-ghost itv-config-btn" onClick={() => setScreen('audio')}>
+            🔊 Áudio
+          </button>
+          <button type="button" className="btn btn-ghost itv-config-btn" onClick={() => setScreen('config')}>
+            ⚙ Configurar Timer
+          </button>
+        </div>
       </div>
 
       <div className="itv-card">
