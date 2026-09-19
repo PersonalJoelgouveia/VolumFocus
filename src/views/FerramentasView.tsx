@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TimerToolView } from './tools/TimerToolView';
+import { ModelosToolView } from './tools/ModelosToolView';
 import './FerramentasView.css';
 
 interface ToolCard {
@@ -14,11 +15,11 @@ const CARDS: ToolCard[] = [
   { key: 'timer', icon: '⏱', title: 'Timer', desc: 'Timer de intervalos: preparação, exercício e descanso.' },
   { key: 'agenda', icon: '📅', title: 'Agenda', desc: 'Organize seus compromissos e sessões.', comingSoon: true },
   { key: 'anotacoes', icon: '📝', title: 'Anotações', desc: 'Registre observações rápidas.', comingSoon: true },
-  { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Modelos reutilizáveis de treino e avaliação.', comingSoon: true },
+  { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Biblioteca de modelos de treino por nível, pronta pra copiar pro Cliente.' },
   { key: 'lembretes', icon: '🔔', title: 'Lembretes', desc: 'Alertas pra você e seus alunos.', comingSoon: true },
 ];
 
-type FerramentasScreen = 'hub' | 'timer';
+type FerramentasScreen = 'hub' | 'timer' | 'modelos';
 
 /**
  * Hub "Ferramentas" — novo item de TOOLS_NAV (types/view.ts), mesmo padrão
@@ -28,17 +29,23 @@ type FerramentasScreen = 'hub' | 'timer';
  * página própria em vez de aba — daí a classe própria .ft-* em
  * FerramentasView.css em vez de reusar .sh-*.
  *
- * Timer é o único card funcional nesta etapa: abre `TimerToolView`
- * (views/tools/TimerToolView.tsx), um timer de intervalos genérico e
- * isolado — sem relação com o cronômetro global de treino
- * (useTimerStore/<TimerEngine>) nem com dados de exercício/musculação. Os
- * demais cards continuam só visuais ("Em breve"), sem onClick nem estado.
+ * Timer abre `TimerToolView` (views/tools/TimerToolView.tsx), um timer de
+ * intervalos genérico e isolado — sem relação com o cronômetro global de
+ * treino (useTimerStore/<TimerEngine>) nem com dados de exercício/
+ * musculação. Modelos abre `ModelosToolView` (views/tools/ModelosToolView.tsx),
+ * a biblioteca de modelos de treino por nível — ferramenta independente de
+ * Rotinas Salvas (useRotinaStore), não a substitui. Os demais cards
+ * continuam só visuais ("Em breve"), sem onClick nem estado.
  */
 export function FerramentasView() {
   const [screen, setScreen] = useState<FerramentasScreen>('hub');
 
   if (screen === 'timer') {
     return <TimerToolView onVoltar={() => setScreen('hub')} />;
+  }
+
+  if (screen === 'modelos') {
+    return <ModelosToolView onVoltar={() => setScreen('hub')} />;
   }
 
   return (
@@ -53,7 +60,12 @@ export function FerramentasView() {
               <div className="ft-card-desc">{card.desc}</div>
             </div>
           ) : (
-            <button key={card.key} type="button" className="ft-card ft-card-active" onClick={() => setScreen('timer')}>
+            <button
+              key={card.key}
+              type="button"
+              className="ft-card ft-card-active"
+              onClick={() => setScreen(card.key as FerramentasScreen)}
+            >
               <div className="ft-card-ico" aria-hidden="true">{card.icon}</div>
               <div className="ft-card-title">{card.title}</div>
               <div className="ft-card-desc">{card.desc}</div>

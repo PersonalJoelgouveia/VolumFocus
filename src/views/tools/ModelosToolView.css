@@ -1,0 +1,119 @@
+/* ========== Ferramenta Modelos (ModelosToolView.tsx) ========== */
+.md-view { max-width: 640px; margin: 0 auto; }
+.md-back { margin-bottom: 14px; }
+
+.md-hub-desc { font-size: 0.82rem; color: var(--text-3); line-height: 1.5; margin-bottom: 16px; }
+
+.md-cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+.md-cat-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 18px;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: var(--tr);
+  min-height: 44px;
+}
+.md-cat-card:hover { border-color: var(--teal-border); background: var(--teal-glow); }
+.md-cat-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.md-cat-sub { font-size: 0.76rem; color: var(--text-3); }
+
+.md-cat-header { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 12px; }
+
+.md-nivel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+
+.md-nivel-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: var(--tr);
+  min-height: 44px;
+}
+.md-nivel-card:hover { border-color: var(--teal-border); background: var(--teal-glow); }
+.md-nivel-num { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
+.md-nivel-nome { font-size: 0.88rem; font-weight: 600; color: var(--text); margin: 3px 0 6px; }
+.md-nivel-status { font-size: 0.72rem; color: var(--text-3); }
+.md-nivel-status.filled { color: var(--teal); }
+
+.md-nivel-header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.md-nivel-header-row .md-back { margin-bottom: 0; }
+
+.md-info-view { cursor: pointer; margin-bottom: 12px; }
+.md-info-nome { font-size: 1rem; font-weight: 700; color: var(--text); margin: 0; }
+.md-info-edit-hint { font-size: 0.72rem; color: var(--text-3); font-weight: 400; }
+.md-info-objetivo { font-size: 0.8rem; color: var(--text-3); margin: 4px 0 0; }
+
+.md-info-edit { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+.md-metodos-hint { margin-bottom: 16px; }
+.md-metodos-label { font-size: 0.72rem; color: var(--text-3); display: block; margin-bottom: 6px; }
+.md-metodos-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.md-copy-hint { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
+
+.md-cliente-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 16px; }
+
+.md-cliente-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+.md-cliente-item:hover { border-color: var(--border-md); }
+.md-cliente-item.active { border-color: var(--teal); background: var(--teal-glow); }
+
+.md-cliente-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--teal-glow);
+  color: var(--teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.md-cliente-nome { font-size: 0.85rem; font-weight: 600; }
+
+.md-modo-field { margin-bottom: 6px; }
+.md-modo-label { font-size: 0.72rem; color: var(--text-3); display: block; margin-bottom: 6px; }
+.md-modo-options { display: flex; flex-direction: column; gap: 8px; }
+
+.md-modo-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  min-height: 44px;
+}
+.md-modo-btn:hover { border-color: var(--border-md); }
+.md-modo-btn.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+.md-modo-btn small { font-size: 0.7rem; font-weight: 400; color: var(--text-3); }
