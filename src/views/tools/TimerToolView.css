@@ -3,6 +3,12 @@
 
 .itv-back { margin-bottom: 14px; }
 
+.itv-header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.itv-header-row .itv-back { margin-bottom: 0; }
+.itv-config-btn { white-space: nowrap; }
+
+.itv-name { font-family: var(--font-title); font-size: 1.1rem; font-weight: 700; color: var(--text); text-align: center; }
+
 .itv-card {
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -37,6 +43,7 @@
 .itv-ring-preparacao .itv-ring-prog { stroke: var(--yellow); }
 .itv-ring-exercicio .itv-ring-prog { stroke: var(--teal); }
 .itv-ring-descanso .itv-ring-prog { stroke: var(--purple); }
+.itv-ring-outro .itv-ring-prog { stroke: var(--orange); }
 .itv-ring-finished .itv-ring-prog { stroke: var(--green); }
 
 .itv-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
@@ -44,7 +51,7 @@
 .itv-ring-label { font-size: 0.75rem; color: var(--text-2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 
 /* ---------- Indicador de estímulo (série) ---------- */
-.itv-dots { display: flex; gap: 7px; }
+.itv-dots { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; max-width: 260px; }
 .itv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-md); }
 .itv-dot-done { background: var(--teal-dim); }
 .itv-dot-active { background: var(--teal); box-shadow: 0 0 0 3px var(--teal-glow); }
@@ -76,3 +83,103 @@
   .itv-ring-time { font-size: 2rem; }
   .itv-stimulus-name { font-size: 0.8rem; }
 }
+
+/* ---------- Área "Configurar Timer" (TimerConfigForm.tsx) ---------- */
+.itv-config-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.itv-config-title { font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--text); }
+
+.itv-field { display: flex; flex-direction: column; gap: 6px; }
+.itv-field-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
+
+.itv-input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--rs);
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem; /* 16px — evita zoom automático no iOS */
+}
+.itv-input:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+
+.itv-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.itv-config-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+@media (max-width: 480px) {
+  .itv-config-actions { flex-direction: column-reverse; }
+  .itv-config-actions .itv-ctrl-btn { flex: none; width: 100%; }
+}
+
+/* ---------- Lista de estímulos (sequência personalizada) ---------- */
+.itv-stim-list { display: flex; flex-direction: column; gap: 12px; }
+
+.itv-stim-empty {
+  font-size: 0.85rem;
+  color: var(--text-3);
+  text-align: center;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r);
+}
+
+.itv-stim-card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.itv-stim-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+.itv-stim-order {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--teal-glow);
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.itv-stim-head-actions { display: flex; gap: 6px; }
+
+.itv-stim-icon-btn {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: var(--rs);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.itv-stim-icon-btn:disabled { opacity: 0.35; }
+.itv-stim-remove { color: var(--red); border-color: rgba(255, 77, 109, 0.3); }
+
+.itv-stim-fields { grid-template-columns: 1fr 1fr; }
+
+.itv-add-stim-btn { align-self: stretch; min-height: 44px; border: 1px dashed var(--border); }

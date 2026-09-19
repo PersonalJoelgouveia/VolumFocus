@@ -11,29 +11,52 @@ import { create } from 'zustand';
  *
  * É um store isolado: NÃO tem nenhuma relação com `useTimerStore`
  * (cronômetro global de treino, com toast/conquistas/kcal) nem com
- * `useWorkoutStore`/`useExerciseStore` (dados reais de exercício). "Estímulo"
- * aqui é só um rótulo genérico de ronda — nesta etapa os valores (durações,
- * nº de estímulos) são fixos; configuração avançada fica pra uma etapa futura.
+ * `useWorkoutStore`/`useExerciseStore` (dados reais de exercício).
+ *
+ * A partir desta etapa o protocolo é uma sequência livre de estímulos
+ * (`config.stimuli`) — cada um com nome, tipo (Preparação/Exercício/
+ * Descanso/Outro) e duração própria, editável/reordenável na área
+ * "Configurar Timer" (ver TimerConfigForm.tsx). O Timer executa a
+ * sequência exatamente na ordem do array, uma única vez, do primeiro ao
+ * último item — sem repetição implícita de "séries" (isso já foi
+ * substituído: quem quiser repetir um bloco agora adiciona os estímulos
+ * quantas vezes quiser na sequência).
  */
-export type TimerPhase = 'preparacao' | 'exercicio' | 'descanso';
+export type StimulusType = 'preparacao' | 'exercicio' | 'descanso' | 'outro';
 
-export const PREP_SECONDS = 10;
-export const WORK_SECONDS = 30;
-export const REST_SECONDS = 15;
-export const DEFAULT_STIMULI = ['Estímulo 1', 'Estímulo 2', 'Estímulo 3'];
-
-export function phaseDurationMs(phase: TimerPhase): number {
-  if (phase === 'preparacao') return PREP_SECONDS * 1000;
-  if (phase === 'exercicio') return WORK_SECONDS * 1000;
-  return REST_SECONDS * 1000;
+export interface Stimulus {
+  id: string;
+  name: string;
+  type: StimulusType;
+  durationSeconds: number;
 }
 
+export interface TimerConfig {
+  name: string;
+  stimuli: Stimulus[];
+}
+
+export function genStimulusId(): string {
+  return `stim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export const DEFAULT_CONFIG: TimerConfig = {
+  name: 'Meu Timer',
+  stimuli: [
+    { id: genStimulusId(), name: 'Preparação', type: 'preparacao', durationSeconds: 10 },
+    { id: genStimulusId(), name: 'Agachamento', type: 'exercicio', durationSeconds: 30 },
+    { id: genStimulusId(), name: 'Descanso', type: 'descanso', durationSeconds: 15 },
+    { id: genStimulusId(), name: 'Flexão', type: 'exercicio', durationSeconds: 30 },
+    { id: genStimulusId(), name: 'Descanso', type: 'descanso', durationSeconds: 15 },
+    { id: genStimulusId(), name: 'Burpee', type: 'exercicio', durationSeconds: 30 },
+  ],
+};
+
 interface IntervalTimerState {
-  /** null = ainda não iniciado, ou já concluído (ver `finished`). */
-  phase: TimerPhase | null;
-  /** Estímulo atual, 0-based. */
-  roundIndex: number;
-  stimuli: string[];
+  config: TimerConfig;
+  /** Índice (0-based) do estímulo em execução em `config.stimuli`. null =
+   *  ainda não iniciado, ou já concluído (ver `finished`). */
+  currentIndex: number | null;
   finished: boolean;
 
   startedAt: number | null;
@@ -44,32 +67,33 @@ interface IntervalTimerState {
   pause: () => void;
   resume: () => void;
   reset: () => void;
-  /** Chamado pelo efeito local do componente quando o tempo da fase atual se esgota. */
-  advancePhase: () => void;
+  /** Salva a configuração (nome + sequência de estímulos) e inicia
+   *  imediatamente do primeiro estímulo, chamado pelo botão "Salvar Timer"
+   *  da área Configurar Timer. */
+  saveAndStart: (config: TimerConfig) => void;
+  /** Chamado pelo efeito local do componente quando o tempo do estímulo
+   *  atual se esgota — avança pro próximo item da sequência, ou finaliza
+   *  se já era o último. */
+  advance: () => void;
 }
 
 export const useIntervalTimerStore = create<IntervalTimerState>()((set, get) => ({
-  phase: null,
-  roundIndex: 0,
-  stimuli: DEFAULT_STIMULI,
+  config: DEFAULT_CONFIG,
+  currentIndex: null,
   finished: false,
   startedAt: null,
   pausedAt: null,
   pausedMs: 0,
 
-  start: () =>
-    set({
-      phase: 'preparacao',
-      roundIndex: 0,
-      finished: false,
-      startedAt: Date.now(),
-      pausedAt: null,
-      pausedMs: 0,
-    }),
+  start: () => {
+    const s = get();
+    if (s.config.stimuli.length === 0) return;
+    set({ currentIndex: 0, finished: false, startedAt: Date.now(), pausedAt: null, pausedMs: 0 });
+  },
 
   pause: () => {
     const s = get();
-    if (!s.phase || s.pausedAt || s.finished) return;
+    if (s.currentIndex === null || s.pausedAt || s.finished) return;
     set({ pausedAt: Date.now() });
   },
 
@@ -79,41 +103,43 @@ export const useIntervalTimerStore = create<IntervalTimerState>()((set, get) => 
     set({ pausedMs: s.pausedMs + (Date.now() - s.pausedAt), pausedAt: null });
   },
 
-  reset: () =>
-    set({ phase: null, roundIndex: 0, finished: false, startedAt: null, pausedAt: null, pausedMs: 0 }),
+  reset: () => set({ currentIndex: null, finished: false, startedAt: null, pausedAt: null, pausedMs: 0 }),
 
-  advancePhase: () => {
+  saveAndStart: (config) => {
+    if (config.stimuli.length === 0) return;
+    set({
+      config,
+      currentIndex: 0,
+      finished: false,
+      startedAt: Date.now(),
+      pausedAt: null,
+      pausedMs: 0,
+    });
+  },
+
+  advance: () => {
     const s = get();
-    if (!s.phase || s.finished) return;
-    const total = s.stimuli.length;
-
-    if (s.phase === 'preparacao') {
-      set({ phase: 'exercicio', startedAt: Date.now(), pausedAt: null, pausedMs: 0 });
+    if (s.currentIndex === null || s.finished) return;
+    const nextIndex = s.currentIndex + 1;
+    if (nextIndex >= s.config.stimuli.length) {
+      set({ finished: true, currentIndex: null, pausedAt: null });
       return;
     }
-    if (s.phase === 'exercicio') {
-      const isLast = s.roundIndex >= total - 1;
-      if (isLast) {
-        set({ finished: true, phase: null, pausedAt: null });
-        return;
-      }
-      set({ phase: 'descanso', startedAt: Date.now(), pausedAt: null, pausedMs: 0 });
-      return;
-    }
-    // descanso → próximo estímulo
-    set({ phase: 'exercicio', roundIndex: s.roundIndex + 1, startedAt: Date.now(), pausedAt: null, pausedMs: 0 });
+    set({ currentIndex: nextIndex, startedAt: Date.now(), pausedAt: null, pausedMs: 0 });
   },
 }));
 
-/** Tempo decorrido na fase atual (ms), descontando pausas. */
+/** Tempo decorrido no estímulo atual (ms), descontando pausas. */
 export function getElapsedMs(state: IntervalTimerState): number {
   if (!state.startedAt) return 0;
   const now = state.pausedAt ?? Date.now();
   return now - state.startedAt - state.pausedMs;
 }
 
-/** Tempo restante na fase atual (ms), já limitado a [0, duração da fase]. */
+/** Tempo restante no estímulo atual (ms), já limitado a [0, duração do estímulo]. */
 export function getRemainingMs(state: IntervalTimerState): number {
-  if (!state.phase) return 0;
-  return Math.max(0, phaseDurationMs(state.phase) - getElapsedMs(state));
+  if (state.currentIndex === null) return 0;
+  const stim = state.config.stimuli[state.currentIndex];
+  if (!stim) return 0;
+  return Math.max(0, stim.durationSeconds * 1000 - getElapsedMs(state));
 }
