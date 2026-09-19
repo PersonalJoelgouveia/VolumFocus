@@ -1,17 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ModeloCategoria, ModeloTreino } from '../types/modelo';
-import { criarCatalogoInicial } from '../types/modelo';
+import type { TrainingModel, TrainingModelCategoria } from '../types/trainingModel';
+import { criarCatalogoInicial } from '../types/trainingModel';
 
 interface ModeloState {
   /** Catálogo fixo de 21 modelos (3 categorias × 7 níveis). Sem add/remove
-   *  nesta etapa — só navegação/consulta da prateleira (ver types/modelo.ts).
-   *  Edição de conteúdo (exercícios por dia) e "Copiar para Cliente" são
-   *  etapas futuras, ainda não implementadas aqui de propósito. */
-  modelos: ModeloTreino[];
+   *  nesta etapa — só navegação/consulta da prateleira (ver
+   *  types/trainingModel.ts). Edição de conteúdo (sessões/exercícios) e
+   *  "Copiar para Cliente" são etapas futuras, ainda não implementadas
+   *  aqui de propósito. */
+  modelos: TrainingModel[];
 
-  listarPorCategoria: (categoria: ModeloCategoria) => ModeloTreino[];
-  getModelo: (id: string) => ModeloTreino | undefined;
+  listarPorCategoria: (categoria: TrainingModelCategoria) => TrainingModel[];
+  getModelo: (id: string) => TrainingModel | undefined;
 }
 
 export const useModeloStore = create<ModeloState>()(
@@ -26,6 +27,10 @@ export const useModeloStore = create<ModeloState>()(
 
       getModelo: (id) => get().modelos.find((m) => m.id === id),
     }),
-    { name: 'jg3_modelos' }
+    // Chave renomeada de 'jg3_modelos' pra 'jg3_training_models' junto com a
+    // troca de schema pra TrainingModel (antigo ModeloTreino usava `rotina`,
+    // este usa `sessoes`) — evita que um localStorage antigo, com o shape
+    // velho, seja carregado por engano e quebre contarExercicios().
+    { name: 'jg3_training_models' }
   )
 );

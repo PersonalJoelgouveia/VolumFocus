@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useModeloStore } from '../../store/useModeloStore';
-import { MODELO_CATEGORIAS, MODELO_CATEGORIA_LABELS, contarExercicios, modeloEstaVazio } from '../../types/modelo';
-import type { ModeloCategoria } from '../../types/modelo';
+import {
+  TRAINING_MODEL_CATEGORIAS,
+  TRAINING_MODEL_CATEGORIA_LABELS,
+  contarExercicios,
+  modeloEstaVazio,
+} from '../../types/trainingModel';
+import type { TrainingModelCategoria } from '../../types/trainingModel';
 import './ModelosToolView.css';
 
-type Screen = { tipo: 'hub' } | { tipo: 'categoria'; categoria: ModeloCategoria } | { tipo: 'nivel'; modeloId: string };
+type Screen = { tipo: 'hub' } | { tipo: 'categoria'; categoria: TrainingModelCategoria } | { tipo: 'nivel'; modeloId: string };
 
 /**
  * Ferramenta "Modelos" (Sidebar > Ferramentas > Modelos) — biblioteca de 21
@@ -37,7 +42,7 @@ export function ModelosToolView({ onVoltar }: { onVoltar: () => void }) {
     return (
       <NivelDetailScreen
         modeloId={screen.modeloId}
-        onVoltar={() => setScreen({ tipo: 'categoria', categoria: screen.modeloId.split('-')[0] as ModeloCategoria })}
+        onVoltar={() => setScreen({ tipo: 'categoria', categoria: screen.modeloId.split('-')[0] as TrainingModelCategoria })}
       />
     );
   }
@@ -45,7 +50,7 @@ export function ModelosToolView({ onVoltar }: { onVoltar: () => void }) {
   return <HubScreen onVoltar={onVoltar} onAbrirCategoria={(categoria) => setScreen({ tipo: 'categoria', categoria })} />;
 }
 
-function HubScreen({ onVoltar, onAbrirCategoria }: { onVoltar: () => void; onAbrirCategoria: (c: ModeloCategoria) => void }) {
+function HubScreen({ onVoltar, onAbrirCategoria }: { onVoltar: () => void; onAbrirCategoria: (c: TrainingModelCategoria) => void }) {
   const modelos = useModeloStore((s) => s.modelos);
 
   return (
@@ -59,12 +64,12 @@ function HubScreen({ onVoltar, onAbrirCategoria }: { onVoltar: () => void; onAbr
         rotina de um Cliente.
       </p>
       <div className="md-cat-grid">
-        {MODELO_CATEGORIAS.map((categoria) => {
+        {TRAINING_MODEL_CATEGORIAS.map((categoria) => {
           const doCategoria = modelos.filter((m) => m.categoria === categoria);
           const preenchidos = doCategoria.filter((m) => !modeloEstaVazio(m)).length;
           return (
             <button key={categoria} type="button" className="md-cat-card" onClick={() => onAbrirCategoria(categoria)}>
-              <div className="md-cat-title">{MODELO_CATEGORIA_LABELS[categoria]}</div>
+              <div className="md-cat-title">{TRAINING_MODEL_CATEGORIA_LABELS[categoria]}</div>
               <div className="md-cat-sub">
                 {preenchidos}/{doCategoria.length} níveis com conteúdo
               </div>
@@ -81,7 +86,7 @@ function CategoriaScreen({
   onVoltar,
   onAbrirNivel,
 }: {
-  categoria: ModeloCategoria;
+  categoria: TrainingModelCategoria;
   onVoltar: () => void;
   onAbrirNivel: (modeloId: string) => void;
 }) {
@@ -93,7 +98,7 @@ function CategoriaScreen({
       <button type="button" className="btn btn-ghost md-back" onClick={onVoltar}>
         ← Voltar
       </button>
-      <h3 className="md-page-title">{MODELO_CATEGORIA_LABELS[categoria]}</h3>
+      <h3 className="md-page-title">{TRAINING_MODEL_CATEGORIA_LABELS[categoria]}</h3>
       <div className="md-nivel-grid">
         {modelos.map((m) => {
           const total = contarExercicios(m);
@@ -125,7 +130,7 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
       </button>
       <div className="md-nivel-header">
         <span className="md-nivel-badge">
-          {MODELO_CATEGORIA_LABELS[modelo.categoria]} · Nível {modelo.nivel}
+          {TRAINING_MODEL_CATEGORIA_LABELS[modelo.categoria]} · Nível {modelo.nivel}
         </span>
         <h3 className="md-page-title" style={{ margin: '6px 0 0' }}>
           {modelo.nome}
