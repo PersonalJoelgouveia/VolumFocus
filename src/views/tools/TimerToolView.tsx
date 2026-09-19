@@ -6,9 +6,11 @@ import {
   type TimerConfig,
 } from '../../store/useIntervalTimerStore';
 import { useTimerAudioStore } from '../../store/useTimerAudioStore';
+import { useTimerLibraryStore, type SavedTimer } from '../../store/useTimerLibraryStore';
 import { playSound } from '../../utils/timerSounds';
 import { TimerConfigForm } from './TimerConfigForm';
 import { TimerAudioSettings } from './TimerAudioSettings';
+import { TimerLibrary } from './TimerLibrary';
 import './TimerToolView.css';
 
 const RING_R = 88;
@@ -44,7 +46,7 @@ function fmt(ms: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-type ToolScreen = 'ring' | 'config' | 'audio';
+type ToolScreen = 'ring' | 'config' | 'audio' | 'library';
 
 /**
  * Timer de intervalos com sequência livre de estímulos — sucessor
@@ -76,6 +78,16 @@ type ToolScreen = 'ring' | 'config' | 'audio';
  * mesmos gatilhos quando suportada (`navigator.vibrate`). Sons gerados via
  * Web Audio API nativa (ver utils/timerSounds.ts) — sem arquivos de áudio
  * nem libs novas.
+ *
+ * Biblioteca de Timers (`useTimerLibraryStore`, tela `TimerLibrary`):
+ * "Salvar Timer" em `TimerConfigForm` sempre persiste na biblioteca — cria
+ * uma entrada nova ou atualiza a que estiver sendo editada
+ * (`editingLibraryId`) — além de já iniciar o protocolo salvo, como antes.
+ * Iniciar/Editar um item da biblioteca só troca `configFormSource`/
+ * `editingLibraryId` e delega pro mesmo motor (`saveAndStart`/
+ * `TimerConfigForm`) — os presets (Tabata, HIIT 30/30, HIIT 40/20,
+ * Circuito, Timer simples) são `TimerConfig` comuns, sem estrutura
+ * paralela.
  */
 export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   const config = useIntervalTimerStore((s) => s.config);
@@ -89,6 +101,8 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
   const saveAndStart = useIntervalTimerStore((s) => s.saveAndStart);
 
   const [screen, setScreen] = useState<ToolScreen>('ring');
+  const [configFormSource, setConfigFormSource] = useState<TimerConfig>(config);
+  const [editingLibraryId, setEditingLibraryId] = useState<string | undefined>(undefined);
   const activeRowRef = useRef<HTMLDivElement | null>(null);
   const lastCountdownSecondRef = useRef<number | null>(null);
 
@@ -148,12 +162,34 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
     activeRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [currentIndex]);
 
+  if (screen === 'library') {
+    return (
+      <div className="itv-view">
+        <TimerLibrary
+          onVoltar={() => setScreen('ring')}
+          onNew={() => {
+            setConfigFormSource({ name: '', stimuli: [] });
+            setEditingLibraryId(undefined);
+            setScreen('config');
+          }}
+          onEdit={(timer: SavedTimer) => {
+            setConfigFormSource(timer.config);
+            setEditingLibraryId(timer.id);
+            setScreen('config');
+          }}
+          onStart={(timer: SavedTimer) => {
+            saveAndStart(timer.config);
+            setEditingLibraryId(timer.id);
+            setScreen('ring');
+          }}
+        />
+      </div>
+    );
+  }
+
   if (screen === 'audio') {
     return (
       <div className="itv-view">
-        <button type="button" className="btn btn-ghost itv-back" onClick={() => setScreen('ring')}>
-          ← Voltar
-        </button>
         <TimerAudioSettings onVoltar={() => setScreen('ring')} />
       </div>
     );
@@ -166,9 +202,11 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
           ← Voltar
         </button>
         <TimerConfigForm
-          config={config}
+          config={configFormSource}
           onCancel={() => setScreen('ring')}
           onSave={(next: TimerConfig) => {
+            const savedId = useTimerLibraryStore.getState().save(next, editingLibraryId);
+            setEditingLibraryId(savedId);
             saveAndStart(next);
             setScreen('ring');
           }}
@@ -219,10 +257,20 @@ export function TimerToolView({ onVoltar }: { onVoltar: () => void }) {
           ← Voltar
         </button>
         <div className="itv-header-actions">
+          <button type="button" className="btn btn-ghost itv-config-btn" onClick={() => setScreen('library')}>
+            📚 Biblioteca
+          </button>
           <button type="button" className="btn btn-ghost itv-config-btn" onClick={() => setScreen('audio')}>
             🔊 Áudio
           </button>
-          <button type="button" className="btn btn-ghost itv-config-btn" onClick={() => setScreen('config')}>
+          <button
+            type="button"
+            className="btn btn-ghost itv-config-btn"
+            onClick={() => {
+              setConfigFormSource(config);
+              setScreen('config');
+            }}
+          >
             ⚙ Configurar Timer
           </button>
         </div>

@@ -302,3 +302,28 @@
   .itv-sound-radio span { font-size: 0.8rem; }
   .itv-test-btn { padding: 0 10px; font-size: 0.72rem; }
 }
+
+/* ---------- Biblioteca de Timers (TimerLibrary.tsx) ---------- */
+.itv-lib-list { display: flex; flex-direction: column; gap: 10px; }
+
+.itv-lib-card {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itv-lib-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.itv-lib-name { font-size: 0.92rem; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.itv-lib-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.itv-lib-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.74rem; color: var(--text-3); font-family: var(--font-mono); }
+
+@media (max-width: 480px) {
+  .itv-lib-name { font-size: 0.85rem; }
+  .itv-lib-actions { gap: 4px; }
+  .itv-lib-actions .itv-stim-icon-btn { min-width: 28px; min-height: 28px; }
+}
