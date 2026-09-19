@@ -8,10 +8,10 @@
  *
  * Reaproveita deliberadamente o mesmo schema de rotina do Cliente
  * (AlunoRotina/AlunoRotinaDia/AlunoExercicio, ver types/aluno.ts) em vez de
- * criar uma taxonomia paralela: um Modelo "é" o formato de uma AlunoRotina
- * com metadados de nível — assim "Copiar para Cliente" (useModeloStore)
- * não precisa converter nada, só clonar (JSON.parse(JSON.stringify)) pra
- * nunca alterar o Modelo original ao editar a rotina copiada do Cliente.
+ * criar uma taxonomia paralela, mesmo nesta etapa em que a rotina de cada
+ * nível ainda nasce vazia — assim o editor de conteúdo (etapa futura) e o
+ * fluxo "Copiar para Cliente" (etapa futura) não vão precisar converter
+ * nada, só clonar.
  */
 
 import type { AlunoRotina } from './aluno';
@@ -32,44 +32,18 @@ export type ModeloNivel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export const MODELO_NIVEIS: ModeloNivel[] = [1, 2, 3, 4, 5, 6, 7];
 
 /**
- * Métodos sugeridos por categoria — só um guia exibido no editor do nível
- * (chips informativos), nunca aplicado automaticamente num exercício. A
- * introdução dos métodos é progressiva: o editor sugere o conjunto da
- * categoria do nível aberto, não uma lista fixa por nível individual.
- */
-export const METODOS_SUGERIDOS: Record<ModeloCategoria, string[]> = {
-  iniciante: ['Séries tradicionais', 'Controle técnico', 'Padrões fundamentais', 'Progressão básica'],
-  intermediario: [
-    'Pirâmide crescente',
-    'Pirâmide decrescente',
-    'Bi-Set',
-    'Tri-Set',
-    'Superset',
-    'Conjugados',
-    'Circuitos',
-    'Progressão de densidade',
-  ],
-  avancado: ['Rest-Pause', 'Drop Set', 'Cluster Set', 'FST-7', 'GVT'],
-};
-
-/**
  * Modelo de treino de um nível. `rotina` é a semana completa (7 dias),
- * mesmo formato usado em Aluno.rotina — cada dia pode ser preparação/
- * vascularização, mobilidade, força, cardio ou Full Body, sem estrutura
- * rígida imposta aqui (o "tipo" de cada AlunoRotinaDia já é texto livre).
+ * mesmo formato usado em Aluno.rotina. Nesta etapa a rotina de todo modelo
+ * nasce vazia (7 dias "Descanso Total") — o conteúdo (exercícios) é uma
+ * etapa futura, preenchida nível a nível pelo Personal.
  */
 export interface ModeloTreino {
   id: string;
   categoria: ModeloCategoria;
   nivel: ModeloNivel;
   nome: string;
-  /** Objetivo textual do nível (ex: "Adaptação anatômica e domínio técnico"). */
-  objetivo?: string;
-  /** Observações livres do Personal sobre o nível (progressão, cuidados etc). */
-  observacoes?: string;
   rotina: AlunoRotina;
   criado: string;
-  atualizado?: string;
 }
 
 function nomePadrao(categoria: ModeloCategoria, nivel: ModeloNivel): string {
@@ -77,11 +51,11 @@ function nomePadrao(categoria: ModeloCategoria, nivel: ModeloNivel): string {
 }
 
 /**
- * Catálogo inicial fixo: 21 modelos vazios (rotina = 7 dias "Descanso
- * Total"), um por categoria×nível. Etapa 1 só cria a prateleira — o
- * conteúdo (exercícios) é preenchido depois, nível a nível, pelo Personal
- * no editor. Ids estáveis (`${categoria}-${nivel}`) pra sobreviver a
- * atualizações futuras do app sem duplicar entradas.
+ * Catálogo inicial fixo: 21 modelos vazios, um por categoria×nível. Esta
+ * etapa só cria a prateleira (navegação/cards/estados vazios) — sem editor
+ * de conteúdo e sem fluxo de cópia ainda. Ids estáveis
+ * (`${categoria}-${nivel}`) pra sobreviver a atualizações futuras do app
+ * sem duplicar entradas.
  */
 export function criarCatalogoInicial(): ModeloTreino[] {
   const agora = new Date().toISOString();

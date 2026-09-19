@@ -15,7 +15,7 @@ const CARDS: ToolCard[] = [
   { key: 'timer', icon: '⏱', title: 'Timer', desc: 'Timer de intervalos: preparação, exercício e descanso.' },
   { key: 'agenda', icon: '📅', title: 'Agenda', desc: 'Organize seus compromissos e sessões.', comingSoon: true },
   { key: 'anotacoes', icon: '📝', title: 'Anotações', desc: 'Registre observações rápidas.', comingSoon: true },
-  { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Biblioteca de modelos de treino por nível, pronta pra copiar pro Cliente.' },
+  { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Biblioteca de modelos de treino organizados por nível de experiência.' },
   { key: 'lembretes', icon: '🔔', title: 'Lembretes', desc: 'Alertas pra você e seus alunos.', comingSoon: true },
 ];
 
@@ -32,10 +32,12 @@ type FerramentasScreen = 'hub' | 'timer' | 'modelos';
  * Timer abre `TimerToolView` (views/tools/TimerToolView.tsx), um timer de
  * intervalos genérico e isolado — sem relação com o cronômetro global de
  * treino (useTimerStore/<TimerEngine>) nem com dados de exercício/
- * musculação. Modelos abre `ModelosToolView` (views/tools/ModelosToolView.tsx),
- * a biblioteca de modelos de treino por nível — ferramenta independente de
- * Rotinas Salvas (useRotinaStore), não a substitui. Os demais cards
- * continuam só visuais ("Em breve"), sem onClick nem estado.
+ * musculação. Modelos abre `ModelosToolView` (views/tools/ModelosToolView.tsx)
+ * — ferramenta independente de Rotinas Salvas (useRotinaStore), não a
+ * substitui. Etapa 1: só navegação (hub de categorias → 7 níveis →
+ * detalhe), cards e estados vazios — editor de conteúdo e "Copiar para
+ * Cliente" são etapas futuras. Os demais cards continuam só visuais ("Em
+ * breve"), sem onClick nem estado.
  */
 export function FerramentasView() {
   const [screen, setScreen] = useState<FerramentasScreen>('hub');
