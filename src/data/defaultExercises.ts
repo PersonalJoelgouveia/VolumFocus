@@ -108,6 +108,19 @@ export const DEFAULT_EXERCISES: Exercise[] = [
 
   // ── Extensores da Coluna — cadeia posterior ──
   {id:'e84',name:'Superman',                       agonist:'Extensores da Coluna',synergist:['Glúteos'],                    stabilizer:[]},
+
+  // ── Glúteos — variação sem equipamento (lacuna: nenhuma opção de peso corporal p/ Iniciante) ──
+  {id:'e85',name:'Coice em Quatro Apoios (Donkey Kick)',agonist:'Glúteos',        synergist:['Isquiotibiais'],              stabilizer:['Extensores da Coluna']},
+
+  // ── Mobilidade — preparação/aquecimento articular (lacuna: banco não tinha nenhum exercício de mobilidade) ──
+  {id:'e86',name:'Mobilidade de Ombro com Bastão',  agonist:'Ombros',              synergist:[],                             stabilizer:[]},
+  {id:'e87',name:'Rotação Torácica em 4 Apoios (Open Book)',agonist:'Extensores da Coluna',synergist:[],                     stabilizer:[]},
+  {id:'e88',name:'Gato-Camelo (Cat-Camel)',         agonist:'Extensores da Coluna',synergist:[],                             stabilizer:[]},
+  {id:'e89',name:'Mobilidade de Quadril 90/90',     agonist:'Glúteos',             synergist:['Isquiotibiais'],              stabilizer:[]},
+  {id:'e90',name:'Agachamento Cossaco (Cossack Squat)',agonist:'Quadríceps',       synergist:['Glúteos','Isquiotibiais'],    stabilizer:['Abdômen']},
+  {id:'e91',name:'Balanço de Perna (Leg Swing)',    agonist:'Isquiotibiais',       synergist:['Glúteos'],                    stabilizer:[]},
+  {id:'e92',name:'Mobilidade de Tornozelo (Ankle Rock)',agonist:'Panturrilhas',    synergist:[],                             stabilizer:[]},
+
   // ── Cardiorrespiratórios ──
   {id:'c1', name:'Esteira (Corrida)',              agonist:'Cardio', type:'cardio', synergist:[], stabilizer:[]},
   {id:'c2', name:'Esteira (Caminhada)',            agonist:'Cardio', type:'cardio', synergist:[], stabilizer:[]},
