@@ -174,10 +174,12 @@ export interface TrainingModelSessao {
 /**
  * Modelo de treino — entidade própria (`TrainingModel`), independente de
  * Rotinas Salvas e da rotina do Cliente (ver cabeçalho do arquivo).
- * `volume` e `intensidade` são descritores de planejamento do nível (ex:
- * "10–14 séries por grupamento/semana", "RIR 2–3, submáximo") — texto
- * livre e editável, não um valor calculado a partir de `sessoes` (para
- * contagens reais, ver `contarExercicios`).
+ * `volume`, `intensidade`, `complexidade` e `densidade` são descritores de
+ * planejamento do nível (ex: "10–14 séries por grupamento/semana", "RIR
+ * 2–3, submáximo") — texto livre e editável, não um valor calculado a
+ * partir de `sessoes` (para contagens reais, ver `contarExercicios`). A
+ * matriz de progressão que popula esses 4 campos + `metodos` pros 21
+ * níveis fica em data/trainingProgression.ts.
  */
 export interface TrainingModel {
   id: string;
@@ -189,6 +191,12 @@ export interface TrainingModel {
   sessoes: TrainingModelSessao[];
   volume: string;
   intensidade: string;
+  /** Complexidade motora/organizacional do nível (nº de padrões de
+   *  movimento combinados, variações técnicas, exigência coordenativa). */
+  complexidade: string;
+  /** Densidade da sessão (relação trabalho/descanso: agrupamentos,
+   *  circuitos, redução de pausa) — eixo de progressão à parte do volume. */
+  densidade: string;
   metodos: TrainingModelMetodo[];
   duracaoEstimadaMinutos: number;
   /** Incrementada pelo Personal a cada revisão relevante do conteúdo do
@@ -203,7 +211,12 @@ function nomePadrao(categoria: TrainingModelCategoria, nivel: TrainingModelNivel
 }
 
 /** Modelo vazio (sem sessões) pra um categoria×nível — ponto de partida
- *  antes do Personal montar o conteúdo. */
+ *  antes do Personal montar o conteúdo. `objetivo`/`volume`/`intensidade`/
+ *  `complexidade`/`densidade`/`metodos` nascem em branco aqui; quem os
+ *  preenche pelos 21 níveis é `criarCatalogoComProgressao()` em
+ *  data/trainingProgression.ts — este helper fica puro/sem opinião de
+ *  progressão de propósito, pra outros usos (ex: duplicar um nível) não
+ *  herdarem a matriz sem pedir. */
 export function criarTrainingModelVazio(categoria: TrainingModelCategoria, nivel: TrainingModelNivel): TrainingModel {
   return {
     id: `${categoria}-${nivel}`,
@@ -215,6 +228,8 @@ export function criarTrainingModelVazio(categoria: TrainingModelCategoria, nivel
     sessoes: [],
     volume: '',
     intensidade: '',
+    complexidade: '',
+    densidade: '',
     metodos: [],
     duracaoEstimadaMinutos: 0,
     versao: 1,

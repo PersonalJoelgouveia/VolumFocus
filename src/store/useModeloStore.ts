@@ -1,14 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { TrainingModel, TrainingModelCategoria } from '../types/trainingModel';
-import { criarCatalogoInicial } from '../types/trainingModel';
+import { criarCatalogoComProgressao } from '../data/trainingProgression';
 
 interface ModeloState {
-  /** Catálogo fixo de 21 modelos (3 categorias × 7 níveis). Sem add/remove
-   *  nesta etapa — só navegação/consulta da prateleira (ver
-   *  types/trainingModel.ts). Edição de conteúdo (sessões/exercícios) e
-   *  "Copiar para Cliente" são etapas futuras, ainda não implementadas
-   *  aqui de propósito. */
+  /** Catálogo fixo de 21 modelos (3 categorias × 7 níveis), nascendo com
+   *  os metadados da matriz de progressão (data/trainingProgression.ts)
+   *  já preenchidos. Sem add/remove nesta etapa — só navegação/consulta
+   *  da prateleira. Edição de conteúdo (sessões/exercícios) e "Copiar
+   *  para Cliente" são etapas futuras, ainda não implementadas aqui de
+   *  propósito. */
   modelos: TrainingModel[];
 
   listarPorCategoria: (categoria: TrainingModelCategoria) => TrainingModel[];
@@ -18,7 +19,7 @@ interface ModeloState {
 export const useModeloStore = create<ModeloState>()(
   persist(
     (_set, get) => ({
-      modelos: criarCatalogoInicial(),
+      modelos: criarCatalogoComProgressao(),
 
       listarPorCategoria: (categoria) =>
         get()
@@ -27,10 +28,10 @@ export const useModeloStore = create<ModeloState>()(
 
       getModelo: (id) => get().modelos.find((m) => m.id === id),
     }),
-    // Chave renomeada de 'jg3_modelos' pra 'jg3_training_models' junto com a
-    // troca de schema pra TrainingModel (antigo ModeloTreino usava `rotina`,
-    // este usa `sessoes`) — evita que um localStorage antigo, com o shape
-    // velho, seja carregado por engano e quebre contarExercicios().
-    { name: 'jg3_training_models' }
+    // Chave renomeada de novo (era 'jg3_training_models') ao ligar a matriz
+    // de progressão: um localStorage anterior, com objetivo/volume/
+    // intensidade/complexidade/densidade ainda em branco, não deve
+    // sobrescrever o catálogo já preenchido no primeiro carregamento.
+    { name: 'jg3_training_models_v2' }
   )
 );
