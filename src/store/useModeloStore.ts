@@ -28,10 +28,10 @@ export const useModeloStore = create<ModeloState>()(
 
       getModelo: (id) => get().modelos.find((m) => m.id === id),
     }),
-    // Chave renomeada de novo (era 'jg3_training_models') ao ligar a matriz
-    // de progressão: um localStorage anterior, com objetivo/volume/
-    // intensidade/complexidade/densidade ainda em branco, não deve
-    // sobrescrever o catálogo já preenchido no primeiro carregamento.
-    { name: 'jg3_training_models_v2' }
+    // Chave renomeada de novo (era 'jg3_training_models_v2') ao ligar o
+    // conteúdo real dos 7 níveis Iniciante: um localStorage anterior, com
+    // `sessoes` ainda vazio nesses modelos, não deve mascarar o conteúdo
+    // novo no primeiro carregamento.
+    { name: 'jg3_training_models_v3' }
   )
 );
