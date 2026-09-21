@@ -28,6 +28,7 @@ import {
 import type { TrainingModel, TrainingModelCategoria, TrainingModelMetodo, TrainingModelNivel } from '../types/trainingModel';
 import { aplicarSessoesIniciante } from './modelosIniciante';
 import { aplicarSessoesIntermediario } from './modelosIntermediario';
+import { aplicarSessoesAvancado } from './modelosAvancado';
 
 export interface NivelProgressao {
   categoria: TrainingModelCategoria;
@@ -255,9 +256,9 @@ export function getProgressao(categoria: TrainingModelCategoria, nivel: Training
  * Catálogo dos 21 modelos já com os metadados da matriz de progressão
  * preenchidos (objetivo/volume/intensidade/complexidade/densidade/
  * metodos), mais o conteúdo real dos níveis Iniciante (data/
- * modelosIniciante.ts) e Intermediário (data/modelosIntermediario.ts) —
- * Avançado continua com `sessoes` vazio, sem conteúdo ainda. É isto que
- * `useModeloStore` deve usar como estado inicial.
+ * modelosIniciante.ts), Intermediário (data/modelosIntermediario.ts) e
+ * Avançado (data/modelosAvancado.ts) — os 21 níveis têm conteúdo. É isto
+ * que `useModeloStore` deve usar como estado inicial.
  */
 export function criarCatalogoComProgressao(): TrainingModel[] {
   const catalogo = TRAINING_MODEL_CATEGORIAS.flatMap((categoria) =>
@@ -275,5 +276,5 @@ export function criarCatalogoComProgressao(): TrainingModel[] {
       };
     })
   );
-  return aplicarSessoesIntermediario(aplicarSessoesIniciante(catalogo));
+  return aplicarSessoesAvancado(aplicarSessoesIntermediario(aplicarSessoesIniciante(catalogo)));
 }
