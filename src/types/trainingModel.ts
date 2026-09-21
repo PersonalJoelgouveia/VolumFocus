@@ -15,8 +15,11 @@
  * o tipo compartilhado.
  *
  * Etapa: só a camada de dados (tipos + helpers puros, sem side effects).
- * Sem UI de edição de conteúdo e sem conversão pra AlunoRotina ("Copiar
- * para Cliente") ainda — isso é uma etapa futura.
+ * Sessões são organizadas em blocos fixos por fase (Preparação/Mobilidade/
+ * Força/Cardio, ver TrainingModelBloco e criarSessaoVazia) — estrutura
+ * exclusiva dos Modelos, sem qualquer alteração em Rotinas Salvas ou na
+ * rotina do Cliente. Sem UI de edição de conteúdo e sem conversão pra
+ * AlunoRotina ("Copiar para Cliente") ainda — isso é uma etapa futura.
  */
 
 import type { GroupType } from './workout';
@@ -36,11 +39,17 @@ export type TrainingModelNivel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export const TRAINING_MODEL_NIVEIS: TrainingModelNivel[] = [1, 2, 3, 4, 5, 6, 7];
 
 /**
- * Fase de uma entrada dentro da sessão — eixo independente de força/cardio:
+ * Fase de um bloco dentro da sessão — eixo independente de força/cardio:
  * um exercício cardio pode SER a preparação (bike/elíptico/esteira, ver
- * regra de preparação cardiovascular), não só o corpo do treino.
+ * PREPARACAO_CARDIO_SUGERIDO em data/preparacaoCardio.ts), não só o corpo
+ * do treino. A partir da estrutura em blocos (ver TrainingModelBloco), a
+ * fase é uma propriedade do bloco, não de cada entrada — uma entrada nunca
+ * fica "sem fase" nem contradiz o bloco em que está.
  */
 export type TrainingModelFase = 'preparacao' | 'mobilidade' | 'forca' | 'cardio';
+
+/** Ordem fixa dos blocos numa sessão (ver TrainingModelSessao/criarSessaoVazia). */
+export const TRAINING_MODEL_FASES: TrainingModelFase[] = ['preparacao', 'mobilidade', 'forca', 'cardio'];
 
 export const TRAINING_MODEL_FASE_LABELS: Record<TrainingModelFase, string> = {
   preparacao: 'Preparação/Vascularização',
@@ -118,7 +127,6 @@ interface TrainingModelEntradaBase {
   /** Referencia Exercise.id existente no Banco de Exercícios
    *  (types/exercise.ts) — nunca duplica nome/agonista/mídia aqui. */
   exId: string;
-  fase: TrainingModelFase;
   metodo?: TrainingModelMetodo;
   descansoSegundos?: number;
   groupId?: string;
@@ -157,18 +165,35 @@ export function isTrainingModelEntradaCardio(e: TrainingModelEntrada): e is Trai
 }
 
 /**
+ * Um bloco dentro de uma sessão — a unidade que carrega a fase
+ * (Preparação/Mobilidade/Força/Cardio) e os exercícios daquela fase.
+ * `duracaoEstimadaMinutos` é referência editável, não regra rígida (pedido
+ * explícito de ~5min pra Preparação; os demais blocos ficam livres).
+ * Cardio "quando aplicável": um bloco de fase `cardio` com `exercicios`
+ * vazio significa que a sessão não tem cardio dedicado — o bloco
+ * continua presente (ordem fixa), só sem conteúdo.
+ */
+export interface TrainingModelBloco {
+  fase: TrainingModelFase;
+  duracaoEstimadaMinutos?: number;
+  exercicios: TrainingModelEntrada[];
+}
+
+/**
  * Uma sessão do modelo. `tipo` é a divisão (Full Body, Upper/Lower, Push,
  * Pull, etc.) — texto livre e editável, mesmo padrão de AlunoRotinaDia.tipo.
- * `sessoes` do modelo não é fixada a 7 dias como AlunoRotina: cabe tanto
- * splits de poucas sessões por semana (ex: Full Body 3x) quanto uma semana
- * cheia — a relação sessão↔dia da semana só é decidida na conversão pra
- * rotina do Cliente (etapa futura), não faz parte do modelo em si.
+ * `blocos` segue sempre a ordem de TRAINING_MODEL_FASES (preparação →
+ * mobilidade → força → cardio) — ver criarSessaoVazia. `sessoes` do modelo
+ * não é fixada a 7 dias como AlunoRotina: cabe tanto splits de poucas
+ * sessões por semana (ex: Full Body 3x) quanto uma semana cheia — a
+ * relação sessão↔dia da semana só é decidida na conversão pra rotina do
+ * Cliente (etapa futura), não faz parte do modelo em si.
  */
 export interface TrainingModelSessao {
   id: string;
   nome: string;
   tipo: string;
-  exercicios: TrainingModelEntrada[];
+  blocos: TrainingModelBloco[];
 }
 
 /**
@@ -252,9 +277,44 @@ export function criarCatalogoInicial(): TrainingModel[] {
   return modelos;
 }
 
-/** Total de entradas (força+cardio) cadastradas no modelo, somando todas as sessões. */
+/** Duração de referência (min) por fase ao criar um bloco vazio — só a
+ *  Preparação tem valor por regra explícita; os demais nascem sem duração
+ *  fixada (editável livremente). */
+const DURACAO_REFERENCIA_POR_FASE: Partial<Record<TrainingModelFase, number>> = {
+  preparacao: 5,
+};
+
+export function criarBlocoVazio(fase: TrainingModelFase): TrainingModelBloco {
+  return {
+    fase,
+    duracaoEstimadaMinutos: DURACAO_REFERENCIA_POR_FASE[fase],
+    exercicios: [],
+  };
+}
+
+/**
+ * Sessão vazia com a estrutura de 4 blocos na ordem fixa (Preparação ~5min
+ * de referência → Mobilidade → Força/Musculação → Cardiovascular). O bloco
+ * de Cardio nasce presente mas vazio — "quando aplicável" quer dizer que
+ * ele pode continuar vazio pra sessões sem cardio dedicado, não que o
+ * bloco deixe de existir. Todos os blocos ficam editáveis pelo Personal
+ * depois (adicionar/remover exercícios, ajustar duração de referência).
+ */
+export function criarSessaoVazia(nome: string, tipo: string): TrainingModelSessao {
+  return {
+    id: `sessao-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    nome,
+    tipo,
+    blocos: TRAINING_MODEL_FASES.map((fase) => criarBlocoVazio(fase)),
+  };
+}
+
+/** Total de entradas (força+cardio) cadastradas no modelo, somando todos os blocos de todas as sessões. */
 export function contarExercicios(modelo: TrainingModel): number {
-  return modelo.sessoes.reduce((acc, sessao) => acc + sessao.exercicios.length, 0);
+  return modelo.sessoes.reduce(
+    (acc, sessao) => acc + sessao.blocos.reduce((soma, bloco) => soma + bloco.exercicios.length, 0),
+    0
+  );
 }
 
 export function modeloEstaVazio(modelo: TrainingModel): boolean {
