@@ -7,6 +7,7 @@ import {
   modeloEstaVazio,
 } from '../../types/trainingModel';
 import type { TrainingModelCategoria } from '../../types/trainingModel';
+import { CopiarParaClienteModal } from '../../components/modelos/CopiarParaClienteModal';
 import './ModelosToolView.css';
 
 type Screen = { tipo: 'hub' } | { tipo: 'categoria'; categoria: TrainingModelCategoria } | { tipo: 'nivel'; modeloId: string };
@@ -14,16 +15,18 @@ type Screen = { tipo: 'hub' } | { tipo: 'categoria'; categoria: TrainingModelCat
 /**
  * Ferramenta "Modelos" (Sidebar > Ferramentas > Modelos) — biblioteca de 21
  * modelos de treino (Iniciante/Intermediário/Avançado × 7 níveis, ver
- * types/modelo.ts) que vai servir de ponto de partida pra montar a rotina
- * de um Cliente. Independente de Rotinas Salvas (useRotinaStore) — nenhuma
- * das duas ferramentas lê ou escreve na outra, e Rotinas Salvas continua
- * funcionando exatamente como antes.
+ * types/trainingModel.ts) que serve de ponto de partida pra montar a
+ * rotina de um Cliente. Independente de Rotinas Salvas (useRotinaStore) —
+ * nenhuma das duas ferramentas lê ou escreve na outra, e Rotinas Salvas
+ * continua funcionando exatamente como antes.
  *
- * ETAPA 1 (esta): só navegação (hub de categorias → grid de 7 níveis →
- * detalhe do nível), cards e estados vazios. Sem editor de exercícios e
- * sem "Copiar para Cliente" ainda — o conteúdo de cada nível e o fluxo de
- * cópia são etapas futuras, construídas por cima desta mesma estrutura de
- * 21 ids estáveis (`${categoria}-${nivel}`).
+ * Navegação: hub de categorias → grid de 7 níveis → detalhe do nível, com
+ * "Copiar para Cliente" (CopiarParaClienteModal) nesse último — converte o
+ * modelo numa rotina nova e independente do Cliente escolhido (ver
+ * utils/buildAlunoRotinaFromTrainingModel.ts). Editor de conteúdo
+ * (adicionar/editar exercícios de um nível por aqui) continua sendo uma
+ * etapa futura — os 21 níveis já vêm com conteúdo pronto (data/
+ * modelosIniciante.ts, modelosIntermediario.ts, modelosAvancado.ts).
  */
 export function ModelosToolView({ onVoltar }: { onVoltar: () => void }) {
   const [screen, setScreen] = useState<Screen>({ tipo: 'hub' });
@@ -60,8 +63,8 @@ function HubScreen({ onVoltar, onAbrirCategoria }: { onVoltar: () => void; onAbr
       </button>
       <h3 className="md-page-title">Modelos</h3>
       <p className="md-hub-desc">
-        Trilhas progressivas de treino, organizadas por nível de experiência — em breve, prontas pra copiar pra
-        rotina de um Cliente.
+        Trilhas progressivas de treino, organizadas por nível de experiência — prontas pra copiar pra rotina de um
+        Cliente.
       </p>
       <div className="md-cat-grid">
         {TRAINING_MODEL_CATEGORIAS.map((categoria) => {
@@ -119,15 +122,22 @@ function CategoriaScreen({
 
 function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar: () => void }) {
   const modelo = useModeloStore((s) => s.getModelo(modeloId));
+  const [copiarOpen, setCopiarOpen] = useState(false);
 
   if (!modelo) return null;
   const vazio = modeloEstaVazio(modelo);
 
   return (
     <div className="md-view">
-      <button type="button" className="btn btn-ghost md-back" onClick={onVoltar}>
-        ← Voltar
-      </button>
+      <div className="md-nivel-header-row">
+        <button type="button" className="btn btn-ghost md-back" onClick={onVoltar}>
+          ← Voltar
+        </button>
+        <button type="button" className="btn btn-primary btn-sm" disabled={vazio} onClick={() => setCopiarOpen(true)}>
+          📤 Copiar para Cliente
+        </button>
+      </div>
+
       <div className="md-nivel-header">
         <span className="md-nivel-badge">
           {TRAINING_MODEL_CATEGORIA_LABELS[modelo.categoria]} · Nível {modelo.nivel}
@@ -143,15 +153,18 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
             📋
           </div>
           <div className="md-empty-title">Nenhum treino cadastrado ainda</div>
-          <div className="md-empty-desc">
-            O conteúdo deste nível (exercícios por dia) e o botão "Copiar para Cliente" chegam numa próxima etapa.
-          </div>
+          <div className="md-empty-desc">Este nível ainda não tem sessões — não há como copiar pra um Cliente.</div>
         </div>
       ) : (
         <div className="md-empty-state">
-          <div className="md-empty-desc">{contarExercicios(modelo)} exercício(s) cadastrados neste nível.</div>
+          <div className="md-empty-desc">
+            {modelo.sessoes.length} sessão{modelo.sessoes.length > 1 ? 'ões' : ''} · {contarExercicios(modelo)}{' '}
+            exercício(s) cadastrados neste nível.
+          </div>
         </div>
       )}
+
+      {copiarOpen && <CopiarParaClienteModal modelo={modelo} onClose={() => setCopiarOpen(false)} />}
     </div>
   );
 }

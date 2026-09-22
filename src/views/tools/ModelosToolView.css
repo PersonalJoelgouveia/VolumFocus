@@ -67,3 +67,43 @@
 .md-empty-ico { font-size: 1.8rem; margin-bottom: 10px; opacity: 0.7; }
 .md-empty-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
 .md-empty-desc { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; }
+
+.md-nivel-header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.md-nivel-header-row .md-back { margin-bottom: 0; }
+
+/* ========== Modal Copiar para Cliente (CopiarParaClienteModal.tsx) ========== */
+.md-copy-hint { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
+
+.md-cliente-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 16px; }
+
+.md-cliente-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+.md-cliente-item:hover { border-color: var(--border-md); }
+.md-cliente-item.active { border-color: var(--teal); background: var(--teal-glow); }
+
+.md-cliente-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--teal-glow);
+  color: var(--teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.md-cliente-nome { font-size: 0.85rem; font-weight: 600; }
