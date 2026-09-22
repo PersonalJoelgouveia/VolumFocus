@@ -93,15 +93,8 @@ function CategoriaScreen({
   onVoltar: () => void;
   onAbrirNivel: (modeloId: string) => void;
 }) {
-  const todosModelos = useModeloStore((s) => s.modelos);
-
-const modelos = useMemo(
-  () =>
-    todosModelos
-      .filter((m) => m.categoria === categoria)
-      .sort((a, b) => a.nivel - b.nivel),
-  [todosModelos, categoria]
-);
+  const listarPorCategoria = useModeloStore((s) => s.listarPorCategoria);
+  const modelos = listarPorCategoria(categoria);
 
   return (
     <div className="md-view">
@@ -128,12 +121,7 @@ const modelos = useMemo(
 }
 
 function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar: () => void }) {
-  const modelos = useModeloStore((s) => s.modelos);
-
-const modelo = useMemo(
-  () => modelos.find((m) => m.id === modeloId),
-  [modelos, modeloId]
-);
+  const modelo = useModeloStore((s) => s.getModelo(modeloId));
   const [copiarOpen, setCopiarOpen] = useState(false);
 
   if (!modelo) return null;
