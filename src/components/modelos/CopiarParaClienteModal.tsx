@@ -21,7 +21,11 @@ interface CopiarParaClienteModalProps {
  * cópia independente — editá-la depois nunca volta a afetar o modelo.
  */
 export function CopiarParaClienteModal({ modelo, onClose }: CopiarParaClienteModalProps) {
-  const alunos = useAlunoStore((s) => s.alunos.filter((a) => a.status === 'ativo'));
+  const alunosTodos = useAlunoStore((s) => s.alunos);
+const alunos = useMemo(
+  () => alunosTodos.filter((a) => a.status === 'ativo'),
+  [alunosTodos]
+);
   const copiarParaCliente = useModeloStore((s) => s.copiarParaCliente);
   const showToast = useUIStore((s) => s.showToast);
 

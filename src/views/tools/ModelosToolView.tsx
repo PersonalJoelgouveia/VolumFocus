@@ -93,8 +93,15 @@ function CategoriaScreen({
   onVoltar: () => void;
   onAbrirNivel: (modeloId: string) => void;
 }) {
-  const listarPorCategoria = useModeloStore((s) => s.listarPorCategoria);
-  const modelos = listarPorCategoria(categoria);
+  const todosModelos = useModeloStore((s) => s.modelos);
+
+const modelos = useMemo(
+  () =>
+    todosModelos
+      .filter((m) => m.categoria === categoria)
+      .sort((a, b) => a.nivel - b.nivel),
+  [todosModelos, categoria]
+);
 
   return (
     <div className="md-view">
