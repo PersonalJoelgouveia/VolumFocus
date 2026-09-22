@@ -5,6 +5,7 @@ import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { MUSCLE_COLOR } from '../../data/muscleColors';
 import type { AlunoExercicio } from '../../types/aluno';
 import { isAlunoExercicioCardio } from '../../types/aluno';
+import { resolverExercisePorNome, sugerirSubstitutos } from '../../utils/sugerirSubstitutos';
 import './ClientesView.css';
 
 interface ExercicioFormModalProps {
@@ -18,9 +19,17 @@ interface ExercicioFormModalProps {
 /**
  * Sucessor de #modal-cli-ed-ex (cli_ed_abrirAddExercicio/cli_ed_abrirEditarExercicio/
  * cli_ed_handleComboInput/cli_ed_salvarExercicio, index.html ~10828-10952).
- * A busca (combo) só aparece ao adicionar um exercício novo — ao editar, o
- * nome já foi fixado e só os campos (séries/reps/carga/RIR ou cardio) mudam,
- * igual ao original.
+ * A busca (combo) só aparece ao adicionar um exercício novo, ou ao editar
+ * um existente depois de tocar em "🔄 Substituir exercício" — fora isso,
+ * ao editar o nome já foi fixado e só os campos (séries/reps/carga/RIR ou
+ * cardio) mudam, igual ao original.
+ *
+ * Substituir exercício (utils/sugerirSubstitutos.ts) ranqueia sugestões
+ * pela taxonomia do Banco (mesmo agonista → sinergistas em comum →
+ * estabilizadores em comum) a partir do exercício atual, resolvido pelo
+ * nome; a busca manual continua disponível pra qualquer exercício, mesmo
+ * sem relação nenhuma. Isso mexe só na rotina do Cliente — nunca no
+ * Modelo de onde a rotina possa ter vindo.
  */
 export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: ExercicioFormModalProps) {
   const exercises = useExerciseStore((s) => s.exercises);
@@ -32,6 +41,7 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
   const [selectedExId, setSelectedExId] = useState<string | null>(null);
   const [isCardio, setIsCardio] = useState(existing ? isAlunoExercicioCardio(existing) : false);
   const [nomeFixo, setNomeFixo] = useState(existing?.nome ?? '');
+  const [substituindo, setSubstituindo] = useState(false);
 
   const [series, setSeries] = useState(existing && !isAlunoExercicioCardio(existing) ? String(existing.series) : '3');
   const [reps, setReps] = useState(existing && !isAlunoExercicioCardio(existing) ? existing.reps : '10-12');
@@ -41,11 +51,22 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
   const [intensidade, setIntensidade] = useState(existing && isAlunoExercicioCardio(existing) ? existing.intensidade : '');
   const [notas, setNotas] = useState(existing?.notes ?? '');
 
+  const mostrarBusca = !isEdit || substituindo;
+
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q || isEdit) return [];
+    if (!q || !mostrarBusca) return [];
     return exercises.filter((e) => e.name.toLowerCase().includes(q) || e.agonist.toLowerCase().includes(q)).slice(0, 12);
-  }, [query, exercises, isEdit]);
+  }, [query, exercises, mostrarBusca]);
+
+  const exercicioAtual = useMemo(
+    () => (substituindo && nomeFixo ? resolverExercisePorNome(nomeFixo, exercises) : undefined),
+    [substituindo, nomeFixo, exercises]
+  );
+  const sugestoes = useMemo(
+    () => (exercicioAtual ? sugerirSubstitutos(exercicioAtual, exercises) : []),
+    [exercicioAtual, exercises]
+  );
 
   function handleSelect(id: string) {
     const ex = exercises.find((e) => e.id === id);
@@ -54,6 +75,7 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
     setNomeFixo(ex.name);
     setQuery(ex.name);
     setDdOpen(false);
+    setSubstituindo(false);
     const cardio = ex.type === 'cardio';
     setIsCardio(cardio);
     if (!cardio) {
@@ -101,7 +123,45 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
           </button>
         </div>
 
-        {!isEdit && (
+        {isEdit && !substituindo && (
+          <div className="cli-ex-current-row">
+            <span className="cli-ex-current-nome">{nomeFixo}</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSubstituindo(true)}>
+              🔄 Substituir exercício
+            </button>
+          </div>
+        )}
+
+        {substituindo && (
+          <div className="cli-ex-sub-header">
+            <span>Escolha o novo exercício pra "{nomeFixo}"</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSubstituindo(false)}>
+              ← Cancelar
+            </button>
+          </div>
+        )}
+
+        {substituindo &&
+          (sugestoes.length > 0 ? (
+            <div className="cli-sub-list">
+              {sugestoes.map((s) => (
+                <div className="combo-item" key={s.exercise.id} onClick={() => handleSelect(s.exercise.id)}>
+                  <div className="combo-dot" style={{ background: MUSCLE_COLOR[s.exercise.agonist] ?? '#888' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="combo-name">{s.exercise.name}</div>
+                    <div className="combo-muscle">{s.motivo}</div>
+                  </div>
+                  <div className="combo-muscle">{s.exercise.agonist}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="cli-ex-sub-hint">
+              Não encontramos esse exercício no banco pra sugerir substitutos parecidos — busque manualmente abaixo.
+            </div>
+          ))}
+
+        {mostrarBusca && (
           <div className="combo-wrap">
             <input
               className="combo-input"
@@ -134,7 +194,7 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
           </div>
         )}
 
-        {(isEdit || selectedExId) && (
+        {!substituindo && (isEdit || selectedExId) && (
           <div className="cli-ex-form-fields">
             {isCardio ? (
               <>
@@ -174,16 +234,18 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          {isEdit && onRemove && (
-            <button className="btn btn-danger" onClick={onRemove}>
-              🗑️ Remover
+        {!substituindo && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            {isEdit && onRemove && (
+              <button className="btn btn-danger" onClick={onRemove}>
+                🗑️ Remover
+              </button>
+            )}
+            <button className="btn-block-primary" style={{ flex: 1 }} disabled={!valid} onClick={handleSubmit}>
+              {isEdit ? 'Salvar' : 'Adicionar'}
             </button>
-          )}
-          <button className="btn-block-primary" style={{ flex: 1 }} disabled={!valid} onClick={handleSubmit}>
-            {isEdit ? 'Salvar' : 'Adicionar'}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

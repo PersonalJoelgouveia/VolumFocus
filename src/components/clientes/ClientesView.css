@@ -245,3 +245,37 @@
 .combo-muscle { font-size: 0.67rem; color: var(--text-3); font-family: var(--font-mono); }
 
 .cli-ex-form-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ========== Substituir exercício (ExercicioFormModal.tsx) ========== */
+.cli-ex-current-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.cli-ex-current-nome { font-size: 0.86rem; font-weight: 600; color: var(--text); }
+
+.cli-ex-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+.cli-sub-list {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 14px;
+}
+
+.cli-ex-sub-hint { font-size: 0.78rem; color: var(--text-3); line-height: 1.5; margin-bottom: 14px; }
