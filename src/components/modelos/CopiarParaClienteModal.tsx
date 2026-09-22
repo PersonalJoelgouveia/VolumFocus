@@ -21,7 +21,14 @@ interface CopiarParaClienteModalProps {
  * cópia independente — editá-la depois nunca volta a afetar o modelo.
  */
 export function CopiarParaClienteModal({ modelo, onClose }: CopiarParaClienteModalProps) {
-  const alunos = useAlunoStore((s) => s.alunos.filter((a) => a.status === 'ativo'));
+  // Seleciona o array estável do store e filtra fora do seletor — um
+  // `.filter()` dentro do seletor retornaria uma referência nova a cada
+  // render, o que o React 18 (useSyncExternalStore) trata como estado
+  // instável e pode disparar loop de atualização (erro #185) — mesma
+  // causa raiz do bug histórico de `useAlunoStore.getAvaliacoes` (ver
+  // notas do projeto).
+  const todosAlunos = useAlunoStore((s) => s.alunos);
+  const alunos = todosAlunos.filter((a) => a.status === 'ativo');
   const copiarParaCliente = useModeloStore((s) => s.copiarParaCliente);
   const showToast = useUIStore((s) => s.showToast);
 
