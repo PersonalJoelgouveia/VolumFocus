@@ -128,7 +128,12 @@ const modelos = useMemo(
 }
 
 function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar: () => void }) {
-  const modelo = useModeloStore((s) => s.getModelo(modeloId));
+  const modelos = useModeloStore((s) => s.modelos);
+
+const modelo = useMemo(
+  () => modelos.find((m) => m.id === modeloId),
+  [modelos, modeloId]
+);
   const [copiarOpen, setCopiarOpen] = useState(false);
 
   if (!modelo) return null;
