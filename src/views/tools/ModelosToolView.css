@@ -84,6 +84,22 @@
 .md-esqueleto-item { font-size: 0.82rem; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .md-esqueleto-item .md-nivel-badge { padding: 1px 7px; }
 
+.md-fase-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.md-fase-tab {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: var(--tr);
+}
+.md-fase-tab:hover { border-color: var(--border-md); }
+.md-fase-tab.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+
 /* ========== Modal Copiar para Cliente (CopiarParaClienteModal.tsx) ========== */
 .md-copy-hint { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
 

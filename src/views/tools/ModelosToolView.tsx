@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useModeloStore } from '../../store/useModeloStore';
 import {
   TRAINING_MODEL_CATEGORIAS,
@@ -7,12 +7,21 @@ import {
   FREQUENCIA_LABELS,
   VARIANTES_POR_GENERO,
   VARIANTE_LABELS,
+  TRAINING_MODEL_FASES,
+  TRAINING_MODEL_FASE_LABELS,
   contarExercicios,
   modeloEstaVazio,
+  isTrainingModelEntradaCardio,
 } from '../../types/trainingModel';
-import type { FrequenciaSemanal, TrainingModelCategoria, VariantePorGenero } from '../../types/trainingModel';
+import type { FrequenciaSemanal, TrainingModelCategoria, TrainingModelEntrada, TrainingModelFase, VariantePorGenero } from '../../types/trainingModel';
+import { GROUP_LABELS } from '../../types/workout';
 import { getEsqueletoFrequencia } from '../../data/frequenciaSemanal';
+import { useExerciseStore } from '../../store/useExerciseStore';
+import { buildGroupedRows } from '../../utils/dayLogGrouping';
+import { useReorderDrag } from '../../hooks/useReorderDrag';
 import { CopiarParaClienteModal } from '../../components/modelos/CopiarParaClienteModal';
+import { ModeloExercicioFormModal } from '../../components/modelos/ModeloExercicioFormModal';
+import '../../components/clientes/ClientesView.css';
 import './ModelosToolView.css';
 
 type Screen =
@@ -37,16 +46,19 @@ type Screen =
  *
  * Navegação em 3–4 telas: Nível de Treinamento (categoria) → Frequência
  * Semanal (2x/3x/4x/5x, com Versão Masculina/Feminina só na 4x, ver
- * data/frequenciaSemanal.ts) → grid de 7 níveis → detalhe do nível, com
- * "Copiar para Cliente" (CopiarParaClienteModal) nesse último.
+ * data/frequenciaSemanal.ts) → grid de 7 níveis → detalhe do nível.
  *
- * Etapa atual: só estrutura de navegação + dados (esqueleto de sessões
- * por frequência) — nenhum exercício foi recriado ainda pra essa
- * organização nova, `sessoes` fica vazio em todo o catálogo (ver nota em
- * data/trainingProgression.ts sobre o conteúdo anterior, incompatível
- * com este esquema). A tela de detalhe mostra o esqueleto planejado
- * (nome + foco de cada sessão) mesmo sem exercícios, pra deixar visível
- * o que vem a seguir.
+ * O detalhe do nível é o editor completo do Modelo: ao abrir, materializa
+ * as sessões a partir do esqueleto da frequência (garantirSessoesIniciais,
+ * useModeloStore) se ainda não existirem, e mostra imediatamente a lista
+ * de exercícios de cada bloco (Preparação/Mobilidade/Força/Cardio),
+ * editável — adicionar, remover, substituir (ModeloExercicioFormModal,
+ * mesma lógica de sugestão por taxonomia do Banco já usada na rotina do
+ * Cliente), reordenar, editar séries/reps/descanso/método/cardio/duração.
+ * Cada edição mexe SÓ nesta instância do modelo (useModeloStore, por
+ * modeloId) — nunca em outro modelo, em Rotinas Salvas (useRotinaStore)
+ * ou no Timer. "Copiar para Cliente" (CopiarParaClienteModal) sempre
+ * copia a versão atualmente editada.
  */
 export function ModelosToolView({ onVoltar }: { onVoltar: () => void }) {
   const [screen, setScreen] = useState<Screen>({ tipo: 'hub' });
@@ -249,11 +261,91 @@ function NivelGridScreen({
 
 function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar: () => void }) {
   const modelo = useModeloStore((s) => s.getModelo(modeloId));
+  const garantirSessoesIniciais = useModeloStore((s) => s.garantirSessoesIniciais);
+  const addExercicio = useModeloStore((s) => s.addExercicio);
+  const updateExercicio = useModeloStore((s) => s.updateExercicio);
+  const removeExercicio = useModeloStore((s) => s.removeExercicio);
+  const reorderExercicio = useModeloStore((s) => s.reorderExercicio);
+  const setBlocoDuracao = useModeloStore((s) => s.setBlocoDuracao);
+  const setDuracaoEstimada = useModeloStore((s) => s.setDuracaoEstimada);
+  const exercises = useExerciseStore((s) => s.exercises);
+
+  const [sessaoIdx, setSessaoIdx] = useState(0);
+  const [faseAtiva, setFaseAtiva] = useState<TrainingModelFase>('forca');
+  const [reorderMode, setReorderMode] = useState(false);
+  const [editando, setEditando] = useState<TrainingModelEntrada | 'novo' | null>(null);
   const [copiarOpen, setCopiarOpen] = useState(false);
 
+  useEffect(() => {
+    if (modelo && modelo.sessoes.length === 0) garantirSessoesIniciais(modelo.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modeloId]);
+
   if (!modelo) return null;
+  if (modelo.sessoes.length === 0) return null; // aguarda o efeito acima materializar as sessões
+
+  const sessao = modelo.sessoes[Math.min(sessaoIdx, modelo.sessoes.length - 1)];
+  const bloco = sessao.blocos.find((b) => b.fase === faseAtiva)!;
   const vazio = modeloEstaVazio(modelo);
-  const esqueleto = getEsqueletoFrequencia(modelo.frequencia, modelo.variante);
+
+  function nomeExercicio(exId: string): string {
+    return exercises.find((e) => e.id === exId)?.name ?? `Exercício não encontrado (${exId})`;
+  }
+
+  function handleReorder(fromIdx: number, toIdx: number) {
+    reorderExercicio(modelo!.id, sessao.id, faseAtiva, fromIdx, toIdx);
+  }
+  const { getItemProps, isDragging, isDragOver } = useReorderDrag(reorderMode, handleReorder);
+
+  function handleSave(entrada: TrainingModelEntrada) {
+    if (editando === 'novo') addExercicio(modelo!.id, sessao.id, faseAtiva, entrada);
+    else updateExercicio(modelo!.id, sessao.id, faseAtiva, entrada);
+    setEditando(null);
+  }
+
+  function handleRemove() {
+    if (editando && editando !== 'novo') removeExercicio(modelo!.id, sessao.id, faseAtiva, editando.id);
+    setEditando(null);
+  }
+
+  function renderEntrada(entrada: TrainingModelEntrada, idx: number) {
+    const cardio = isTrainingModelEntradaCardio(entrada);
+    return (
+      <div
+        className={`cli-ed-ex-item${isDragging(idx) ? ' ro-dragging' : ''}${isDragOver(idx) ? ' ro-drag-over' : ''}`}
+        key={entrada.id}
+        onClick={() => !reorderMode && setEditando(entrada)}
+        {...getItemProps(idx)}
+      >
+        {reorderMode && (
+          <span className="cli-ed-ro-handle" title="Arrastar para reordenar">
+            ↕
+          </span>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="cli-ex-name">{nomeExercicio(entrada.exId)}</div>
+          <div className="cli-ex-detail">
+            {cardio ? (
+              <>
+                <span className="cli-ex-chip">{entrada.duracaoMinutos}min</span>
+                <span className="cli-ex-chip">{entrada.intensidade}</span>
+              </>
+            ) : (
+              <>
+                <span className="cli-ex-chip">
+                  {entrada.series}×{entrada.repsMin === entrada.repsMax ? entrada.repsMin : `${entrada.repsMin}-${entrada.repsMax}`}
+                </span>
+                {entrada.rir != null && <span className="cli-ex-chip">RIR {entrada.rir}</span>}
+              </>
+            )}
+            {entrada.descansoSegundos != null && <span className="cli-ex-chip">{entrada.descansoSegundos}s desc.</span>}
+            {entrada.metodo && entrada.metodo !== 'series_tradicionais' && <span className="cli-ex-chip">{entrada.metodo}</span>}
+          </div>
+        </div>
+        {!reorderMode && <span className="cli-ed-ex-handle">✎</span>}
+      </div>
+    );
+  }
 
   return (
     <div className="md-view">
@@ -276,35 +368,107 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
         </h3>
       </div>
 
-      <div className="md-esqueleto">
-        <span className="md-metodos-label">Estrutura das sessões desta frequência</span>
-        <div className="md-esqueleto-lista">
-          {esqueleto.sessoes.map((s) => (
-            <div className="md-esqueleto-item" key={s.nome}>
-              <span className="md-nivel-badge">{s.nome}</span> {s.foco}
-            </div>
-          ))}
-        </div>
-        <div className="md-empty-desc" style={{ marginTop: 8 }}>
-          ~45–60min de musculação por sessão, sem contar cardio. {esqueleto.cardioNota}
+      <label className="cli-form-field" style={{ maxWidth: 220, marginBottom: 14 }}>
+        <span>Duração estimada da sessão (min)</span>
+        <input
+          type="number"
+          min={0}
+          value={modelo.duracaoEstimadaMinutos || ''}
+          onChange={(e) => setDuracaoEstimada(modelo.id, Number(e.target.value) || 0)}
+        />
+      </label>
+
+      <div className="cli-days-bar">
+        {modelo.sessoes.map((s, i) => (
+          <button
+            key={s.id}
+            className={`cli-day-btn${sessaoIdx === i ? ' active' : ''}`}
+            onClick={() => {
+              setReorderMode(false);
+              setSessaoIdx(i);
+            }}
+          >
+            <div className="cli-dl">{s.nome.split(' — ')[0]}</div>
+            <div className="cli-ds">{s.blocos.reduce((acc, b) => acc + b.exercicios.length, 0)}ex</div>
+          </button>
+        ))}
+      </div>
+
+      <div className="md-fase-tabs">
+        {TRAINING_MODEL_FASES.map((fase) => {
+          const b = sessao.blocos.find((bl) => bl.fase === fase)!;
+          return (
+            <button
+              key={fase}
+              type="button"
+              className={`md-fase-tab${faseAtiva === fase ? ' active' : ''}`}
+              onClick={() => {
+                setReorderMode(false);
+                setFaseAtiva(fase);
+              }}
+            >
+              {TRAINING_MODEL_FASE_LABELS[fase]} {b.exercicios.length > 0 && `(${b.exercicios.length})`}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 10, marginBottom: 10, marginTop: 12 }}>
+        <label className="cli-form-field" style={{ margin: 0 }}>
+          <span>Duração de referência deste bloco (min, opcional)</span>
+          <input
+            type="number"
+            min={0}
+            value={bloco.duracaoEstimadaMinutos ?? ''}
+            onChange={(e) => setBlocoDuracao(modelo.id, sessao.id, faseAtiva, e.target.value ? Number(e.target.value) : undefined)}
+          />
+        </label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {bloco.exercicios.length > 1 && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setReorderMode((v) => !v)}>
+              {reorderMode ? '✓ Concluir' : '↕️ Reordenar'}
+            </button>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={() => setEditando('novo')}>
+            + Exercício
+          </button>
         </div>
       </div>
 
-      {vazio ? (
-        <div className="md-empty-state">
-          <div className="md-empty-ico" aria-hidden="true">
-            📋
-          </div>
-          <div className="md-empty-title">Nenhum treino cadastrado ainda</div>
-          <div className="md-empty-desc">Este nível ainda não tem sessões — não há como copiar pra um Cliente.</div>
-        </div>
-      ) : (
-        <div className="md-empty-state">
-          <div className="md-empty-desc">
-            {modelo.sessoes.length} sessão{modelo.sessoes.length > 1 ? 'ões' : ''} · {contarExercicios(modelo)}{' '}
-            exercício(s) cadastrados neste nível.
-          </div>
-        </div>
+      <div className="cli-ed-day-content">
+        {bloco.exercicios.length === 0 ? (
+          <div className="cli-rest-day">Nenhum exercício neste bloco ainda.</div>
+        ) : reorderMode ? (
+          bloco.exercicios.map((ex, i) => renderEntrada(ex, i))
+        ) : (
+          buildGroupedRows(bloco.exercicios).map((row) =>
+            row.kind === 'free' ? (
+              renderEntrada(row.entry, row.index)
+            ) : (
+              <div className="cj-group" key={row.groupId}>
+                <div className="cj-group-header">
+                  <span className="cj-group-badge">{GROUP_LABELS[row.members[0].entry.groupType ?? 'biset']}</span>
+                  <span className="cj-group-desc">{row.members.length} exercícios conjugados</span>
+                </div>
+                {row.members.map((m, k) => (
+                  <div key={m.index}>
+                    {k > 0 && <div className="cj-connector" />}
+                    {renderEntrada(m.entry, m.index)}
+                  </div>
+                ))}
+              </div>
+            )
+          )
+        )}
+      </div>
+
+      {editando !== null && (
+        <ModeloExercicioFormModal
+          existing={editando === 'novo' ? undefined : editando}
+          onSave={handleSave}
+          onRemove={editando !== 'novo' ? handleRemove : undefined}
+          onClose={() => setEditando(null)}
+        />
       )}
 
       {copiarOpen && <CopiarParaClienteModal modelo={modelo} onClose={() => setCopiarOpen(false)} />}

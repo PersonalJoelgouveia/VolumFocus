@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { FrequenciaSemanal, TrainingModel, TrainingModelCategoria, VariantePorGenero } from '../types/trainingModel';
+import type {
+  FrequenciaSemanal,
+  TrainingModel,
+  TrainingModelBloco,
+  TrainingModelCategoria,
+  TrainingModelEntrada,
+  TrainingModelFase,
+  TrainingModelSessao,
+  VariantePorGenero,
+} from '../types/trainingModel';
+import { FREQUENCIA_LABELS, criarSessaoVazia } from '../types/trainingModel';
 import { criarCatalogoComProgressao } from '../data/trainingProgression';
+import { getEsqueletoFrequencia } from '../data/frequenciaSemanal';
 import { buildAlunoRotinaFromTrainingModel } from '../utils/buildAlunoRotinaFromTrainingModel';
 import { useAlunoStore } from './useAlunoStore';
 import { useExerciseStore } from './useExerciseStore';
@@ -11,13 +22,25 @@ export interface CopiarParaClienteResult {
   exerciciosNaoEncontrados: string[];
 }
 
+function comBlocoAtualizado(
+  sessao: TrainingModelSessao,
+  fase: TrainingModelFase,
+  updater: (exercicios: TrainingModelEntrada[]) => TrainingModelEntrada[]
+): TrainingModelSessao {
+  return {
+    ...sessao,
+    blocos: sessao.blocos.map((b): TrainingModelBloco => (b.fase === fase ? { ...b, exercicios: updater(b.exercicios) } : b)),
+  };
+}
+
 interface ModeloState {
   /** Catálogo fixo — um modelo por categoria × (frequência, variante
    *  quando 4x) × nível (ver data/frequenciaSemanal.ts), nascendo com os
    *  metadados da matriz de progressão (data/trainingProgression.ts)
-   *  preenchidos. `sessoes` ainda vazio em todos — conteúdo real de
-   *  treino é etapa futura. Sem add/remove nesta etapa — só navegação/
-   *  consulta da prateleira e o fluxo de cópia pra Cliente. */
+   *  preenchidos e `sessoes` vazio. `garantirSessoesIniciais` materializa
+   *  o esqueleto de sessões na primeira vez que um nível é aberto pro
+   *  Personal editar — a edição daí em diante fica só nessa instância do
+   *  modelo, nunca em outro nem em Rotinas Salvas/Timer. */
   modelos: TrainingModel[];
 
   /** Frequências (e variante, quando 4x) com modelo cadastrado pra uma categoria. */
@@ -30,22 +53,36 @@ interface ModeloState {
   ) => TrainingModel[];
   getModelo: (id: string) => TrainingModel | undefined;
 
+  /** Cria as sessões do modelo a partir do esqueleto da sua frequência
+   *  (data/frequenciaSemanal.ts) — só age se `sessoes` ainda estiver
+   *  vazio; chamar de novo depois de já ter conteúdo não faz nada. */
+  garantirSessoesIniciais: (modeloId: string) => void;
+
+  addExercicio: (modeloId: string, sessaoId: string, fase: TrainingModelFase, entrada: TrainingModelEntrada) => void;
+  updateExercicio: (modeloId: string, sessaoId: string, fase: TrainingModelFase, entrada: TrainingModelEntrada) => void;
+  removeExercicio: (modeloId: string, sessaoId: string, fase: TrainingModelFase, entradaId: string) => void;
+  reorderExercicio: (modeloId: string, sessaoId: string, fase: TrainingModelFase, fromIdx: number, toIdx: number) => void;
+  /** Duração de referência (min) de um bloco específico (ex: Preparação). */
+  setBlocoDuracao: (modeloId: string, sessaoId: string, fase: TrainingModelFase, minutos: number | undefined) => void;
+  /** Duração estimada do modelo como um todo (campo já existente em TrainingModel). */
+  setDuracaoEstimada: (modeloId: string, minutos: number) => void;
+
   /**
-   * Fluxo "Modelo → Copiar para Cliente": converte o modelo numa
-   * `AlunoRotina` nova (utils/buildAlunoRotinaFromTrainingModel.ts) e
-   * grava na rotina do Cliente via `useAlunoStore.setRotinaDia` — a mesma
-   * estrutura já existente de Clientes/Rotinas, sem tocar em Rotinas
-   * Salvas (`useRotinaStore`) em nenhum momento. A conversão só LÊ o
-   * modelo; ele nunca é alterado por essa ação, e a rotina do Cliente
-   * criada é uma cópia independente — editá-la depois nunca volta a
-   * afetar o modelo original.
+   * Fluxo "Modelo → Copiar para Cliente": converte a VERSÃO ATUAL (já
+   * editada) do modelo numa `AlunoRotina` nova (utils/
+   * buildAlunoRotinaFromTrainingModel.ts) e grava na rotina do Cliente via
+   * `useAlunoStore.setRotinaDia` — a mesma estrutura já existente de
+   * Clientes/Rotinas, sem tocar em Rotinas Salvas (`useRotinaStore`) nem
+   * no Timer em nenhum momento. A conversão só LÊ o modelo; ele nunca é
+   * alterado por essa ação, e a rotina do Cliente criada é uma cópia
+   * independente — editá-la depois nunca volta a afetar o modelo original.
    */
   copiarParaCliente: (modeloId: string, alunoId: string) => CopiarParaClienteResult;
 }
 
 export const useModeloStore = create<ModeloState>()(
   persist(
-    (_set, get) => ({
+    (set, get) => ({
       modelos: criarCatalogoComProgressao(),
 
       listarFrequenciasPorCategoria: (categoria) => {
@@ -68,6 +105,99 @@ export const useModeloStore = create<ModeloState>()(
 
       getModelo: (id) => get().modelos.find((m) => m.id === id),
 
+      garantirSessoesIniciais: (modeloId) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) => {
+            if (m.id !== modeloId || m.sessoes.length > 0) return m;
+            const esqueleto = getEsqueletoFrequencia(m.frequencia, m.variante);
+            const sessoes = esqueleto.sessoes.map((s) => criarSessaoVazia(`${s.nome} — ${s.foco}`, FREQUENCIA_LABELS[m.frequencia]));
+            return { ...m, sessoes };
+          }),
+        })),
+
+      addExercicio: (modeloId, sessaoId, fase, entrada) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) =>
+            m.id !== modeloId
+              ? m
+              : {
+                  ...m,
+                  sessoes: m.sessoes.map((s) => (s.id === sessaoId ? comBlocoAtualizado(s, fase, (exs) => [...exs, entrada]) : s)),
+                  atualizado: new Date().toISOString(),
+                }
+          ),
+        })),
+
+      updateExercicio: (modeloId, sessaoId, fase, entrada) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) =>
+            m.id !== modeloId
+              ? m
+              : {
+                  ...m,
+                  sessoes: m.sessoes.map((s) =>
+                    s.id === sessaoId ? comBlocoAtualizado(s, fase, (exs) => exs.map((e) => (e.id === entrada.id ? entrada : e))) : s
+                  ),
+                  atualizado: new Date().toISOString(),
+                }
+          ),
+        })),
+
+      removeExercicio: (modeloId, sessaoId, fase, entradaId) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) =>
+            m.id !== modeloId
+              ? m
+              : {
+                  ...m,
+                  sessoes: m.sessoes.map((s) => (s.id === sessaoId ? comBlocoAtualizado(s, fase, (exs) => exs.filter((e) => e.id !== entradaId)) : s)),
+                  atualizado: new Date().toISOString(),
+                }
+          ),
+        })),
+
+      reorderExercicio: (modeloId, sessaoId, fase, fromIdx, toIdx) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) =>
+            m.id !== modeloId
+              ? m
+              : {
+                  ...m,
+                  sessoes: m.sessoes.map((s) =>
+                    s.id === sessaoId
+                      ? comBlocoAtualizado(s, fase, (exs) => {
+                          const arr = [...exs];
+                          const [movido] = arr.splice(fromIdx, 1);
+                          arr.splice(toIdx, 0, movido);
+                          return arr;
+                        })
+                      : s
+                  ),
+                  atualizado: new Date().toISOString(),
+                }
+          ),
+        })),
+
+      setBlocoDuracao: (modeloId, sessaoId, fase, minutos) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) =>
+            m.id !== modeloId
+              ? m
+              : {
+                  ...m,
+                  sessoes: m.sessoes.map((s) =>
+                    s.id === sessaoId ? { ...s, blocos: s.blocos.map((b) => (b.fase === fase ? { ...b, duracaoEstimadaMinutos: minutos } : b)) } : s
+                  ),
+                  atualizado: new Date().toISOString(),
+                }
+          ),
+        })),
+
+      setDuracaoEstimada: (modeloId, minutos) =>
+        set((state) => ({
+          modelos: state.modelos.map((m) => (m.id === modeloId ? { ...m, duracaoEstimadaMinutos: minutos, atualizado: new Date().toISOString() } : m)),
+        })),
+
       copiarParaCliente: (modeloId, alunoId) => {
         const modelo = get().modelos.find((m) => m.id === modeloId);
         const alunoStore = useAlunoStore.getState();
@@ -82,11 +212,13 @@ export const useModeloStore = create<ModeloState>()(
         return { ok: true, exerciciosNaoEncontrados };
       },
     }),
-    // Chave renomeada de novo (era 'jg3_training_models_v5') ao adicionar
-    // Frequência Semanal (2x/3x/4x-masc/4x-fem/5x) como novo eixo do
-    // catálogo — muda o shape do TrainingModel (campos `frequencia`/
-    // `variante` novos) e o id de cada modelo; um localStorage anterior,
-    // no shape velho, não deve ser carregado por engano.
-    { name: 'jg3_training_models_v6' }
+    // Chave renomeada de novo (era 'jg3_training_models_v6') ao ligar o
+    // editor de conteúdo (garantirSessoesIniciais/add/update/remove/
+    // reorder Exercicio) — nada no shape do TrainingModel mudou desta vez,
+    // mas modelos já persistidos com `sessoes` vazio nesta chave antiga
+    // continuariam vazios pra sempre sem re-executar a materialização do
+    // esqueleto; a troca de chave garante que todo mundo recomeça do
+    // catálogo gerado por criarCatalogoComProgressao().
+    { name: 'jg3_training_models_v7' }
   )
 );
