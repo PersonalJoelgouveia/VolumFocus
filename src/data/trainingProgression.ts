@@ -4,8 +4,12 @@
  * Define os metadados de planejamento dos 21 níveis (Iniciante/
  * Intermediário/Avançado × 7) que alimentam `TrainingModel.objetivo`/
  * `volume`/`intensidade`/`complexidade`/`densidade`/`metodos`
- * (types/trainingModel.ts) — ainda sem sessões/exercícios reais
- * (`sessoes` continua vazio; isso é conteúdo de uma etapa futura).
+ * (types/trainingModel.ts). Esse eixo (nível 1–7 dentro de uma categoria)
+ * é ortogonal à Frequência Semanal (data/frequenciaSemanal.ts, que dita a
+ * organização das sessões) — por isso a mesma matriz de 21 entradas
+ * alimenta cada combinação categoria×frequência×nível do catálogo, sem
+ * duplicação. `sessoes` continua vazio em todo o catálogo; conteúdo real
+ * de treino é etapa futura.
  *
  * REGRA DE PROGRESSÃO: nunca "mais séries = nível maior". Cada nível avança
  * numa combinação de eixos — complexidade motora, organização da sessão,
@@ -26,9 +30,7 @@ import {
   criarTrainingModelVazio,
 } from '../types/trainingModel';
 import type { TrainingModel, TrainingModelCategoria, TrainingModelMetodo, TrainingModelNivel } from '../types/trainingModel';
-import { aplicarSessoesIniciante } from './modelosIniciante';
-import { aplicarSessoesIntermediario } from './modelosIntermediario';
-import { aplicarSessoesAvancado } from './modelosAvancado';
+import { listarCombinacoesFrequencia } from './frequenciaSemanal';
 
 export interface NivelProgressao {
   categoria: TrainingModelCategoria;
@@ -253,28 +255,41 @@ export function getProgressao(categoria: TrainingModelCategoria, nivel: Training
 }
 
 /**
- * Catálogo dos 21 modelos já com os metadados da matriz de progressão
- * preenchidos (objetivo/volume/intensidade/complexidade/densidade/
- * metodos), mais o conteúdo real dos níveis Iniciante (data/
- * modelosIniciante.ts), Intermediário (data/modelosIntermediario.ts) e
- * Avançado (data/modelosAvancado.ts) — os 21 níveis têm conteúdo. É isto
- * que `useModeloStore` deve usar como estado inicial.
+ * Catálogo de modelos vazios (sem sessões/exercícios) já com os metadados
+ * da matriz de progressão preenchidos (objetivo/volume/intensidade/
+ * complexidade/densidade/metodos) — um modelo por combinação categoria ×
+ * (frequência, variante quando 4x) × nível (ver data/frequenciaSemanal.ts
+ * pras combinações de frequência). `sessoes` fica vazio em todos: o
+ * conteúdo real de treino pra essa estrutura por frequência é uma etapa
+ * futura, explicitamente adiada.
+ *
+ * NOTA: os geradores de conteúdo anteriores (data/modelosIniciante.ts,
+ * modelosIntermediario.ts, modelosAvancado.ts) foram construídos sob a
+ * premissa antiga — o nível 1–7 ditava a organização da sessão (Full
+ * Body → Upper/Lower → Push/Pull/Legs). Agora é a Frequência Semanal
+ * quem dita a organização (ver data/frequenciaSemanal.ts) e o nível só
+ * progride intensidade/volume/complexidade/densidade dentro dela — os
+ * dois modelos de organização são incompatíveis, então esses três
+ * arquivos não são mais chamados aqui. Ficam intactos no projeto (nada
+ * foi apagado), mas o conteúdo que geravam não migra automaticamente
+ * pra cá; é decisão explícita futura se algo deles será reaproveitado.
  */
 export function criarCatalogoComProgressao(): TrainingModel[] {
-  const catalogo = TRAINING_MODEL_CATEGORIAS.flatMap((categoria) =>
-    TRAINING_MODEL_NIVEIS.map((nivel) => {
-      const modelo = criarTrainingModelVazio(categoria, nivel);
-      const p = getProgressao(categoria, nivel);
-      return {
-        ...modelo,
-        objetivo: p.objetivo,
-        volume: p.volume,
-        intensidade: p.intensidade,
-        complexidade: p.complexidade,
-        densidade: p.densidade,
-        metodos: p.metodosRecomendados,
-      };
-    })
+  return TRAINING_MODEL_CATEGORIAS.flatMap((categoria) =>
+    listarCombinacoesFrequencia().flatMap(({ frequencia, variante }) =>
+      TRAINING_MODEL_NIVEIS.map((nivel) => {
+        const modelo = criarTrainingModelVazio(categoria, frequencia, nivel, variante);
+        const p = getProgressao(categoria, nivel);
+        return {
+          ...modelo,
+          objetivo: p.objetivo,
+          volume: p.volume,
+          intensidade: p.intensidade,
+          complexidade: p.complexidade,
+          densidade: p.densidade,
+          metodos: p.metodosRecomendados,
+        };
+      })
+    )
   );
-  return aplicarSessoesAvancado(aplicarSessoesIntermediario(aplicarSessoesIniciante(catalogo)));
 }

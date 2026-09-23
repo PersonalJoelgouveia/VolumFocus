@@ -71,6 +71,19 @@
 .md-nivel-header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .md-nivel-header-row .md-back { margin-bottom: 0; }
 
+.md-metodos-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-3); }
+
+.md-esqueleto {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.md-esqueleto-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.md-esqueleto-item { font-size: 0.82rem; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.md-esqueleto-item .md-nivel-badge { padding: 1px 7px; }
+
 /* ========== Modal Copiar para Cliente (CopiarParaClienteModal.tsx) ========== */
 .md-copy-hint { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
 

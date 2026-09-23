@@ -39,6 +39,38 @@ export type TrainingModelNivel = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export const TRAINING_MODEL_NIVEIS: TrainingModelNivel[] = [1, 2, 3, 4, 5, 6, 7];
 
 /**
+ * Frequência semanal de treino — segundo eixo de navegação dos Modelos
+ * (Nível de Treinamento → Frequência Semanal → Nível 1–7), independente
+ * do nível de experiência (`TrainingModelCategoria`). Dita a organização
+ * da sessão (quantas sessões, com que foco — ver data/frequenciaSemanal.ts);
+ * o nível 1–7 progride volume/intensidade/complexidade/densidade DENTRO
+ * dessa mesma organização, não muda o número ou o foco das sessões.
+ */
+export type FrequenciaSemanal = 2 | 3 | 4 | 5;
+export const FREQUENCIAS_SEMANAIS: FrequenciaSemanal[] = [2, 3, 4, 5];
+export const FREQUENCIA_LABELS: Record<FrequenciaSemanal, string> = {
+  2: '2x por semana',
+  3: '3x por semana',
+  4: '4x por semana',
+  5: '5x por semana',
+};
+
+/**
+ * Variante por gênero da estrutura de sessões — hoje só a 4x/semana tem
+ * divisão diferente pra cada versão (ver data/frequenciaSemanal.ts); nas
+ * demais frequências a estrutura é a mesma pras duas, então `variante`
+ * fica `undefined`. Chamado `variante`, não `versao`, pra não colidir com
+ * o campo `TrainingModel.versao` (revisão numérica) que já existia antes
+ * desta etapa.
+ */
+export type VariantePorGenero = 'masculina' | 'feminina';
+export const VARIANTES_POR_GENERO: VariantePorGenero[] = ['masculina', 'feminina'];
+export const VARIANTE_LABELS: Record<VariantePorGenero, string> = {
+  masculina: 'Versão Masculina',
+  feminina: 'Versão Feminina',
+};
+
+/**
  * Fase de um bloco dentro da sessão — eixo independente de força/cardio:
  * um exercício cardio pode SER a preparação (bike/elíptico/esteira, ver
  * PREPARACAO_CARDIO_SUGERIDO em data/preparacaoCardio.ts), não só o corpo
@@ -211,6 +243,12 @@ export interface TrainingModel {
   nome: string;
   categoria: TrainingModelCategoria;
   nivel: TrainingModelNivel;
+  /** Frequência semanal desta variante do modelo (2/3/4/5x) — ver
+   *  data/frequenciaSemanal.ts pra estrutura de sessões de cada uma. */
+  frequencia: FrequenciaSemanal;
+  /** Só definido quando `frequencia === 4` — única com estrutura de sessão
+   *  distinta por gênero. Nas demais frequências a estrutura é unissex. */
+  variante?: VariantePorGenero;
   objetivo: string;
   descricao: string;
   sessoes: TrainingModelSessao[];
@@ -231,23 +269,37 @@ export interface TrainingModel {
   atualizado?: string;
 }
 
-function nomePadrao(categoria: TrainingModelCategoria, nivel: TrainingModelNivel): string {
-  return `${TRAINING_MODEL_CATEGORIA_LABELS[categoria]} — Nível ${nivel}`;
+function nomePadrao(
+  categoria: TrainingModelCategoria,
+  frequencia: FrequenciaSemanal,
+  nivel: TrainingModelNivel,
+  variante?: VariantePorGenero
+): string {
+  const sufixoVariante = variante ? ` (${VARIANTE_LABELS[variante]})` : '';
+  return `${TRAINING_MODEL_CATEGORIA_LABELS[categoria]} — ${FREQUENCIA_LABELS[frequencia]}${sufixoVariante} — Nível ${nivel}`;
 }
 
-/** Modelo vazio (sem sessões) pra um categoria×nível — ponto de partida
- *  antes do Personal montar o conteúdo. `objetivo`/`volume`/`intensidade`/
- *  `complexidade`/`densidade`/`metodos` nascem em branco aqui; quem os
- *  preenche pelos 21 níveis é `criarCatalogoComProgressao()` em
- *  data/trainingProgression.ts — este helper fica puro/sem opinião de
- *  progressão de propósito, pra outros usos (ex: duplicar um nível) não
- *  herdarem a matriz sem pedir. */
-export function criarTrainingModelVazio(categoria: TrainingModelCategoria, nivel: TrainingModelNivel): TrainingModel {
+/** Modelo vazio (sem sessões) pra um categoria×frequência×nível (e
+ *  variante, quando frequencia===4) — ponto de partida antes do Personal
+ *  montar o conteúdo. `objetivo`/`volume`/`intensidade`/`complexidade`/
+ *  `densidade`/`metodos` nascem em branco aqui; quem os preenche é
+ *  `criarCatalogoComProgressao()` em data/trainingProgression.ts — este
+ *  helper fica puro/sem opinião de progressão de propósito, pra outros
+ *  usos (ex: duplicar um nível) não herdarem a matriz sem pedir. */
+export function criarTrainingModelVazio(
+  categoria: TrainingModelCategoria,
+  frequencia: FrequenciaSemanal,
+  nivel: TrainingModelNivel,
+  variante?: VariantePorGenero
+): TrainingModel {
+  const sufixoIdVariante = variante ? `-${variante}` : '';
   return {
-    id: `${categoria}-${nivel}`,
+    id: `${categoria}-${frequencia}x${sufixoIdVariante}-${nivel}`,
     categoria,
     nivel,
-    nome: nomePadrao(categoria, nivel),
+    frequencia,
+    variante,
+    nome: nomePadrao(categoria, frequencia, nivel, variante),
     objetivo: '',
     descricao: '',
     sessoes: [],
@@ -263,15 +315,21 @@ export function criarTrainingModelVazio(categoria: TrainingModelCategoria, nivel
 }
 
 /**
- * Catálogo inicial fixo: 21 modelos vazios, um por categoria×nível. Ids
- * estáveis (`${categoria}-${nivel}`) pra sobreviver a atualizações futuras
- * do app sem duplicar entradas.
+ * Catálogo inicial fixo: um modelo vazio por combinação categoria ×
+ * (frequência, variante quando 4x) × nível — ver
+ * data/frequenciaSemanal.ts pra lista de combinações de frequência.
+ * Ids estáveis (`${categoria}-${frequencia}x[-variante]-${nivel}`) pra
+ * sobreviver a atualizações futuras do app sem duplicar entradas.
  */
-export function criarCatalogoInicial(): TrainingModel[] {
+export function criarCatalogoInicial(
+  combinacoesFrequencia: { frequencia: FrequenciaSemanal; variante?: VariantePorGenero }[]
+): TrainingModel[] {
   const modelos: TrainingModel[] = [];
   for (const categoria of TRAINING_MODEL_CATEGORIAS) {
-    for (const nivel of TRAINING_MODEL_NIVEIS) {
-      modelos.push(criarTrainingModelVazio(categoria, nivel));
+    for (const { frequencia, variante } of combinacoesFrequencia) {
+      for (const nivel of TRAINING_MODEL_NIVEIS) {
+        modelos.push(criarTrainingModelVazio(categoria, frequencia, nivel, variante));
+      }
     }
   }
   return modelos;
