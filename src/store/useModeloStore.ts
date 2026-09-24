@@ -10,9 +10,9 @@ import type {
   TrainingModelSessao,
   VariantePorGenero,
 } from '../types/trainingModel';
-import { FREQUENCIA_LABELS, criarSessaoVazia } from '../types/trainingModel';
 import { criarCatalogoComProgressao } from '../data/trainingProgression';
 import { getEsqueletoFrequencia } from '../data/frequenciaSemanal';
+import { gerarSessoesComCardioSemanal } from '../data/cardioSemanal';
 import { buildAlunoRotinaFromTrainingModel } from '../utils/buildAlunoRotinaFromTrainingModel';
 import { useAlunoStore } from './useAlunoStore';
 import { useExerciseStore } from './useExerciseStore';
@@ -110,7 +110,7 @@ export const useModeloStore = create<ModeloState>()(
           modelos: state.modelos.map((m) => {
             if (m.id !== modeloId || m.sessoes.length > 0) return m;
             const esqueleto = getEsqueletoFrequencia(m.frequencia, m.variante);
-            const sessoes = esqueleto.sessoes.map((s) => criarSessaoVazia(`${s.nome} — ${s.foco}`, FREQUENCIA_LABELS[m.frequencia]));
+            const sessoes = gerarSessoesComCardioSemanal(esqueleto, m.categoria, m.nivel);
             return { ...m, sessoes };
           }),
         })),
@@ -212,13 +212,11 @@ export const useModeloStore = create<ModeloState>()(
         return { ok: true, exerciciosNaoEncontrados };
       },
     }),
-    // Chave renomeada de novo (era 'jg3_training_models_v6') ao ligar o
-    // editor de conteúdo (garantirSessoesIniciais/add/update/remove/
-    // reorder Exercicio) — nada no shape do TrainingModel mudou desta vez,
-    // mas modelos já persistidos com `sessoes` vazio nesta chave antiga
-    // continuariam vazios pra sempre sem re-executar a materialização do
-    // esqueleto; a troca de chave garante que todo mundo recomeça do
-    // catálogo gerado por criarCatalogoComProgressao().
-    { name: 'jg3_training_models_v7' }
+    // Chave renomeada de novo (era 'jg3_training_models_v7') ao ligar a
+    // progressão de cardio semanal: `garantirSessoesIniciais` agora
+    // preenche o bloco de cardio de cada sessão com a meta distribuída
+    // (data/cardioSemanal.ts) em vez de nascer sempre vazio; modelos já
+    // materializados na chave antiga ficariam sem esse cardio pra sempre.
+    { name: 'jg3_training_models_v8' }
   )
 );

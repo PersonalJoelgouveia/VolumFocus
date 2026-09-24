@@ -100,6 +100,17 @@
 .md-fase-tab:hover { border-color: var(--border-md); }
 .md-fase-tab.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
 
+.md-cardio-resumo {
+  font-size: 0.84rem;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+.md-cardio-meta { color: var(--text-3); font-size: 0.78rem; }
+
 /* ========== Modal Copiar para Cliente (CopiarParaClienteModal.tsx) ========== */
 .md-copy-hint { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
 

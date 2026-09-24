@@ -16,6 +16,7 @@ import {
 import type { FrequenciaSemanal, TrainingModelCategoria, TrainingModelEntrada, TrainingModelFase, VariantePorGenero } from '../../types/trainingModel';
 import { GROUP_LABELS } from '../../types/workout';
 import { getEsqueletoFrequencia } from '../../data/frequenciaSemanal';
+import { getMetaCardioSemanal, calcularCardioSemanalAtual, calcularCardioDaSessao } from '../../data/cardioSemanal';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
 import { useReorderDrag } from '../../hooks/useReorderDrag';
@@ -281,8 +282,6 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modeloId]);
 
-  const { getItemProps, isDragging, isDragOver } = useReorderDrag(reorderMode, handleReorder);
-
   if (!modelo) return null;
   if (modelo.sessoes.length === 0) return null; // aguarda o efeito acima materializar as sessões
 
@@ -297,7 +296,7 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
   function handleReorder(fromIdx: number, toIdx: number) {
     reorderExercicio(modelo!.id, sessao.id, faseAtiva, fromIdx, toIdx);
   }
-  
+  const { getItemProps, isDragging, isDragOver } = useReorderDrag(reorderMode, handleReorder);
 
   function handleSave(entrada: TrainingModelEntrada) {
     if (editando === 'novo') addExercicio(modelo!.id, sessao.id, faseAtiva, entrada);
@@ -370,6 +369,11 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
         </h3>
       </div>
 
+      <div className="md-cardio-resumo">
+        Cardio semanal: <strong>{calcularCardioSemanalAtual(modelo)} min</strong>
+        <span className="md-cardio-meta"> (meta do nível: {getMetaCardioSemanal(modelo.categoria, modelo.nivel)} min)</span>
+      </div>
+
       <label className="cli-form-field" style={{ maxWidth: 220, marginBottom: 14 }}>
         <span>Duração estimada da sessão (min)</span>
         <input
@@ -391,7 +395,9 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
             }}
           >
             <div className="cli-dl">{s.nome.split(' — ')[0]}</div>
-            <div className="cli-ds">{s.blocos.reduce((acc, b) => acc + b.exercicios.length, 0)}ex</div>
+            <div className="cli-ds">
+              {s.blocos.reduce((acc, b) => acc + b.exercicios.length, 0)}ex · {calcularCardioDaSessao(s)}min cardio
+            </div>
           </button>
         ))}
       </div>
