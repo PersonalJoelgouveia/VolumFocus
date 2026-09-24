@@ -282,6 +282,9 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modeloId]);
 
+  const { getItemProps, isDragging, isDragOver } = useReorderDrag(reorderMode, handleReorder);
+
+
   if (!modelo) return null;
   if (modelo.sessoes.length === 0) return null; // aguarda o efeito acima materializar as sessões
 
@@ -296,7 +299,6 @@ function NivelDetailScreen({ modeloId, onVoltar }: { modeloId: string; onVoltar:
   function handleReorder(fromIdx: number, toIdx: number) {
     reorderExercicio(modelo!.id, sessao.id, faseAtiva, fromIdx, toIdx);
   }
-  const { getItemProps, isDragging, isDragOver } = useReorderDrag(reorderMode, handleReorder);
 
   function handleSave(entrada: TrainingModelEntrada) {
     if (editando === 'novo') addExercicio(modelo!.id, sessao.id, faseAtiva, entrada);
