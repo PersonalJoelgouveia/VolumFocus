@@ -12,7 +12,7 @@ import type {
 } from '../types/trainingModel';
 import { criarCatalogoComProgressao } from '../data/trainingProgression';
 import { getEsqueletoFrequencia } from '../data/frequenciaSemanal';
-import { gerarSessoesComCardioSemanal } from '../data/cardioSemanal';
+import { gerarSessoesCompletas } from '../data/trainingSessionContent';
 import { buildAlunoRotinaFromTrainingModel } from '../utils/buildAlunoRotinaFromTrainingModel';
 import { useAlunoStore } from './useAlunoStore';
 import { useExerciseStore } from './useExerciseStore';
@@ -110,7 +110,7 @@ export const useModeloStore = create<ModeloState>()(
           modelos: state.modelos.map((m) => {
             if (m.id !== modeloId || m.sessoes.length > 0) return m;
             const esqueleto = getEsqueletoFrequencia(m.frequencia, m.variante);
-            const sessoes = gerarSessoesComCardioSemanal(esqueleto, m.categoria, m.nivel);
+            const sessoes = gerarSessoesCompletas(esqueleto, m.categoria, m.nivel);
             return { ...m, sessoes };
           }),
         })),
@@ -212,11 +212,12 @@ export const useModeloStore = create<ModeloState>()(
         return { ok: true, exerciciosNaoEncontrados };
       },
     }),
-    // Chave renomeada de novo (era 'jg3_training_models_v7') ao ligar a
-    // progressão de cardio semanal: `garantirSessoesIniciais` agora
-    // preenche o bloco de cardio de cada sessão com a meta distribuída
-    // (data/cardioSemanal.ts) em vez de nascer sempre vazio; modelos já
-    // materializados na chave antiga ficariam sem esse cardio pra sempre.
-    { name: 'jg3_training_models_v8' }
+    // Chave renomeada de novo (era 'jg3_training_models_v8') ao ligar o
+    // conteúdo real de Preparação/Mobilidade/Força (data/
+    // trainingSessionContent.ts): `garantirSessoesIniciais` agora só
+    // materializa sessões com Força/Mobilidade preenchidas (nunca mais
+    // vazias); modelos já materializados na chave antiga ficariam com
+    // esses blocos vazios pra sempre.
+    { name: 'jg3_training_models_v9' }
   )
 );

@@ -60,8 +60,8 @@ export function distribuirCardioPorSessoes(metaMinutos: number, numeroSessoes: n
   return Array.from({ length: numeroSessoes }, (_, i) => base + (i < resto ? 1 : 0));
 }
 
-/** Decide o foco de cardio (data/preparacaoCardio.ts) a partir do texto de foco de uma sessão do esqueleto. */
-function focoCardioDaSessao(focoSessao: string): PreparacaoFoco {
+/** Decide o foco de cardio (data/preparacaoCardio.ts) a partir do texto de foco de uma sessão do esqueleto — reaproveitado também pelo bloco de Preparação (data/trainingSessionContent.ts), mesma taxonomia, sem duplicar regra. */
+export function focoCardioDaSessao(focoSessao: string): PreparacaoFoco {
   const f = focoSessao.toLowerCase();
   if (f.includes('inferior') || f.includes('quadríceps') || f.includes('posteriores')) return 'membros_inferiores';
   if (f.includes('superior') || f.includes('dorsais') || f.includes('peitorais') || f.includes('deltoide') || f.includes('bíceps') || f.includes('tríceps')) {
