@@ -1,53 +1,53 @@
 /**
- * Tipos do domínio "Anotações" — prontuário de acompanhamento do
+ * Tipo do domínio "Anotações" — prontuário de acompanhamento do
  * treinamento por Cliente (Ferramentas > Anotações). NÃO é prontuário
  * médico/diagnóstico: só observações e acompanhamento profissional do
  * Personal Trainer.
  *
- * Cada anotação é um documento independente (ver
- * lib/trainingNotesRepository.ts, subcoleção `alunos/{email}/anotacoes`) —
- * nunca embutida no doc principal do aluno, mesmo padrão já usado em
- * types/assessment.ts + physicalAssessmentRepository.ts.
+ * Cada anotação é um documento independente, vinculado ao cliente por
+ * `alunoId` — ver lib/trainingNotesRepository.ts (subcoleção
+ * `alunos/{email}/anotacoes`), nunca embutida no doc principal do aluno.
+ * Mesmo desacoplamento já usado em types/assessment.ts +
+ * physicalAssessmentRepository.ts.
  */
 
-/** Limite amplo e documentado, com folga real em relação ao teto de 1MiB
- *  por documento do Firestore mesmo no pior caso de UTF-8 (4 bytes/char):
- *  200.000 chars × 4 bytes = ~800KB, deixando espaço de sobra pros demais
- *  campos do documento (ids, nomes, timestamps). Validado via `maxLength`
- *  do textarea (nunca deixa digitar além) e checado de novo antes de
- *  salvar. */
+/** Limite amplo e documentado para o campo `conteudo`, com folga real em
+ *  relação ao teto de 1MiB por documento do Firestore mesmo no pior caso
+ *  de UTF-8 (4 bytes/char): 200.000 chars × 4 bytes = ~800KB, deixando
+ *  espaço de sobra pros demais campos do documento (ids, nomes,
+ *  timestamps). Validado pelo repository antes de gravar/atualizar (ver
+ *  trainingNotesRepository.ts) — validação de UI (ex.: `maxLength` do
+ *  textarea) é responsabilidade de uma etapa futura, não desta camada. */
 export const TRAINING_NOTE_MAX_LENGTH = 200_000;
 
 export interface TrainingNote {
   id: string;
   alunoId: string;
   alunoNome: string;
-  /** Dia da semana (0=Segunda...6=Domingo, mesma convenção de DAYS em
-   *  types/workout.ts) em que a anotação foi criada, como string — o
-   *  vínculo real com "não misturar duas sessões diferentes" vem de
-   *  createdAt (uma anotação por dia calendário), não deste campo sozinho. */
+  /** Dia da semana / treino ao qual a anotação está vinculada, quando
+   *  essa informação existir (ex.: criada durante a execução de um
+   *  treino específico) — opcional, nunca inventado. */
   treinoId?: string;
-  /** dia.tipo da rotina do aluno (ex.: "Treino A") quando existir, ou o
-   *  nome do dia da semana (DAYS[day]) como fallback — nunca inventado. */
+  /** Nome do treino (ex.: dia.tipo da rotina do aluno), quando existir. */
   treinoNome?: string;
+  /** Sessão presencial (useSessionStore) em que a anotação foi criada,
+   *  quando essa informação existir — contexto histórico, não usado como
+   *  chave de identidade da anotação. */
+  sessionId?: string;
   conteudo: string;
   /** ISO 8601. */
   createdAt: string;
   /** ISO 8601. */
   updatedAt: string;
-  /** E-mail do Personal autor (só Personal cria/edita/exclui — ver privacidade no pedido). */
+  /** E-mail do Personal autor — só o Personal cria/edita/exclui anotações. */
   authorId: string;
   authorName?: string;
-  /** Sessão presencial (useSessionStore) em que a anotação foi criada,
-   *  quando existir essa informação — não usado para resolver duplicidade,
-   *  só contexto histórico. */
-  sessionId?: string;
 }
 
 /** Nova anotação vazia, pronta pra `createNote` — id gerado no cliente
- *  (mesmo padrão de PhysicalAssessment) pra local e nuvem nunca divergirem.
- *  Sufixo aleatório além do timestamp: duas chamadas no mesmo milissegundo
- *  (ex.: dois cliques rápidos) não podem colidir no mesmo id. */
+ *  (mesma convenção de physicalAssessmentRepository.ts/AvaliacaoFisicaModal)
+ *  pra local e nuvem nunca divergirem no identificador. Sufixo aleatório
+ *  além do timestamp: duas chamadas no mesmo milissegundo não colidem. */
 export function criarTrainingNoteVazia(params: {
   alunoId: string;
   alunoNome: string;
@@ -65,30 +65,4 @@ export function criarTrainingNoteVazia(params: {
     updatedAt: agora,
     ...params,
   };
-}
-
-/** Resumo de uma linha pro histórico — colapsa quebras de linha/espaços,
- *  nunca reformata o conteúdo real salvo. */
-export function resumoConteudo(conteudo: string, max = 80): string {
-  const limpo = conteudo.trim().replace(/\s+/g, ' ');
-  if (!limpo) return '(sem conteúdo)';
-  return limpo.length > max ? `${limpo.slice(0, max)}…` : limpo;
-}
-
-/** Data + horário no padrão pt-BR pro cabeçalho/histórico. */
-export function formatarDataHorario(iso: string): { data: string; horario: string } {
-  const d = new Date(iso);
-  return {
-    data: d.toLocaleDateString('pt-BR'),
-    horario: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-  };
-}
-
-/** true se os dois ISO caem no mesmo dia calendário local — usado pra
- *  decidir se o painel rápido continua a anotação de hoje (reabrir) em vez
- *  de criar uma nova. */
-export function isMesmoDiaCalendario(isoA: string, isoB: string): boolean {
-  const a = new Date(isoA);
-  const b = new Date(isoB);
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }

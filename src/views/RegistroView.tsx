@@ -11,7 +11,6 @@ import { ConjugarBar } from '../components/registro/ConjugarBar';
 import { SessionTabsBar } from '../components/registro/SessionTabsBar';
 import { AlunoRotinaSyncBanner } from '../components/registro/AlunoRotinaSyncBanner';
 import { RegistroActionsMenu } from '../components/registro/RegistroActionsMenu';
-import { QuickNoteButton } from '../components/registro/QuickNotePanel';
 import { useSessionStore } from '../store/useSessionStore';
 import type { ListMode } from '../components/registro/ExerciseListItem';
 
@@ -149,7 +148,6 @@ export function RegistroView() {
               <button className="btn btn-ghost" onClick={() => openModal('rotinas')}>
                 📁 Rotinas
               </button>
-              <QuickNoteButton />
               <button className="btn btn-primary" onClick={handleCheckProgress}>
                 📈 Verificar Progressão
               </button>

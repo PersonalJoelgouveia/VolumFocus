@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { TimerToolView } from './tools/TimerToolView';
 import { ModelosToolView } from './tools/ModelosToolView';
-import { AnotacoesToolView } from './tools/AnotacoesToolView';
 import './FerramentasView.css';
 
 interface ToolCard {
@@ -15,12 +14,12 @@ interface ToolCard {
 const CARDS: ToolCard[] = [
   { key: 'timer', icon: '⏱', title: 'Timer', desc: 'Timer de intervalos: preparação, exercício e descanso.' },
   { key: 'agenda', icon: '📅', title: 'Agenda', desc: 'Organize seus compromissos e sessões.', comingSoon: true },
-  { key: 'anotacoes', icon: '📝', title: 'Anotações', desc: 'Prontuário de acompanhamento do treinamento por cliente.' },
+  { key: 'anotacoes', icon: '📝', title: 'Anotações', desc: 'Registre observações rápidas.', comingSoon: true },
   { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Biblioteca de modelos de treino organizados por nível de experiência.' },
   { key: 'lembretes', icon: '🔔', title: 'Lembretes', desc: 'Alertas pra você e seus alunos.', comingSoon: true },
 ];
 
-type FerramentasScreen = 'hub' | 'timer' | 'modelos' | 'anotacoes';
+type FerramentasScreen = 'hub' | 'timer' | 'modelos';
 
 /**
  * Hub "Ferramentas" — novo item de TOOLS_NAV (types/view.ts), mesmo padrão
@@ -35,10 +34,10 @@ type FerramentasScreen = 'hub' | 'timer' | 'modelos' | 'anotacoes';
  * treino (useTimerStore/<TimerEngine>) nem com dados de exercício/
  * musculação. Modelos abre `ModelosToolView` (views/tools/ModelosToolView.tsx)
  * — ferramenta independente de Rotinas Salvas (useRotinaStore), não a
- * substitui. Anotações abre `AnotacoesToolView` (views/tools/AnotacoesToolView.tsx)
- * — prontuário de acompanhamento do treinamento por Cliente (ver
- * types/trainingNote.ts), independente das demais ferramentas. Os demais
- * cards continuam só visuais ("Em breve"), sem onClick nem estado.
+ * substitui. Etapa 1: só navegação (hub de categorias → 7 níveis →
+ * detalhe), cards e estados vazios — editor de conteúdo e "Copiar para
+ * Cliente" são etapas futuras. Os demais cards continuam só visuais ("Em
+ * breve"), sem onClick nem estado.
  */
 export function FerramentasView() {
   const [screen, setScreen] = useState<FerramentasScreen>('hub');
@@ -49,10 +48,6 @@ export function FerramentasView() {
 
   if (screen === 'modelos') {
     return <ModelosToolView onVoltar={() => setScreen('hub')} />;
-  }
-
-  if (screen === 'anotacoes') {
-    return <AnotacoesToolView onVoltar={() => setScreen('hub')} />;
   }
 
   return (
