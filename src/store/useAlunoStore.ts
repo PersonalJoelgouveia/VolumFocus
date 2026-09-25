@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Aluno, AlunoExercicio, AlunoRotinaDia } from '../types/aluno';
 import { criarRotinaVazia } from '../types/aluno';
 import type { PhysicalAssessment } from '../types/assessment';
+import type { TrainingNote } from '../types/trainingNote';
 
 /** Referência estável — nunca criar `[]` novo dentro de um selector (ver
  *  `getAvaliacoes` abaixo): React (useSyncExternalStore) trata cada `[]`
@@ -11,6 +12,8 @@ import type { PhysicalAssessment } from '../types/assessment';
  *  existe — ex.: aluno novo, ou fetch do Firestore que nunca populinha
  *  por falha de permissão. */
 const AVALIACOES_VAZIAS: PhysicalAssessment[] = [];
+/** Mesma proteção contra #185, aplicada ao cache de Anotações (ver acima). */
+const NOTAS_VAZIAS: TrainingNote[] = [];
 
 interface AlunoState {
   /** Alunos ativos do Personal. Equivale a `cli_dados_alunos` (jg3_alunos).
@@ -46,6 +49,17 @@ interface AlunoState {
   setAvaliacoes: (alunoId: string, avaliacoes: PhysicalAssessment[]) => void;
   updateAvaliacao: (alunoId: string, assessmentId: string, patch: Partial<PhysicalAssessment>) => void;
   removeAvaliacao: (alunoId: string, assessmentId: string) => void;
+
+  /** Histórico de Anotações (Ferramentas > Anotações) por aluno — mesmo
+   *  desacoplamento de `avaliacoes` (mapa isolado, não embutido em `Aluno`),
+   *  já que cada anotação é um documento independente no Firestore. */
+  notas: Record<string, TrainingNote[]>;
+  getNotas: (alunoId: string) => TrainingNote[];
+  addNota: (alunoId: string, nota: TrainingNote) => void;
+  /** Substitui a lista inteira (usado ao sincronizar com o Firestore). */
+  setNotas: (alunoId: string, notas: TrainingNote[]) => void;
+  updateNota: (alunoId: string, noteId: string, patch: Partial<TrainingNote>) => void;
+  removeNota: (alunoId: string, noteId: string) => void;
 }
 
 function updateDia(aluno: Aluno, day: number, updater: (dia: AlunoRotinaDia) => AlunoRotinaDia): Aluno {
@@ -198,6 +212,33 @@ export const useAlunoStore = create<AlunoState>()(
           avaliacoes: {
             ...state.avaliacoes,
             [alunoId]: (state.avaliacoes[alunoId] ?? []).filter((a) => a.id !== assessmentId),
+          },
+        })),
+
+      notas: {},
+
+      getNotas: (alunoId) => get().notas[alunoId] ?? NOTAS_VAZIAS,
+
+      addNota: (alunoId, nota) =>
+        set((state) => ({
+          notas: { ...state.notas, [alunoId]: [nota, ...(state.notas[alunoId] ?? [])] },
+        })),
+
+      setNotas: (alunoId, notas) => set((state) => ({ notas: { ...state.notas, [alunoId]: notas } })),
+
+      updateNota: (alunoId, noteId, patch) =>
+        set((state) => ({
+          notas: {
+            ...state.notas,
+            [alunoId]: (state.notas[alunoId] ?? []).map((n) => (n.id === noteId ? { ...n, ...patch } : n)),
+          },
+        })),
+
+      removeNota: (alunoId, noteId) =>
+        set((state) => ({
+          notas: {
+            ...state.notas,
+            [alunoId]: (state.notas[alunoId] ?? []).filter((n) => n.id !== noteId),
           },
         })),
     }),

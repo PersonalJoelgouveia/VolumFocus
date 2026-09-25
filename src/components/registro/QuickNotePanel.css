@@ -1,0 +1,70 @@
+.qn-icon-btn {
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qn-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 250;
+  padding: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+}
+
+.qn-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.qn-panel-title {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qn-panel-treino {
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.qn-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  min-height: auto;
+  padding: 4px;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.qn-close-btn:hover {
+  color: var(--text);
+}
+
+.qn-panel-loading {
+  color: var(--text-2);
+  font-size: 0.85rem;
+  padding: 8px 0;
+}
+
+.qn-nova-btn {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .qn-panel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}

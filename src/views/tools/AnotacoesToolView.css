@@ -1,0 +1,46 @@
+.an-empty {
+  color: var(--text-2);
+  padding: 24px 4px;
+  font-size: 0.9rem;
+}
+
+.an-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.an-item {
+  cursor: pointer;
+  padding: 12px 14px;
+  transition: border-color 0.15s ease;
+}
+
+.an-item:hover {
+  border-color: var(--teal-border);
+}
+
+.an-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.an-item-date {
+  color: var(--text-2);
+  font-size: 0.8rem;
+}
+
+.an-item-resumo {
+  color: var(--text);
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.an-editor-card {
+  padding: 16px;
+}

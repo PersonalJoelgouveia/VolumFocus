@@ -1,0 +1,56 @@
+.ne-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ne-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ne-header-title {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.ne-header-meta {
+  color: var(--text-2);
+  font-size: 0.78rem;
+}
+
+.ne-textarea {
+  width: 100%;
+  min-height: 220px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.ne-textarea:focus {
+  outline: none;
+  border-color: var(--teal-border);
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+
+.ne-compact .ne-textarea {
+  min-height: 120px;
+}
+
+.ne-status {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  min-height: 1em;
+  text-align: right;
+}
