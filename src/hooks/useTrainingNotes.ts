@@ -16,8 +16,8 @@ export interface UseTrainingNotes {
   canWrite: boolean;
   /** Cria a anotação (otimista) e retorna `true` se a subida deu certo. */
   criar: (nota: TrainingNote) => Promise<boolean>;
-  /** Autosave de conteúdo — sem toast de sucesso (silencioso, ver status
-   *  próprio do editor) nem confirmação; toast só no erro. */
+  /** Salva conteúdo editado. Sem toast de sucesso (silencioso — quem
+   *  chama decide como mostrar o status); toast só no erro. */
   salvarConteudo: (noteId: string, conteudo: string) => Promise<boolean>;
   /** Pede confirmação (useConfirmStore) antes de remover. */
   remover: (noteId: string) => Promise<void>;
@@ -110,10 +110,11 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
         return true;
       } catch (e) {
         console.error('useTrainingNotes: falha ao salvar anotação', e);
+        showToast('Não foi possível salvar. Tente novamente.', 'error');
         return false;
       }
     },
-    [canWrite, email, alunoId, updateNota]
+    [canWrite, email, alunoId, updateNota, showToast]
   );
 
   const remover = useCallback(

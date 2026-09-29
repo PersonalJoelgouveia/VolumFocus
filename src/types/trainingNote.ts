@@ -66,3 +66,20 @@ export function criarTrainingNoteVazia(params: {
     ...params,
   };
 }
+
+/** Data + horário no padrão pt-BR pro histórico/cabeçalho. */
+export function formatarDataHorario(iso: string): { data: string; horario: string } {
+  const d = new Date(iso);
+  return {
+    data: d.toLocaleDateString('pt-BR'),
+    horario: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+  };
+}
+
+/** Resumo de uma linha pro histórico — colapsa quebras de linha/espaços,
+ *  nunca reformata o conteúdo real salvo. */
+export function resumoConteudo(conteudo: string, max = 90): string {
+  const limpo = conteudo.trim().replace(/\s+/g, ' ');
+  if (!limpo) return '(sem conteúdo)';
+  return limpo.length > max ? `${limpo.slice(0, max)}…` : limpo;
+}

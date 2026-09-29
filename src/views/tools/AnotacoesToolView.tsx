@@ -5,7 +5,6 @@ import { iniciais } from '../../types/aluno';
 import { criarTrainingNoteVazia, formatarDataHorario, resumoConteudo } from '../../types/trainingNote';
 import type { TrainingNote } from '../../types/trainingNote';
 import { useTrainingNotes } from '../../hooks/useTrainingNotes';
-import { NoteEditor } from '../../components/anotacoes/NoteEditor';
 import '../../components/clientes/ClientesView.css';
 import './AnotacoesToolView.css';
 
@@ -16,13 +15,19 @@ type Screen = { tipo: 'clientes' } | { tipo: 'historico'; alunoId: string } | { 
  * de acompanhamento do treinamento por Cliente, NÃO um prontuário médico
  * (sem diagnóstico/prescrição/interpretação clínica, ver types/trainingNote.ts).
  *
- * Navegação em 3 telas: lista de Clientes (reaproveita o grid/busca de
- * views/ClientesView.tsx) → histórico do Cliente (cronológico, mais
- * recente primeiro) → anotação aberta (NoteEditor, compartilhado com o
- * painel rápido da execução do treino em components/registro/QuickNotePanel.tsx).
+ * Fluxo em 3 telas, tudo dentro do próprio hub Ferramentas (nenhuma rota/
+ * sidebar nova, mesmo padrão de navegação por estado local já usado em
+ * ModelosToolView.tsx/TimerToolView.tsx):
+ *
+ *   Clientes (reaproveita grid/busca de views/ClientesView.tsx)
+ *     → Histórico do Cliente (cronológico, mais recente primeiro — a
+ *       própria ordem que já vem de listNotesByAluno)
+ *       → Anotação aberta (conteúdo completo)
  *
  * Persistência via useTrainingNotes (ponte local/Firestore, mesmo padrão
- * de usePhysicalAssessments) — cache local em useAlunoStore.notas.
+ * de usePhysicalAssessments) — cache local em useAlunoStore.notas. Edição/
+ * autosave em tempo real durante a execução do treino é etapa futura;
+ * aqui a gravação é explícita (botão Salvar).
  */
 export function AnotacoesToolView({ onVoltar }: { onVoltar: () => void }) {
   const [screen, setScreen] = useState<Screen>({ tipo: 'clientes' });
@@ -60,7 +65,7 @@ function ClientesScreen({ onVoltar, onSelecionar }: { onVoltar: () => void; onSe
     <div>
       <div className="sec-row">
         <div className="page-title">
-          <button className="btn btn-ghost btn-sm" onClick={onVoltar} style={{ marginRight: 8 }}>
+          <button className="btn btn-ghost btn-sm an-voltar" onClick={onVoltar}>
             ← Ferramentas
           </button>
           Anotações <span className="tag">POR CLIENTE</span>
@@ -132,7 +137,10 @@ function HistoricoScreen({
   if (!aluno) {
     return (
       <div className="an-empty">
-        Aluno não encontrado. <button className="btn btn-ghost btn-sm" onClick={onVoltar}>← Voltar</button>
+        Aluno não encontrado.{' '}
+        <button className="btn btn-ghost btn-sm" onClick={onVoltar}>
+          ← Voltar
+        </button>
       </div>
     );
   }
@@ -141,14 +149,14 @@ function HistoricoScreen({
     <div>
       <div className="sec-row">
         <div className="page-title">
-          <button className="btn btn-ghost btn-sm" onClick={onVoltar} style={{ marginRight: 8 }}>
+          <button className="btn btn-ghost btn-sm an-voltar" onClick={onVoltar}>
             ← Anotações
           </button>
           {aluno.nome} <span className="tag">{notes.length} ANOTAÇÕES</span>
         </div>
         {canWrite && (
           <button className="btn btn-primary" onClick={handleNovaAnotacao} disabled={criando}>
-            + Nova Anotação
+            {criando ? 'Criando…' : '+ Nova Anotação'}
           </button>
         )}
       </div>
@@ -179,12 +187,17 @@ function HistoricoScreen({
   );
 }
 
+/** Item do histórico — data, horário, treino relacionado (quando existir)
+ *  e resumo curto do conteúdo. Ordem cronológica já vem do hook (mais
+ *  recente primeiro, `listNotesByAluno` ordena por `createdAt desc`). */
 function NoteListItem({ nota, onAbrir }: { nota: TrainingNote; onAbrir: () => void }) {
   const { data, horario } = formatarDataHorario(nota.createdAt);
   return (
     <div className="card an-item" onClick={onAbrir}>
       <div className="an-item-top">
-        <span className="an-item-date">{data} · {horario}</span>
+        <span className="an-item-date">
+          {data} · {horario}
+        </span>
         {nota.treinoNome && <span className="tag">{nota.treinoNome}</span>}
       </div>
       <div className="an-item-resumo">{resumoConteudo(nota.conteudo)}</div>
@@ -194,15 +207,31 @@ function NoteListItem({ nota, onAbrir }: { nota: TrainingNote; onAbrir: () => vo
 
 function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: string; onVoltar: () => void }) {
   const notes = useAlunoStore((s) => s.getNotas(alunoId));
-  const { salvarConteudo, remover } = useTrainingNotes(alunoId);
+  const { canWrite, salvarConteudo, remover } = useTrainingNotes(alunoId);
   const nota = notes.find((n) => n.id === noteId);
+
+  const [conteudo, setConteudo] = useState(nota?.conteudo ?? '');
+  const [salvando, setSalvando] = useState(false);
+  const [sujo, setSujo] = useState(false);
 
   if (!nota) {
     return (
       <div className="an-empty">
-        Anotação não encontrada. <button className="btn btn-ghost btn-sm" onClick={onVoltar}>← Voltar</button>
+        Anotação não encontrada.{' '}
+        <button className="btn btn-ghost btn-sm" onClick={onVoltar}>
+          ← Voltar
+        </button>
       </div>
     );
+  }
+
+  const { data, horario } = formatarDataHorario(nota.createdAt);
+
+  async function handleSalvar() {
+    setSalvando(true);
+    const ok = await salvarConteudo(noteId, conteudo);
+    setSalvando(false);
+    if (ok) setSujo(false);
   }
 
   async function handleRemover() {
@@ -214,16 +243,45 @@ function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: st
     <div>
       <div className="sec-row">
         <div className="page-title">
-          <button className="btn btn-ghost btn-sm" onClick={onVoltar} style={{ marginRight: 8 }}>
+          <button className="btn btn-ghost btn-sm an-voltar" onClick={onVoltar}>
             ← Histórico
           </button>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={handleRemover}>
-          🗑 Excluir
-        </button>
+        {canWrite && (
+          <button className="btn btn-ghost btn-sm" onClick={handleRemover}>
+            🗑 Excluir
+          </button>
+        )}
       </div>
+
       <div className="card an-editor-card">
-        <NoteEditor key={nota.id} note={nota} onSalvar={salvarConteudo} autoFocus />
+        <div className="an-editor-header">
+          <div className="an-editor-title">📝 {nota.alunoNome}</div>
+          <div className="an-editor-meta">
+            {data} · {horario}
+            {nota.treinoNome && ` · ${nota.treinoNome}`}
+          </div>
+        </div>
+
+        <textarea
+          className="an-textarea"
+          value={conteudo}
+          onChange={(e) => {
+            setConteudo(e.target.value);
+            setSujo(true);
+          }}
+          placeholder="Escreva suas observações sobre o treino…"
+          rows={14}
+          readOnly={!canWrite}
+        />
+
+        {canWrite && (
+          <div className="an-editor-footer">
+            <button className="btn btn-primary" onClick={handleSalvar} disabled={!sujo || salvando}>
+              {salvando ? 'Salvando…' : 'Salvar'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
