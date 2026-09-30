@@ -71,33 +71,4 @@
   font-size: 0.78rem;
 }
 
-.an-textarea {
-  width: 100%;
-  min-height: 260px;
-  background: var(--bg-3);
-  border: 1px solid var(--border);
-  border-radius: var(--rs);
-  color: var(--text);
-  padding: 12px 14px;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  font-family: inherit;
-  resize: vertical;
-  white-space: pre-wrap;
-}
 
-.an-textarea:focus {
-  outline: none;
-  border-color: var(--teal-border);
-  box-shadow: 0 0 0 3px var(--teal-glow);
-}
-
-.an-textarea:read-only {
-  opacity: 0.85;
-  cursor: default;
-}
-
-.an-editor-footer {
-  display: flex;
-  justify-content: flex-end;
-}

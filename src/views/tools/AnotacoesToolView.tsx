@@ -5,6 +5,7 @@ import { iniciais } from '../../types/aluno';
 import { criarTrainingNoteVazia, formatarDataHorario, resumoConteudo } from '../../types/trainingNote';
 import type { TrainingNote } from '../../types/trainingNote';
 import { useTrainingNotes } from '../../hooks/useTrainingNotes';
+import { NoteEditor } from '../../components/anotacoes/NoteEditor';
 import '../../components/clientes/ClientesView.css';
 import './AnotacoesToolView.css';
 
@@ -210,10 +211,6 @@ function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: st
   const { canWrite, salvarConteudo, remover } = useTrainingNotes(alunoId);
   const nota = notes.find((n) => n.id === noteId);
 
-  const [conteudo, setConteudo] = useState(nota?.conteudo ?? '');
-  const [salvando, setSalvando] = useState(false);
-  const [sujo, setSujo] = useState(false);
-
   if (!nota) {
     return (
       <div className="an-empty">
@@ -226,13 +223,6 @@ function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: st
   }
 
   const { data, horario } = formatarDataHorario(nota.createdAt);
-
-  async function handleSalvar() {
-    setSalvando(true);
-    const ok = await salvarConteudo(noteId, conteudo);
-    setSalvando(false);
-    if (ok) setSujo(false);
-  }
 
   async function handleRemover() {
     await remover(noteId);
@@ -263,25 +253,17 @@ function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: st
           </div>
         </div>
 
-        <textarea
-          className="an-textarea"
-          value={conteudo}
-          onChange={(e) => {
-            setConteudo(e.target.value);
-            setSujo(true);
-          }}
-          placeholder="Escreva suas observações sobre o treino…"
-          rows={14}
+        {/* key={nota.id} força remontar ao abrir uma anotação diferente —
+           nunca reaproveita estado interno de edição entre anotações
+           distintas (ver NoteEditor.tsx). */}
+        <NoteEditor
+          key={nota.id}
+          noteId={nota.id}
+          conteudoInicial={nota.conteudo}
+          onSalvar={salvarConteudo}
           readOnly={!canWrite}
+          autoFocus
         />
-
-        {canWrite && (
-          <div className="an-editor-footer">
-            <button className="btn btn-primary" onClick={handleSalvar} disabled={!sujo || salvando}>
-              {salvando ? 'Salvando…' : 'Salvar'}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

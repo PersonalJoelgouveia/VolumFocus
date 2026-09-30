@@ -1,0 +1,53 @@
+.ne-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ne-textarea {
+  width: 100%;
+  min-height: 280px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text);
+  padding: 14px 16px;
+  /* 16px é o mínimo pra evitar o zoom automático do iOS ao focar o campo
+   * (mesma convenção já usada nos demais inputs do projeto). */
+  font-size: 16px;
+  line-height: 1.6;
+  font-family: inherit;
+  resize: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ne-textarea::placeholder {
+  color: var(--text-3);
+}
+
+.ne-textarea:focus {
+  outline: none;
+  border-color: var(--teal-border);
+  box-shadow: 0 0 0 3px var(--teal-glow);
+}
+
+.ne-textarea:read-only {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.ne-status {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  min-height: 1em;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .ne-textarea {
+    min-height: 220px;
+  }
+}
