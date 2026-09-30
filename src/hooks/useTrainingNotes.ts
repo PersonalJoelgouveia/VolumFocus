@@ -16,8 +16,12 @@ export interface UseTrainingNotes {
   canWrite: boolean;
   /** Cria a anotação (otimista) e retorna `true` se a subida deu certo. */
   criar: (nota: TrainingNote) => Promise<boolean>;
-  /** Salva conteúdo editado. Sem toast de sucesso (silencioso — quem
-   *  chama decide como mostrar o status); toast só no erro. */
+  /** Salva conteúdo editado (autosave). Sem toast em sucesso OU falha —
+   *  silencioso de propósito: o NoteEditor já mostra "Salvando…"/"Salvo"/
+   *  "Não sincronizado" e tenta de novo sozinho (timer + evento `online`),
+   *  então um toast a cada nova tentativa falha viraria spam. Quem quiser
+   *  reagir ao retorno (`false`) pode — o hook só não notifica por conta
+   *  própria aqui. */
   salvarConteudo: (noteId: string, conteudo: string) => Promise<boolean>;
   /** Pede confirmação (useConfirmStore) antes de remover. */
   remover: (noteId: string) => Promise<void>;
@@ -109,12 +113,15 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
         await updateNote(email, noteId, { conteudo, updatedAt: atualizadoEm });
         return true;
       } catch (e) {
-        console.error('useTrainingNotes: falha ao salvar anotação', e);
-        showToast('Não foi possível salvar. Tente novamente.', 'error');
+        // Sem toast aqui de propósito (ver doc da interface) — o
+        // NoteEditor já cobre isso com o status "Não sincronizado" e tenta
+        // de novo sozinho; o conteúdo já está seguro no cache otimista
+        // acima, que é persistido em localStorage por useAlunoStore.
+        console.error('useTrainingNotes: falha ao salvar anotação (será tentado de novo)', e);
         return false;
       }
     },
-    [canWrite, email, alunoId, updateNota, showToast]
+    [canWrite, email, alunoId, updateNota]
   );
 
   const remover = useCallback(

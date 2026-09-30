@@ -46,6 +46,12 @@
   text-align: right;
 }
 
+/* "Não sincronizado" — aviso, não erro fatal: o conteúdo já está salvo
+ * localmente (ver doc do componente), só ainda não subiu pra nuvem. */
+.ne-status-alerta {
+  color: var(--orange);
+}
+
 @media (max-width: 640px) {
   .ne-textarea {
     min-height: 220px;
