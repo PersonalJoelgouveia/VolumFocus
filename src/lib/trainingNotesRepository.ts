@@ -19,20 +19,74 @@ import type { TrainingNote } from '../types/trainingNote';
  * physicalAssessmentRepository.ts) — quem chama precisa do catch pra
  * popular estado de erro/retry e desfazer atualização otimista.
  *
- * IMPORTANTE — requer regra nova no Firestore (ainda não publicada; não
- * vem no zip enviado, que só contém `src/`). Mesmo espírito da regra já
- * publicada para `avaliacoesFisicas`, mas SEM a exceção de leitura/escrita
- * do Aluno (anotação é dado privado do acompanhamento — Aluno nunca lê,
- * cria, edita ou exclui, só o Personal):
+ * ============================================================
+ * SEGURANÇA — LEIA ANTES DE PUBLICAR/ALTERAR QUALQUER COISA AQUI
+ * ============================================================
+ *
+ * Este arquivo (e o app em geral) NÃO TEM BACKEND PRÓPRIO. A única barreira
+ * de autorização real é a regra do Firestore abaixo — tudo que existe em
+ * TypeScript (este repository, useTrainingNotes.ts, os componentes de UI,
+ * o filtro `ptOnly` do card em FerramentasView.tsx) é caminho feliz e
+ * conveniência de interface, nunca proteção. Um usuário autenticado
+ * (Personal OU Aluno) pode abrir o console do navegador e chamar o SDK do
+ * Firestore diretamente, ignorando hooks/telas por completo. Se a regra
+ * abaixo não estiver publicada exatamente assim, qualquer Aluno logado
+ * pode ler (e possivelmente escrever) anotações privadas de QUALQUER
+ * cliente, não só as próprias.
+ *
+ * REQUER REGRA NOVA NO FIRESTORE — AINDA NÃO PUBLICADA (não vem no zip
+ * enviado, que só contém `src/`; regras vivem no Firebase Console, fora
+ * deste repositório — preciso que você confirme/publique manualmente).
+ * Mesmo espírito da regra já publicada para `avaliacoesFisicas`, mas SEM a
+ * exceção de leitura/escrita do Aluno — a anotação é dado privado do
+ * acompanhamento, o Aluno NUNCA lê, cria, edita ou exclui, só o Personal:
  *
  *   match /alunos/{email}/anotacoes/{noteId} {
- *     allow read, create, update, delete: if request.auth != null
+ *     allow read, delete: if request.auth != null
  *       && request.auth.token.email.lower() in PT_EMAILS;
+ *     allow create, update: if request.auth != null
+ *       && request.auth.token.email.lower() in PT_EMAILS
+ *       && request.resource.data.alunoId is string
+ *       && request.resource.data.conteudo is string
+ *       && request.resource.data.conteudo.size() <= 200000;
  *   }
  *
  * PT_EMAILS aqui deve ser a mesma lista hardcoded nas regras publicadas
  * para `alunos` (não dá pra referenciar useAuthStore.PT_EMAILS do client
- * dentro das regras — são mundos separados).
+ * dentro das regras — são mundos separados; se a lista mudar num lado,
+ * precisa mudar no outro manualmente). O `size() <= 200000` espelha
+ * TRAINING_NOTE_MAX_LENGTH (types/trainingNote.ts) na própria regra — a
+ * validação client-side (`validarConteudo` abaixo) é só UX (erro antes de
+ * gastar uma escrita), nunca a garantia real de que o limite é respeitado.
+ *
+ * RISCO ESPECÍFICO A CONFERIR — wildcard recursivo: se as regras já
+ * publicadas tiverem algo como `match /alunos/{email}/{document=**}`
+ * concedendo leitura ampla (ex.: pro próprio Aluno em qualquer subcoleção
+ * dele), essa regra mais genérica NÃO é sobrescrita pela regra específica
+ * de `anotacoes` acima — no Firestore, se QUALQUER bloco `match` que
+ * casa com o caminho permite o acesso, o acesso é permitido (não é "a
+ * regra mais específica vence"). Ou seja: um wildcard desses tornaria a
+ * regra restritiva de `anotacoes` inútil na prática. Confira isso no
+ * Firebase Console antes de considerar este documento "seguro" — o padrão
+ * observado nas regras já publicadas para `avaliacoesFisicas`/`alunos`
+ * (blocos `match` nomeados por subcoleção, não um `{document=**}`) sugere
+ * que isso NÃO deve estar acontecendo hoje, mas não dá pra confirmar sem
+ * ver o arquivo de regras de verdade.
+ *
+ * IDs não são a proteção: `note.id` (ver criarTrainingNoteVazia) não
+ * precisa ser imprevisível/impossível de adivinhar — mesmo que um Aluno
+ * de alguma forma soubesse o `noteId` exato de outro cliente, a regra
+ * acima nega o acesso pelo token de autenticação de quem pede, não por
+ * quão difícil é adivinhar o caminho do documento. Segurança por obscuridade
+ * de ID nunca é a barreira aqui.
+ *
+ * Queries sempre escopadas por aluno: `notesCol`/`listNotesByAlunoPage`
+ * usam `collection(db, 'alunos', email, 'anotacoes')` — uma subcoleção de
+ * UM email específico — nunca `collectionGroup('anotacoes')`, que
+ * atravessaria a subcoleção de TODOS os alunos numa única consulta. Não
+ * introduza um `collectionGroup` aqui sem repensar a regra acima (ela
+ * autoriza por `{email}` do caminho; uma collectionGroup precisaria de uma
+ * regra própria, mais fácil de errar).
  */
 
 function notesCol(email: string) {

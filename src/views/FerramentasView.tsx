@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUIStore } from '../store/useUIStore';
 import { TimerToolView } from './tools/TimerToolView';
 import { ModelosToolView } from './tools/ModelosToolView';
 import { AnotacoesToolView } from './tools/AnotacoesToolView';
@@ -10,12 +11,23 @@ interface ToolCard {
   title: string;
   desc: string;
   comingSoon?: boolean;
+  /** Nunca mostrado pro Aluno — usado por ferramentas que são dado privado
+   *  do Personal (ver Anotações). Isto é só higiene de interface: a
+   *  proteção real é a regra do Firestore (Aluno não tem `allow` nenhum na
+   *  subcoleção `anotacoes`), não esconder o card. */
+  ptOnly?: boolean;
 }
 
 const CARDS: ToolCard[] = [
   { key: 'timer', icon: '⏱', title: 'Timer', desc: 'Timer de intervalos: preparação, exercício e descanso.' },
   { key: 'agenda', icon: '📅', title: 'Agenda', desc: 'Organize seus compromissos e sessões.', comingSoon: true },
-  { key: 'anotacoes', icon: '📝', title: 'Anotações', desc: 'Prontuário de acompanhamento do treinamento por cliente.' },
+  {
+    key: 'anotacoes',
+    icon: '📝',
+    title: 'Anotações',
+    desc: 'Prontuário de acompanhamento do treinamento por cliente.',
+    ptOnly: true,
+  },
   { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Biblioteca de modelos de treino organizados por nível de experiência.' },
   { key: 'lembretes', icon: '🔔', title: 'Lembretes', desc: 'Alertas pra você e seus alunos.', comingSoon: true },
 ];
@@ -42,9 +54,16 @@ type FerramentasScreen = 'hub' | 'timer' | 'modelos' | 'anotacoes';
  * Ícone de criação durante a execução do treino (RegistroView) e autosave
  * em tempo real são etapas futuras — aqui a gravação é explícita. Os
  * demais cards continuam só visuais ("Em breve"), sem onClick nem estado.
+ *
+ * Anotações é `ptOnly` — nunca aparece nem abre em modo Aluno (ver
+ * `CARDS.filter` abaixo + guard em `screen === 'anotacoes'`). Isto é
+ * higiene de interface, não a proteção de verdade: quem impede o Aluno de
+ * ler anotações de outro cliente (ou de qualquer cliente) é a regra do
+ * Firestore documentada em lib/trainingNotesRepository.ts.
  */
 export function FerramentasView() {
   const [screen, setScreen] = useState<FerramentasScreen>('hub');
+  const isPersonalMode = useUIStore((s) => s.isPersonalMode);
 
   if (screen === 'timer') {
     return <TimerToolView onVoltar={() => setScreen('hub')} />;
@@ -54,14 +73,18 @@ export function FerramentasView() {
     return <ModelosToolView onVoltar={() => setScreen('hub')} />;
   }
 
-  if (screen === 'anotacoes') {
+  // Segunda camada, não a única: mesmo que `screen` chegasse a 'anotacoes'
+  // por algum caminho que não seja o clique no card abaixo (já filtrado
+  // pro Aluno), a tela em si também se recusa a abrir fora do modo
+  // Personal — ver mesmo guard em AnotacoesToolView.tsx.
+  if (screen === 'anotacoes' && isPersonalMode) {
     return <AnotacoesToolView onVoltar={() => setScreen('hub')} />;
   }
 
   return (
     <div className="ft-view">
       <div className="ft-grid">
-        {CARDS.map((card) =>
+        {CARDS.filter((card) => !card.ptOnly || isPersonalMode).map((card) =>
           card.comingSoon ? (
             <div key={card.key} className="ft-card ft-card-soon" aria-disabled="true">
               <span className="ft-soon-badge">Em breve</span>

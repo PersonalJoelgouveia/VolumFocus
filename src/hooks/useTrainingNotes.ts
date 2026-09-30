@@ -139,6 +139,15 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
         showToast('Aluno sem e-mail cadastrado — não é possível salvar na nuvem.', 'error');
         return false;
       }
+      if (!nota.authorId) {
+        // Autor é um dos campos que o pedido exige vir sempre preenchido
+        // automaticamente — nunca grava uma anotação sem saber quem a
+        // criou (ex.: authUser momentaneamente nulo na criação automática
+        // do painel rápido).
+        console.error('useTrainingNotes: recusando criar anotação sem authorId');
+        showToast('Não foi possível identificar o autor. Tente novamente.', 'error');
+        return false;
+      }
 
       addNota(alunoId, nota); // otimista
 

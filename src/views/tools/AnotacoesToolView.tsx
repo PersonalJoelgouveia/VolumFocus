@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUIStore } from '../../store/useUIStore';
 import { iniciais } from '../../types/aluno';
 import { criarTrainingNoteVazia, formatarDataHorario, resumoConteudo } from '../../types/trainingNote';
 import type { TrainingNote } from '../../types/trainingNote';
@@ -30,9 +31,31 @@ type Screen = { tipo: 'clientes' } | { tipo: 'historico'; alunoId: string } | { 
  *
  * Persistência via useTrainingNotes (ponte local/Firestore, mesmo padrão
  * de usePhysicalAssessments) — cache local em useAlunoStore.notas.
+ *
+ * SEGURANÇA: as anotações são dado privado do Personal (não um prontuário
+ * que o Aluno acompanha, ao contrário de Avaliação Física). Este guard de
+ * `isPersonalMode` — como o filtro do card em FerramentasView.tsx — é só
+ * higiene de interface: reduz a superfície exposta e evita uma tela quebrada
+ * se algo chegar aqui fora do fluxo normal. NÃO é a proteção de verdade.
+ * Um cliente Firestore usado diretamente (fora deste app) ainda dependeria
+ * inteiramente da regra publicada em `alunos/{email}/anotacoes/{noteId}`
+ * (ver comentário em lib/trainingNotesRepository.ts) — que nunca concede
+ * `allow` nenhum ao próprio aluno, diferente da regra de avaliações físicas.
  */
 export function AnotacoesToolView({ onVoltar }: { onVoltar: () => void }) {
   const [screen, setScreen] = useState<Screen>({ tipo: 'clientes' });
+  const isPersonalMode = useUIStore((s) => s.isPersonalMode);
+
+  if (!isPersonalMode) {
+    return (
+      <div className="an-empty">
+        Esta ferramenta é exclusiva do Personal Trainer.{' '}
+        <button className="btn btn-ghost btn-sm" onClick={onVoltar}>
+          ← Voltar
+        </button>
+      </div>
+    );
+  }
 
   if (screen.tipo === 'historico') {
     return (
