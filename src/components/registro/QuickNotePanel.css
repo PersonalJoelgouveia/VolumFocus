@@ -1,0 +1,89 @@
+/* Mesma família .btn.btn-ghost do botão "Rotinas" vizinho — só ajusta o
+ * padding pra ficar compacto/quadrado em vez de largo como um botão de
+ * texto. Nada de tamanho/cor inventado à parte. */
+.qn-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 10px;
+}
+
+.qn-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: min(380px, calc(100vw - 32px));
+  z-index: 250;
+  padding: 14px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+.qn-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.qn-panel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.qn-panel-titulo {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.qn-panel-cliente {
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qn-panel-treino,
+.qn-panel-datahora {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qn-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  min-height: auto;
+  padding: 4px;
+  display: inline-flex;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.qn-close-btn:hover {
+  color: var(--text);
+}
+
+.qn-panel-loading {
+  color: var(--text-2);
+  font-size: 0.85rem;
+  padding: 8px 0;
+}
+
+@media (max-width: 640px) {
+  .qn-panel {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}

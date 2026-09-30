@@ -83,3 +83,13 @@ export function resumoConteudo(conteudo: string, max = 90): string {
   if (!limpo) return '(sem conteúdo)';
   return limpo.length > max ? `${limpo.slice(0, max)}…` : limpo;
 }
+
+/** true se os dois ISO caem no mesmo dia calendário local — usado pelo
+ *  painel de anotação da execução do treino pra decidir se reabre a
+ *  anotação de hoje (continuar) em vez de criar uma nova a cada clique no
+ *  ícone. Compara ano/mês/dia locais, ignora a hora. */
+export function isMesmoDiaCalendario(isoA: string, isoB: string): boolean {
+  const a = new Date(isoA);
+  const b = new Date(isoB);
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
