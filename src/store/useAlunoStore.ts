@@ -57,8 +57,12 @@ interface AlunoState {
   notas: Record<string, TrainingNote[]>;
   getNotas: (alunoId: string) => TrainingNote[];
   addNota: (alunoId: string, nota: TrainingNote) => void;
-  /** Substitui a lista inteira (usado ao sincronizar com o Firestore). */
+  /** Substitui a lista inteira (usado ao (re)carregar a primeira página). */
   setNotas: (alunoId: string, notas: TrainingNote[]) => void;
+  /** Acrescenta uma página seguinte ao final da lista já carregada — nunca
+   *  substitui (usado por "carregar mais" no histórico paginado). Descarta
+   *  qualquer nota cujo id já esteja no cache, por segurança. */
+  appendNotas: (alunoId: string, notas: TrainingNote[]) => void;
   updateNota: (alunoId: string, noteId: string, patch: Partial<TrainingNote>) => void;
   removeNota: (alunoId: string, noteId: string) => void;
 }
@@ -226,6 +230,14 @@ export const useAlunoStore = create<AlunoState>()(
         })),
 
       setNotas: (alunoId, notas) => set((state) => ({ notas: { ...state.notas, [alunoId]: notas } })),
+
+      appendNotas: (alunoId, novasNotas) =>
+        set((state) => {
+          const atuais = state.notas[alunoId] ?? [];
+          const idsExistentes = new Set(atuais.map((n) => n.id));
+          const semDuplicar = novasNotas.filter((n) => !idsExistentes.has(n.id));
+          return { notas: { ...state.notas, [alunoId]: [...atuais, ...semDuplicar] } };
+        }),
 
       updateNota: (alunoId, noteId, patch) =>
         set((state) => ({

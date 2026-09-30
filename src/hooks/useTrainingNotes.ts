@@ -1,16 +1,34 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAlunoStore } from '../store/useAlunoStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useUIStore } from '../store/useUIStore';
-import { createNote, deleteNote, listNotesByAluno, updateNote } from '../lib/trainingNotesRepository';
+import { createNote, deleteNote, listNotesByAlunoPage, updateNote } from '../lib/trainingNotesRepository';
 import type { TrainingNote } from '../types/trainingNote';
 
+/** Tamanho de página do histórico — ver doc de `listNotesByAlunoPage`
+ *  (trainingNotesRepository.ts) pra por que a lista nunca é buscada
+ *  inteira de uma vez. */
+const PAGE_SIZE = 20;
+
 export interface UseTrainingNotes {
+  /** Só as anotações já carregadas até agora (primeira página + páginas
+   *  seguintes pedidas via `carregarMais`) — nunca o histórico inteiro de
+   *  uma só vez. */
   notes: TrainingNote[];
   loading: boolean;
+  /** true durante uma chamada a `carregarMais` (distinto de `loading`,
+   *  que é só a carga inicial — a UI usa isso pro botão "Carregar mais"). */
+  loadingMore: boolean;
+  /** true se a página mais recente veio cheia — provavelmente há mais
+   *  anotações além das já carregadas. */
+  hasMore: boolean;
   error: string | null;
   retry: () => void;
+  /** Busca a próxima página e ACRESCENTA ao que já está carregado — nunca
+   *  substitui. Não faz nada se já estiver carregando ou se `hasMore` for
+   *  falso. */
+  carregarMais: () => void;
   /** true só para o Personal — trava de UX; a garantia de verdade são as
    *  regras do Firestore (aluno não tem `allow` nenhum em `anotacoes`). */
   canWrite: boolean;
@@ -32,11 +50,18 @@ export interface UseTrainingNotes {
  * "zero UI lag") e a persistência em nuvem (trainingNotesRepository).
  * Mesma estratégia de atualização otimista de usePhysicalAssessments.ts:
  * muda o estado local primeiro, chama o Firestore depois; desfaz se falhar.
+ *
+ * PAGINADO desde o início — a carga inicial já busca só a primeira página
+ * (`PAGE_SIZE`), não o histórico inteiro do aluno. Isso beneficia tanto o
+ * histórico completo (Ferramentas > Anotações) quanto o painel rápido da
+ * execução do treino (QuickNotePanel.tsx), que só precisa das anotações
+ * mais recentes pra resolver a de hoje — nunca precisou de tudo.
  */
 export function useTrainingNotes(alunoId: string): UseTrainingNotes {
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const notes = useAlunoStore((s) => s.getNotas(alunoId));
   const setNotas = useAlunoStore((s) => s.setNotas);
+  const appendNotas = useAlunoStore((s) => s.appendNotas);
   const addNota = useAlunoStore((s) => s.addNota);
   const updateNota = useAlunoStore((s) => s.updateNota);
   const removeNota = useAlunoStore((s) => s.removeNota);
@@ -46,8 +71,14 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
   const ask = useConfirmStore((s) => s.ask);
 
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tentativa, setTentativa] = useState(0);
+  // Cursor de paginação: createdAt (ISO) da última anotação já carregada.
+  // Não precisa ser estado — só é lido dentro de `carregarMais`, nunca
+  // renderizado.
+  const cursorRef = useRef<string | undefined>(undefined);
 
   const email = aluno?.email;
 
@@ -56,10 +87,14 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    cursorRef.current = undefined;
 
-    listNotesByAluno(email)
-      .then((remotas) => {
-        if (!cancelled) setNotas(alunoId, remotas);
+    listNotesByAlunoPage(email, PAGE_SIZE)
+      .then((primeiraPagina) => {
+        if (cancelled) return;
+        setNotas(alunoId, primeiraPagina);
+        cursorRef.current = primeiraPagina.at(-1)?.createdAt;
+        setHasMore(primeiraPagina.length === PAGE_SIZE);
       })
       .catch((e) => {
         console.error('useTrainingNotes: falha ao carregar histórico', e);
@@ -75,6 +110,24 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
   }, [email, canWrite, alunoId, setNotas, tentativa]);
 
   const retry = useCallback(() => setTentativa((n) => n + 1), []);
+
+  const carregarMais = useCallback(() => {
+    if (!email || loading || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    setError(null);
+
+    listNotesByAlunoPage(email, PAGE_SIZE, cursorRef.current)
+      .then((pagina) => {
+        appendNotas(alunoId, pagina);
+        if (pagina.length > 0) cursorRef.current = pagina.at(-1)?.createdAt;
+        setHasMore(pagina.length === PAGE_SIZE);
+      })
+      .catch((e) => {
+        console.error('useTrainingNotes: falha ao carregar mais anotações', e);
+        setError('Não foi possível carregar mais anotações.');
+      })
+      .finally(() => setLoadingMore(false));
+  }, [email, loading, loadingMore, hasMore, alunoId, appendNotas]);
 
   const criar = useCallback(
     async (nota: TrainingNote): Promise<boolean> => {
@@ -152,5 +205,17 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
     [canWrite, email, alunoId, notes, ask, removeNota, addNota, showToast]
   );
 
-  return { notes, loading, error, retry, canWrite, criar, salvarConteudo, remover };
+  return {
+    notes,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    retry,
+    carregarMais,
+    canWrite,
+    criar,
+    salvarConteudo,
+    remover,
+  };
 }

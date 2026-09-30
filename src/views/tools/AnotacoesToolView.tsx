@@ -21,14 +21,15 @@ type Screen = { tipo: 'clientes' } | { tipo: 'historico'; alunoId: string } | { 
  * ModelosToolView.tsx/TimerToolView.tsx):
  *
  *   Clientes (reaproveita grid/busca de views/ClientesView.tsx)
- *     → Histórico do Cliente (cronológico, mais recente primeiro — a
- *       própria ordem que já vem de listNotesByAluno)
- *       → Anotação aberta (conteúdo completo)
+ *     → Histórico do Cliente (cronológico, mais recente primeiro; carregado
+ *       em páginas — "Carregar mais" busca a próxima, nunca o histórico
+ *       inteiro de uma vez, ver useTrainingNotes/listNotesByAlunoPage)
+ *       → Anotação aberta (conteúdo completo, editável com autosave via
+ *         NoteEditor, mesmo componente do painel rápido da execução do
+ *         treino)
  *
  * Persistência via useTrainingNotes (ponte local/Firestore, mesmo padrão
- * de usePhysicalAssessments) — cache local em useAlunoStore.notas. Edição/
- * autosave em tempo real durante a execução do treino é etapa futura;
- * aqui a gravação é explícita (botão Salvar).
+ * de usePhysicalAssessments) — cache local em useAlunoStore.notas.
  */
 export function AnotacoesToolView({ onVoltar }: { onVoltar: () => void }) {
   const [screen, setScreen] = useState<Screen>({ tipo: 'clientes' });
@@ -118,7 +119,8 @@ function HistoricoScreen({
 }) {
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const authUser = useAuthStore((s) => s.user);
-  const { notes, loading, error, retry, canWrite, criar } = useTrainingNotes(alunoId);
+  const { notes, loading, loadingMore, hasMore, error, retry, carregarMais, canWrite, criar } =
+    useTrainingNotes(alunoId);
   const [criando, setCriando] = useState(false);
 
   async function handleNovaAnotacao() {
@@ -153,7 +155,11 @@ function HistoricoScreen({
           <button className="btn btn-ghost btn-sm an-voltar" onClick={onVoltar}>
             ← Anotações
           </button>
-          {aluno.nome} <span className="tag">{notes.length} ANOTAÇÕES</span>
+          {aluno.nome}{' '}
+          <span className="tag">
+            {notes.length}
+            {hasMore ? '+' : ''} ANOTAÇÕES
+          </span>
         </div>
         {canWrite && (
           <button className="btn btn-primary" onClick={handleNovaAnotacao} disabled={criando}>
@@ -182,6 +188,15 @@ function HistoricoScreen({
           {notes.map((nota) => (
             <NoteListItem key={nota.id} nota={nota} onAbrir={() => onAbrirNota(nota.id)} />
           ))}
+
+          {/* Carregamento incremental — nunca busca o histórico inteiro de
+             uma vez (ver useTrainingNotes/listNotesByAlunoPage). Só aparece
+             quando a página mais recente veio cheia. */}
+          {hasMore && (
+            <button className="btn btn-ghost an-carregar-mais" onClick={carregarMais} disabled={loadingMore}>
+              {loadingMore ? 'Carregando…' : 'Carregar mais'}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -190,7 +205,7 @@ function HistoricoScreen({
 
 /** Item do histórico — data, horário, treino relacionado (quando existir)
  *  e resumo curto do conteúdo. Ordem cronológica já vem do hook (mais
- *  recente primeiro, `listNotesByAluno` ordena por `createdAt desc`). */
+ *  recente primeiro, `listNotesByAlunoPage` ordena por `createdAt desc`). */
 function NoteListItem({ nota, onAbrir }: { nota: TrainingNote; onAbrir: () => void }) {
   const { data, horario } = formatarDataHorario(nota.createdAt);
   return (

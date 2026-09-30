@@ -11,6 +11,7 @@ import {
   query,
   orderBy,
   limit,
+  startAfter,
   getDocs,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -46,5 +47,18 @@ export function signOutUser() {
   return signOut(auth);
 }
 
-export { onAuthStateChanged, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, orderBy, limit, getDocs };
+export {
+  onAuthStateChanged,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  collection,
+  query,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+};
 export { ref, uploadBytes, getDownloadURL, deleteObject };

@@ -1,4 +1,4 @@
-import { collection, db, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc } from './firebase';
+import { collection, db, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, startAfter, updateDoc } from './firebase';
 import { TRAINING_NOTE_MAX_LENGTH } from '../types/trainingNote';
 import type { TrainingNote } from '../types/trainingNote';
 
@@ -67,9 +67,33 @@ export async function getNote(studentEmail: string, noteId: string): Promise<Tra
   return snap.exists() ? (snap.data() as TrainingNote) : null;
 }
 
-/** Lista o histórico completo do aluno, mais recente primeiro. */
-export async function listNotesByAluno(studentEmail: string): Promise<TrainingNote[]> {
-  const q = query(notesCol(studentEmail), orderBy('createdAt', 'desc'));
+/**
+ * Lista UMA PÁGINA do histórico do aluno, mais recente primeiro — nunca o
+ * histórico inteiro de uma vez. Um cliente pode acumular centenas de
+ * anotações ao longo do tempo, cada uma com até `TRAINING_NOTE_MAX_LENGTH`
+ * caracteres; buscar tudo de uma vez sem paginação escalaria mal tanto em
+ * tráfego de rede quanto em memória no dispositivo do Personal.
+ *
+ * `cursorCreatedAt` é o `createdAt` (ISO) da ÚLTIMA anotação já carregada
+ * — passe `undefined` pra primeira página. Como a query já ordena por
+ * `createdAt desc`, isso é suficiente pro `startAfter` (a versão do
+ * Firestore que recebe valores de campo, não precisa do DocumentSnapshot
+ * inteiro) sem a UI/hook precisarem conhecer tipos internos do Firestore.
+ *
+ * `hasMore` é inferido por quem chama pela heurística padrão: se a página
+ * veio cheia (`length === pageSize`), pode haver mais; a próxima busca
+ * confirma (uma página vazia/parcial encerra a paginação). Não faz uma
+ * consulta de contagem à parte só pra saber se "tem mais".
+ */
+export async function listNotesByAlunoPage(
+  studentEmail: string,
+  pageSize: number,
+  cursorCreatedAt?: string
+): Promise<TrainingNote[]> {
+  const restricoes = cursorCreatedAt
+    ? [orderBy('createdAt', 'desc'), startAfter(cursorCreatedAt), limit(pageSize)]
+    : [orderBy('createdAt', 'desc'), limit(pageSize)];
+  const q = query(notesCol(studentEmail), ...restricoes);
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as TrainingNote);
 }
