@@ -150,7 +150,11 @@ export function RegistroView() {
                 📁 Rotinas
               </button>
               {isPersonalMode && activeSessao && (
+                // key força remontar (e resetar qual anotação está ativa)
+                // ao trocar de aba de sessão — nunca herda estado de um
+                // cliente pro outro.
                 <QuickNoteButton
+                  key={activeSessao.id}
                   alunoId={activeSessao.alunoId}
                   alunoNome={activeSessao.alunoNome}
                   selectedDay={selectedDay}

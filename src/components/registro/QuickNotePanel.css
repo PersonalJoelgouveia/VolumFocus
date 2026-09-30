@@ -59,6 +59,30 @@
   white-space: nowrap;
 }
 
+.qn-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.qn-nova-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  min-height: auto;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.qn-nova-btn:hover {
+  color: var(--text);
+  border-color: var(--teal-border);
+}
+
 .qn-close-btn {
   background: none;
   border: none;
