@@ -284,8 +284,11 @@ function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: st
   const { data, horario } = formatarDataHorario(nota.createdAt);
 
   async function handleRemover() {
-    await remover(noteId);
-    onVoltar();
+    // Só navega de volta se o Personal realmente confirmou — cancelar o
+    // diálogo de confirmação não pode levar embora da anotação como se
+    // ela tivesse sido excluída.
+    const confirmou = await remover(noteId);
+    if (confirmou) onVoltar();
   }
 
   return (

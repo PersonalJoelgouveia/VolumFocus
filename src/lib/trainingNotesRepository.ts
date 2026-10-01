@@ -98,8 +98,9 @@ function noteDocRef(email: string, noteId: string) {
 }
 
 /** Lança se `conteudo` passar do limite documentado — protege o Firestore
- *  contra gravação de um campo grande demais, independente de qualquer
- *  validação (ou falta dela) na camada de UI, que ainda não existe. */
+ *  contra gravação de um campo grande demais mesmo que a validação de UI
+ *  (NoteEditor.tsx: `maxLength` do textarea + aviso "Limite atingido")
+ *  seja contornada por algum caminho que não passe por ela. */
 function validarConteudo(conteudo: string | undefined): void {
   if (conteudo !== undefined && conteudo.length > TRAINING_NOTE_MAX_LENGTH) {
     throw new Error(

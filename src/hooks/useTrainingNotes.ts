@@ -41,8 +41,13 @@ export interface UseTrainingNotes {
    *  reagir ao retorno (`false`) pode — o hook só não notifica por conta
    *  própria aqui. */
   salvarConteudo: (noteId: string, conteudo: string) => Promise<boolean>;
-  /** Pede confirmação (useConfirmStore) antes de remover. */
-  remover: (noteId: string) => Promise<void>;
+  /** Pede confirmação (useConfirmStore) antes de remover. Retorna `true`
+   *  se o Personal confirmou (a remoção otimista já foi aplicada — o
+   *  eventual catch de rede só desfaz e avisa por toast, não muda esse
+   *  retorno), `false` se cancelou ou se não tinha permissão. Quem chama
+   *  usa esse retorno pra decidir se navega pra longe da anotação
+   *  excluída — nunca deve navegar quando o Personal cancelou. */
+  remover: (noteId: string) => Promise<boolean>;
 }
 
 /**
@@ -187,17 +192,17 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
   );
 
   const remover = useCallback(
-    async (noteId: string): Promise<void> => {
+    async (noteId: string): Promise<boolean> => {
       if (!canWrite || !email) {
         showToast('Só o Personal Trainer pode remover anotações.', 'error');
-        return;
+        return false;
       }
 
       const confirmado = await ask('Remover esta anotação? Essa ação não pode ser desfeita.', {
         confirmLabel: 'Remover',
         danger: true,
       });
-      if (!confirmado) return;
+      if (!confirmado) return false;
 
       const removida = notes.find((n) => n.id === noteId);
       removeNota(alunoId, noteId); // otimista
@@ -210,6 +215,7 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
         if (removida) addNota(alunoId, removida); // desfaz
         showToast('Não foi possível remover. Tente novamente.', 'error');
       }
+      return true; // confirmado pelo Personal — quem chama pode navegar, mesmo se o catch acima desfez
     },
     [canWrite, email, alunoId, notes, ask, removeNota, addNota, showToast]
   );

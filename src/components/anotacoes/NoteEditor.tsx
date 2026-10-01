@@ -164,6 +164,15 @@ function NoteEditorImpl({
       if (tentativaIdRef.current !== minhaTentativa) return; // superada por uma tentativa mais nova
 
       if (ok) {
+        // Pode existir um retry pendente se o timeout de 6s já tinha
+        // marcado "não sincronizado" bem antes desta mesma chamada acabar
+        // respondendo com sucesso (rede lenta, não necessariamente
+        // offline) — sem isso, o retry dispararia sozinho mais tarde e
+        // reenviaria o mesmo conteúdo já salvo, piscando o status de novo.
+        if (retryRef.current) {
+          clearTimeout(retryRef.current);
+          retryRef.current = null;
+        }
         setStatus('salvo');
       } else {
         marcarNaoSincronizadoEAgendarRetry();
