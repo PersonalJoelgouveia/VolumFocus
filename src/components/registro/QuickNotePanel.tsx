@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ClipboardPen, X } from 'lucide-react';
+import { ClipboardPen, Maximize2, Minimize2, X } from 'lucide-react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { DAYS } from '../../types/workout';
@@ -42,9 +42,21 @@ interface QuickNoteButtonProps {
  * busca "não achar" a anotação recém-criada e criar uma segunda por
  * engano. Manter o estado aqui, num componente que não desmonta, elimina
  * essa janela de corrida por completo.)
+ *
+ * MOBILE DURANTE O TREINO: o painel abre COMPACTO (`NoteEditor
+ * tamanho="compacto"`, ~3 linhas) de propósito — ocupa pouco espaço e
+ * deixa a execução do treino (lista de exercícios, botão Rotinas) visível
+ * ao redor, sem forçar o Personal a sair da tela pra anotar algo rápido.
+ * O botão de expandir (`expandido`) troca pra um campo bem maior quando o
+ * Personal realmente precisa escrever mais — nunca o contrário: o padrão
+ * é sempre compacto, expandir é uma ação explícita. `max-height` +
+ * `overflow-y: auto` no `.qn-panel` (CSS) garantem que, mesmo expandido e
+ * com o teclado virtual aberto, o painel nunca cresce além da tela — rola
+ * por dentro em vez de empurrar/cobrir tudo.
  */
 export function QuickNoteButton({ alunoId, alunoNome, selectedDay, sessionId }: QuickNoteButtonProps) {
   const [aberto, setAberto] = useState(false);
+  const [expandido, setExpandido] = useState(false);
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const authUser = useAuthStore((s) => s.user);
   const { notes, loading, criar, salvarConteudo } = useTrainingNotes(alunoId);
@@ -160,11 +172,21 @@ export function QuickNoteButton({ alunoId, alunoNome, selectedDay, sessionId }: 
               </button>
               <button
                 type="button"
+                className="qn-expand-btn"
+                onClick={() => setExpandido((v) => !v)}
+                title={expandido ? 'Recolher campo de texto' : 'Expandir campo de texto'}
+                aria-label={expandido ? 'Recolher campo de texto' : 'Expandir campo de texto'}
+              >
+                {expandido ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </button>
+              <button
+                type="button"
                 className="qn-close-btn"
                 onClick={() => setAberto(false)}
+                title="Minimizar anotação"
                 aria-label="Minimizar anotação"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
           </div>
@@ -175,12 +197,16 @@ export function QuickNoteButton({ alunoId, alunoNome, selectedDay, sessionId }: 
             // key={notaAtiva.id} força remontar o editor só quando a
             // anotação ativa realmente muda (troca de dia ou "+ Nova") —
             // nunca reaproveita estado interno de edição entre anotações
-            // distintas.
+            // distintas. Trocar `tamanho` (compacto↔expandido) NÃO
+            // remonta — é só re-render (ver comparador do React.memo em
+            // NoteEditor.tsx), então o conteúdo/autosave em andamento
+            // nunca é interrompido ao expandir/recolher.
             <NoteEditor
               key={notaAtiva.id}
               noteId={notaAtiva.id}
               conteudoInicial={notaAtiva.conteudo}
               onSalvar={salvarConteudo}
+              tamanho={expandido ? 'expandido' : 'compacto'}
               autoFocus
             />
           )}

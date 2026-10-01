@@ -39,6 +39,32 @@
   cursor: default;
 }
 
+/* Variantes de tamanho pro painel rápido da execução do treino (celular)
+ * — a tela cheia de Anotações nunca usa estas classes, continua com o
+ * `.ne-textarea` base acima, sem nenhuma mudança. Seletor composto
+ * (duas classes) de propósito: precisa ter especificidade MAIOR que a
+ * regra `@media (max-width: 640px) .ne-textarea` abaixo, senão ela vence
+ * por vir depois no arquivo com a mesma especificidade — justamente no
+ * celular, que é onde essas variantes mais importam. */
+.ne-textarea.ne-textarea--compacto {
+  min-height: 0; /* `rows={3}` já dá o tamanho natural — pouco espaço inicialmente */
+}
+
+.ne-textarea.ne-textarea--expandido {
+  min-height: 200px;
+}
+
+.ne-limite {
+  font-size: 0.75rem;
+  color: var(--text-3);
+  text-align: right;
+}
+
+.ne-limite-atingido {
+  color: var(--orange);
+  font-weight: 600;
+}
+
 .ne-status {
   font-size: 0.75rem;
   color: var(--text-3);

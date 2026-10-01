@@ -76,12 +76,39 @@ export function formatarDataHorario(iso: string): { data: string; horario: strin
   };
 }
 
+/** Prefixo generoso o bastante pra sempre sobrar `max` caracteres úteis
+ *  mesmo depois de colapsar espaços/quebras de linha — bem acima de
+ *  qualquer `max` usado na prática (histórico usa 90). Existe só pra
+ *  `resumoConteudo` nunca precisar processar uma anotação inteira (até
+ *  `TRAINING_NOTE_MAX_LENGTH` = 200.000 caracteres) só pra descartar quase
+ *  tudo em seguida — importante pra performance da lista do histórico,
+ *  que pode mostrar várias dezenas de anotações longas ao mesmo tempo. */
+const PREFIXO_PARA_RESUMO = 1000;
+
 /** Resumo de uma linha pro histórico — colapsa quebras de linha/espaços,
- *  nunca reformata o conteúdo real salvo. */
+ *  nunca reformata o conteúdo real salvo (só processa um prefixo do
+ *  conteúdo, nunca a anotação inteira — ver PREFIXO_PARA_RESUMO). */
 export function resumoConteudo(conteudo: string, max = 90): string {
-  const limpo = conteudo.trim().replace(/\s+/g, ' ');
+  let prefixo = conteudo.length > PREFIXO_PARA_RESUMO ? conteudo.slice(0, PREFIXO_PARA_RESUMO) : conteudo;
+  // O corte acima conta unidades UTF-16 — se caiu bem no meio de um emoji
+  // (par substituto), descarta a metade solta em vez de exibir um
+  // caractere quebrado no resumo.
+  if (terminaEmSurrogateSolto(prefixo)) prefixo = prefixo.slice(0, -1);
+
+  const limpo = prefixo.trim().replace(/\s+/g, ' ');
   if (!limpo) return '(sem conteúdo)';
   return limpo.length > max ? `${limpo.slice(0, max)}…` : limpo;
+}
+
+/** true se o último caractere (em unidades UTF-16) for um "high surrogate"
+ *  sem o "low surrogate" seguinte — metade de um emoji cortado ao meio por
+ *  um `.slice()` em vez de um caractere completo removido de propósito.
+ *  Exportada pra ser reaproveitada por NoteEditor.tsx (mesma checagem,
+ *  usada lá pra colagem de texto que bateu no limite de tamanho). */
+export function terminaEmSurrogateSolto(valor: string): boolean {
+  if (valor.length === 0) return false;
+  const codigo = valor.charCodeAt(valor.length - 1);
+  return codigo >= 0xd800 && codigo <= 0xdbff;
 }
 
 /** true se os dois ISO caem no mesmo dia calendário local — usado pelo

@@ -16,6 +16,12 @@
   z-index: 250;
   padding: 14px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  /* Nunca deixa o painel crescer além da tela — importante com o teclado
+   * virtual aberto (reduz a altura visível disponível) e no modo
+   * "expandido": rola por dentro em vez de empurrar/cobrir os controles
+   * do treino atrás dele. */
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
 }
 
 .qn-panel-header {
@@ -83,17 +89,24 @@
   border-color: var(--teal-border);
 }
 
+.qn-expand-btn,
 .qn-close-btn {
   background: none;
   border: none;
   color: var(--text-2);
-  min-height: auto;
-  padding: 4px;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  /* Alvo de toque confortável no celular (mesma convenção de ~40-44px já
+   * usada em outros botões de ícone do app) — bem maior que o ícone em si
+   * (16-18px), que fica centralizado dentro. */
+  min-width: 36px;
+  min-height: 36px;
 }
 
+.qn-expand-btn:hover,
 .qn-close-btn:hover {
   color: var(--text);
 }

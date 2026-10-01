@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
@@ -209,7 +209,12 @@ function HistoricoScreen({
       {!loading && !error && notes.length > 0 && (
         <div className="an-list">
           {notes.map((nota) => (
-            <NoteListItem key={nota.id} nota={nota} onAbrir={() => onAbrirNota(nota.id)} />
+            // onAbrirNota é passado direto (não embrulhado numa closure por
+            // item) — é o que permite ao React.memo abaixo pular o
+            // re-render de itens que não mudaram quando a lista ganha uma
+            // nova página ("Carregar mais") ou uma anotação diferente é
+            // atualizada.
+            <NoteListItem key={nota.id} nota={nota} onAbrirNota={onAbrirNota} />
           ))}
 
           {/* Carregamento incremental — nunca busca o histórico inteiro de
@@ -228,11 +233,27 @@ function HistoricoScreen({
 
 /** Item do histórico — data, horário, treino relacionado (quando existir)
  *  e resumo curto do conteúdo. Ordem cronológica já vem do hook (mais
- *  recente primeiro, `listNotesByAlunoPage` ordena por `createdAt desc`). */
-function NoteListItem({ nota, onAbrir }: { nota: TrainingNote; onAbrir: () => void }) {
+ *  recente primeiro, `listNotesByAlunoPage` ordena por `createdAt desc`).
+ *
+ *  Memoizado: com muitas anotações carregadas, recalcular resumo/data de
+ *  TODOS os itens toda vez que a lista ganha uma página nova ("Carregar
+ *  mais") ou que uma única anotação é atualizada em outro lugar seria
+ *  trabalho desperdiçado — `.map()` sempre gera um array novo, mas os
+ *  objetos `nota` de itens que não mudaram mantêm a mesma referência
+ *  (useAlunoStore só substitui o item afetado), e React.memo aproveita
+ *  isso pra pular o re-render desses itens. Só funciona porque
+ *  `onAbrirNota` chega aqui como a mesma referência estável pra todo
+ *  mundo, nunca uma closure recriada por item (ver `.map()` acima). */
+const NoteListItem = memo(function NoteListItem({
+  nota,
+  onAbrirNota,
+}: {
+  nota: TrainingNote;
+  onAbrirNota: (noteId: string) => void;
+}) {
   const { data, horario } = formatarDataHorario(nota.createdAt);
   return (
-    <div className="card an-item" onClick={onAbrir}>
+    <div className="card an-item" onClick={() => onAbrirNota(nota.id)}>
       <div className="an-item-top">
         <span className="an-item-date">
           {data} · {horario}
@@ -242,7 +263,7 @@ function NoteListItem({ nota, onAbrir }: { nota: TrainingNote; onAbrir: () => vo
       <div className="an-item-resumo">{resumoConteudo(nota.conteudo)}</div>
     </div>
   );
-}
+});
 
 function NotaScreen({ alunoId, noteId, onVoltar }: { alunoId: string; noteId: string; onVoltar: () => void }) {
   const notes = useAlunoStore((s) => s.getNotas(alunoId));
