@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useUIStore } from '../store/useUIStore';
 import { createAssessment, deleteAssessment, listAssessments, updateAssessment } from '../lib/physicalAssessmentRepository';
+import { deletePhotosByAssessment } from '../lib/assessmentPhotoStore';
 import type { PhysicalAssessment } from '../types/assessment';
 
 export interface UsePhysicalAssessments {
@@ -149,6 +150,10 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
 
       try {
         await deleteAssessment(email, assessmentId);
+        // As fotos só existem neste aparelho: sem a avaliação ficariam órfãs para sempre.
+        void deletePhotosByAssessment(assessmentId).catch((e) =>
+          console.error('usePhysicalAssessments: falha ao apagar fotos locais da avaliação', e)
+        );
         showToast('Avaliação removida.', 'success');
       } catch (e) {
         console.error('usePhysicalAssessments: falha ao remover avaliação', e);

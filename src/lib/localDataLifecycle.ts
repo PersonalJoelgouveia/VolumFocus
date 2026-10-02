@@ -1,5 +1,6 @@
 import { LOCAL_STORAGE_KEYS } from './backupRepository';
 import { limparTodosRascunhosOnline } from './onlineAssessmentDraftStore';
+import { OWNER_KEY, clearLocalOwnerMemory, setLocalOwner } from './localOwner';
 
 /**
  * Ciclo de vida dos dados locais (P1 da auditoria de segurança).
@@ -19,8 +20,6 @@ import { limparTodosRascunhosOnline } from './onlineAssessmentDraftStore';
  * cliente): jg3_theme, jg3_locale, jg3_timer_audio_settings,
  * jg3_timer_library, jg3_training_models_v9.
  */
-
-const OWNER_KEY = 'jg3_owner';
 
 /** Dado de usuário/cliente que não estava em LOCAL_STORAGE_KEYS. */
 const EXTRA_USER_KEYS = ['jg3_sessoes_treino', 'jg3_rotina_sync', 'jg3_health_status', 'jg3_wearable_status'];
@@ -46,14 +45,18 @@ export type OwnerCheck = 'same' | 'adopted' | 'mismatch';
 export function enforceLocalOwner(uid: string): OwnerCheck {
   try {
     const current = localStorage.getItem(OWNER_KEY);
-    if (current === uid) return 'same';
+    if (current === uid) {
+      setLocalOwner(uid);
+      return 'same';
+    }
     if (!current) {
-      localStorage.setItem(OWNER_KEY, uid);
+      setLocalOwner(uid);
       return 'adopted';
     }
     return 'mismatch';
   } catch {
-    return 'same'; // localStorage indisponível: nada persiste, nada a proteger
+    setLocalOwner(uid); // localStorage indisponível: o dono vale só em memória
+    return 'same';
   }
 }
 
@@ -158,6 +161,7 @@ export async function hasLocalMedia(): Promise<boolean> {
 export async function wipeLocalData({ includeMedia }: { includeMedia: boolean }): Promise<boolean> {
   let ok = true;
   try {
+    clearLocalOwnerMemory();
     [...LOCAL_STORAGE_KEYS, ...EXTRA_USER_KEYS, OWNER_KEY].forEach((k) => localStorage.removeItem(k));
     limparTodosRascunhosOnline();
   } catch (e) {

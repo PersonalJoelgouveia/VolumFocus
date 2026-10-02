@@ -98,6 +98,7 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
           }
         }
         if (!cancelado) setUrls(novasUrls);
+        else Object.values(novasUrls).forEach((u) => u && URL.revokeObjectURL(u)); // chegaram depois do desmonte
       } catch (e) {
         console.error('FotosComparativas: falha ao carregar fotos salvas', e);
         if (!cancelado) {

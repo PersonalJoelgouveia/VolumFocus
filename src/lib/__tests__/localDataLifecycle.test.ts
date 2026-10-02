@@ -4,6 +4,11 @@ vi.mock('../backupRepository', () => ({
   LOCAL_STORAGE_KEYS: ['jg3_log', 'jg3_alunos', 'jg3_dirty'],
 }));
 
+const deletePhotosByAssessment = vi.fn().mockResolvedValue(undefined);
+vi.mock('../assessmentPhotoStore', () => ({
+  deletePhotosByAssessment: (id: string) => deletePhotosByAssessment(id),
+}));
+
 import { enforceLocalOwner, hasLocalMedia, wipeLocalData } from '../localDataLifecycle';
 import {
   carregarRascunhoOnline,
@@ -87,6 +92,17 @@ describe('rascunho online: expiração', () => {
     expect(carregarRascunhoOnline('aluno-1')).not.toBeNull();
     expect(carregarRascunhoOnline('aluno-2')).toBeNull();
     expect(localStorage.getItem('jg3_online_draft_aluno-2')).toBeNull();
+  });
+
+  it('rascunho vencido descarta também as fotos da avaliação dele (e o recente não)', () => {
+    deletePhotosByAssessment.mockClear();
+    salvarRascunhoOnline('aluno-1', { assessmentId: 'af-novo', step: 'review', updatedAt: iso(1), data: {} });
+    salvarRascunhoOnline('aluno-2', { assessmentId: 'af-velho', step: 'review', updatedAt: iso(20), data: {} });
+
+    limparRascunhosExpirados();
+
+    expect(deletePhotosByAssessment).toHaveBeenCalledTimes(1);
+    expect(deletePhotosByAssessment).toHaveBeenCalledWith('af-velho');
   });
 
   it('trata updatedAt ausente/ilegível como expirado (falha segura)', () => {

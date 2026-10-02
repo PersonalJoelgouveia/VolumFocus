@@ -11,7 +11,7 @@ import {
   type CircumferenceEntry,
 } from '../../utils/circumference';
 import { hojeISODate, paraDateInputValue } from '../../utils/timelineDate';
-import { PHOTO_POSES, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
+import { PHOTO_POSES, deletePhotosByAssessment, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
 import {
   SKINFOLD_SITES,
   SKINFOLD_SITE_LABELS,
@@ -152,6 +152,17 @@ export function SkinfoldAssessmentForm({
   const errosCircunferencias = validarCircunferencias(circunferencias);
   const podeSalvar = podeCalcular && !erroAltura && errosCircunferencias.length === 0;
 
+  /** Avaliação NOVA cancelada: as fotos capturadas não pertencem a nenhuma avaliação salva (ficariam órfãs).
+   *  Nunca apaga durante o salvamento nem ao editar uma avaliação existente. */
+  function cancelar() {
+    if (!editando && !salvando) {
+      void deletePhotosByAssessment(assessmentId).catch((e) =>
+        console.error('SkinfoldAssessmentForm: falha ao descartar fotos da avaliação cancelada', e)
+      );
+    }
+    onCancel();
+  }
+
   async function handleSalvar() {
     setTentouSalvar(true);
     setErroFotos(null);
@@ -199,11 +210,11 @@ export function SkinfoldAssessmentForm({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
+    <div className="modal-backdrop" onClick={cancelar}>
       <div className="cli-detail-panel sf-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 style={{ marginBottom: 0 }}>{editando ? 'Editar avaliação — Dobras Cutâneas (JP7)' : 'Dobras Cutâneas (JP7)'}</h2>
-          <button className="modal-close" onClick={onCancel} aria-label="Fechar">
+          <button className="modal-close" onClick={cancelar} aria-label="Fechar">
             ×
           </button>
         </div>
@@ -357,7 +368,7 @@ export function SkinfoldAssessmentForm({
         )}
 
         <div className="sf-actions">
-          <button className="btn btn-ghost" onClick={onCancel}>
+          <button className="btn btn-ghost" onClick={cancelar}>
             Cancelar
           </button>
           <button className="btn btn-primary" onClick={handleSalvar} disabled={salvando}>
