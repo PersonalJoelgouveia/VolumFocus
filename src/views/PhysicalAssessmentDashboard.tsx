@@ -293,6 +293,8 @@ function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
 
   useEffect(() => {
     let cancelado = false;
+    // Toda URL criada aqui é revogada no cleanup (inclusive as que chegam depois do desmonte).
+    const criadas: string[] = [];
     (async () => {
       try {
         const referencias = await getPhotosByAssessment(assessment.id);
@@ -300,7 +302,11 @@ function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
         for (const pose of PHOTO_POSES) {
           if (referencias[pose]) {
             const url = await getPhotoObjectUrl(assessment.id, pose);
-            if (url) novasUrls[pose] = url;
+            if (url) {
+              criadas.push(url);
+              if (cancelado) URL.revokeObjectURL(url);
+              else novasUrls[pose] = url;
+            }
           }
         }
         if (!cancelado) setUrls(novasUrls);
@@ -312,6 +318,7 @@ function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
     })();
     return () => {
       cancelado = true;
+      criadas.forEach((u) => URL.revokeObjectURL(u));
     };
   }, [assessment.id]);
 

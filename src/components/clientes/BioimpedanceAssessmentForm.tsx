@@ -8,7 +8,7 @@ import {
   type CircumferenceEntry,
 } from '../../utils/circumference';
 import { hojeISODate, paraDateInputValue } from '../../utils/timelineDate';
-import { PHOTO_POSES, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
+import { PHOTO_POSES, deletePhotosByAssessment, getPhotosByAssessment } from '../../lib/assessmentPhotoStore';
 import type { CircumferenceMeasurement, PhysicalAssessment } from '../../types/assessment';
 import {
   calcIMC,
@@ -152,6 +152,17 @@ export function BioimpedanceAssessmentForm({
     setMassaMagraManual(valor);
   }
 
+  /** Avaliação NOVA cancelada: as fotos capturadas não pertencem a nenhuma avaliação salva (ficariam órfãs).
+   *  Nunca apaga durante a confirmação nem ao editar uma avaliação existente. */
+  function cancelar() {
+    if (!editando && !confirmando) {
+      void deletePhotosByAssessment(assessmentId).catch((e) =>
+        console.error('BioimpedanceAssessmentForm: falha ao descartar fotos da avaliação cancelada', e)
+      );
+    }
+    onCancel();
+  }
+
   function handleRevisar() {
     setTentouRevisar(true);
     if (!podeRevisar) return;
@@ -216,11 +227,11 @@ export function BioimpedanceAssessmentForm({
 
   if (etapa === 'confirmacao') {
     return (
-      <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-backdrop" onClick={cancelar}>
         <div className="cli-detail-panel bf-panel" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
             <h2 style={{ marginBottom: 0 }}>Confirmar avaliação</h2>
-            <button className="modal-close" onClick={onCancel} aria-label="Fechar">
+            <button className="modal-close" onClick={cancelar} aria-label="Fechar">
               ×
             </button>
           </div>
@@ -290,11 +301,11 @@ export function BioimpedanceAssessmentForm({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onCancel}>
+    <div className="modal-backdrop" onClick={cancelar}>
       <div className="cli-detail-panel bf-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 style={{ marginBottom: 0 }}>{editando ? 'Editar avaliação — Bioimpedância' : 'Bioimpedância'}</h2>
-          <button className="modal-close" onClick={onCancel} aria-label="Fechar">
+          <button className="modal-close" onClick={cancelar} aria-label="Fechar">
             ×
           </button>
         </div>
@@ -473,7 +484,7 @@ export function BioimpedanceAssessmentForm({
         )}
 
         <div className="bf-actions">
-          <button type="button" className="btn btn-ghost" onClick={onCancel}>
+          <button type="button" className="btn btn-ghost" onClick={cancelar}>
             Cancelar
           </button>
           <button type="button" className="btn btn-primary" onClick={handleRevisar}>

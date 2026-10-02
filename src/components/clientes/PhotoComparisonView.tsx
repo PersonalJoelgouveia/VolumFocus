@@ -52,7 +52,10 @@ export function PhotoComparisonView({ anterior, atual }: PhotoComparisonViewProp
             getPhotoObjectUrl(atual.id, pose).then((u) => [chave(atual.id, pose), u] as const),
           ])
         );
-        if (cancelado) return;
+        if (cancelado) {
+          pares.forEach(([, u]) => u && URL.revokeObjectURL(u)); // chegaram depois do desmonte
+          return;
+        }
         const mapa: Record<string, string> = {};
         for (const [k, url] of pares) if (url) mapa[k] = url;
         setUrls(mapa);

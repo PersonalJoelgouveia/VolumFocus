@@ -6,6 +6,7 @@ import { DAYS, DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
 import { calcularIdade, iniciais, isAlunoExercicioCardio } from '../../types/aluno';
 import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
+import { deletePhotosByAluno } from '../../lib/assessmentPhotoStore';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
 import './ClientesView.css';
 
@@ -41,9 +42,15 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   function handleExcluir() {
     useConfirmStore
       .getState()
-      .ask(`Remover ${aluno!.nome} da lista de alunos?`, { confirmLabel: 'Remover', danger: true })
+      .ask(`Remover ${aluno!.nome} da lista de alunos? As fotos de avaliação deste aluno salvas neste dispositivo também serão apagadas.`, {
+        confirmLabel: 'Remover',
+        danger: true,
+      })
       .then((ok) => {
         if (!ok) return;
+        void deletePhotosByAluno(aluno!.id).catch((e) =>
+          console.error('AlunoDetailModal: falha ao apagar fotos locais do aluno', e)
+        );
         removeAluno(aluno!.id);
         showToast('🗑️ Aluno removido', 'success');
         onClose();
