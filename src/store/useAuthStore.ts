@@ -5,7 +5,8 @@ import { useUIStore } from './useUIStore';
 import { useNotificationStore } from './useNotificationStore';
 import { useSyncStore } from './useSyncStore';
 import { useConfirmStore } from './useConfirmStore';
-import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
+import { enforceLocalOwner, hasLocalMedia, wipeLocalData } from '../lib/localDataLifecycle';
+import { limparRascunhosExpirados } from '../lib/onlineAssessmentDraftStore';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -124,6 +125,23 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const user = toAuthUser(fbUser);
 
       if (authorized) {
+        // Dados locais de OUTRA conta (sessão anterior encerrada sem logout):
+        // não herdar nem enviar ao backup desta conta. Limpa (sem tocar em
+        // fotos/vídeos, que só existem aqui), sai e recarrega — o novo login
+        // explícito faz o pull normal do backup.
+        if (enforceLocalOwner(fbUser.uid) === 'mismatch') {
+          pendingSyncOnGrant = false;
+          useUIStore.getState().showToast('🔒 Havia dados de outra conta neste dispositivo. Removendo — entre novamente.');
+          try {
+            await signOutUser();
+          } catch (e) {
+            console.error('useAuthStore: erro ao sair após troca de dono dos dados locais', e);
+          }
+          await wipeLocalData({ includeMedia: false });
+          setTimeout(() => window.location.reload(), 600);
+          return;
+        }
+        limparRascunhosExpirados();
         useUIStore.getState().setPersonalMode(isPT);
         useUIStore.getState().setAlunoMode(!isPT);
         set({ status: 'granted', role: isPT ? 'personal' : 'aluno', user, errorMessage: null });
@@ -202,14 +220,28 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       }
     }
 
+    // Fotos de avaliação e vídeos existem SÓ neste aparelho: apagar é
+    // definitivo, então o usuário decide (cancelar = manter).
+    let includeMedia = false;
+    if (await hasLocalMedia()) {
+      includeMedia = await useConfirmStore.getState().ask(
+        'Há fotos de avaliação e/ou vídeos salvos SOMENTE neste dispositivo (não existem na nuvem). Apagá-los também? Não será possível recuperar.',
+        { confirmLabel: 'Apagar também', danger: true }
+      );
+    }
+
     try {
       await signOutUser();
     } catch (e) {
       console.error('useAuthStore: erro ao sair', e);
     }
 
-    LOCAL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
-    useUIStore.getState().showToast('👋 Sessão encerrada. Limpando dados deste dispositivo…');
+    const limpo = await wipeLocalData({ includeMedia });
+    useUIStore.getState().showToast(
+      limpo
+        ? '👋 Sessão encerrada. Limpando dados deste dispositivo…'
+        : '⚠️ Sessão encerrada, mas parte dos dados locais não pôde ser apagada.'
+    );
     setTimeout(() => window.location.reload(), 600);
   },
 
