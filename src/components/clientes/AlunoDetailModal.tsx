@@ -7,6 +7,8 @@ import { calcularIdade, iniciais, isAlunoExercicioCardio } from '../../types/alu
 import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
 import { deletePhotosByAluno } from '../../lib/assessmentPhotoStore';
+import { deletePersonalVideosByCliente } from '../../lib/localVideoStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
 import './ClientesView.css';
 
@@ -42,7 +44,7 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   function handleExcluir() {
     useConfirmStore
       .getState()
-      .ask(`Remover ${aluno!.nome} da lista de alunos? As fotos de avaliação deste aluno salvas neste dispositivo também serão apagadas.`, {
+      .ask(`Remover ${aluno!.nome} da lista de alunos? As fotos de avaliação e os vídeos deste aluno salvos neste dispositivo também serão apagados.`, {
         confirmLabel: 'Remover',
         danger: true,
       })
@@ -51,6 +53,12 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
         void deletePhotosByAluno(aluno!.id).catch((e) =>
           console.error('AlunoDetailModal: falha ao apagar fotos locais do aluno', e)
         );
+        const meuEmail = useAuthStore.getState().user?.email;
+        if (meuEmail) {
+          void deletePersonalVideosByCliente(meuEmail, aluno!.id).catch((e) =>
+            console.error('AlunoDetailModal: falha ao apagar vídeos locais do aluno', e)
+          );
+        }
         removeAluno(aluno!.id);
         showToast('🗑️ Aluno removido', 'success');
         onClose();

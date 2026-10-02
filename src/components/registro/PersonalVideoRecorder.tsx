@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useSessionStore } from '../../store/useSessionStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
-import { deletePersonalVideo, getPersonalVideo, isIndexedDbAvailable, savePersonalVideo } from '../../lib/localVideoStore';
+import {
+  VideoStorageFullError,
+  deletePersonalVideo,
+  getPersonalVideo,
+  isIndexedDbAvailable,
+  savePersonalVideo,
+} from '../../lib/localVideoStore';
 import type { Exercise } from '../../types/exercise';
 import './PersonalVideoRecorder.css';
 
 const UNAVAILABLE_MSG = 'Vídeo não disponível neste dispositivo.';
+
+/** Teto da gravação ao vivo: antes não havia limite e os dados ficavam todos em memória. */
+const MAX_REC_SECONDS = 180;
+/** Teto de um arquivo da galeria (acima disso é recusado; antes só avisava e salvava assim mesmo). */
+const MAX_GALLERY_BYTES = 500 * 1024 * 1024;
+const FULL_MSG = '⚠️ Sem espaço no dispositivo para salvar este vídeo. Remova vídeos antigos e tente de novo.';
 
 type RecorderPhase = 'idle' | 'live' | 'recording' | 'review';
 
@@ -54,6 +67,9 @@ interface PersonalVideoRecorderProps {
  */
 export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) {
   const userEmail = useAuthStore((s) => s.user?.email);
+  // Aba de sessão de um aluno aberta (Personal)? Escopa o vídeo por cliente: o vídeo do
+  // Cliente A não aparece na sessão do Cliente B. `null` = "Meu Treino"/modo aluno.
+  const clienteId = useSessionStore((s) => s.sessions.find((x) => x.id === s.activeSessionId)?.alunoId ?? null);
   const showToast = useUIStore((s) => s.showToast);
 
   const [savedBlob, setSavedBlob] = useState<Blob | null | 'loading' | 'error'>('loading');
@@ -79,7 +95,7 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
     (async () => {
       try {
         if (!isIndexedDbAvailable()) throw new Error('IndexedDB indisponível');
-        const rec = await getPersonalVideo(userEmail, exercise.id);
+        const rec = await getPersonalVideo(userEmail, exercise.id, clienteId);
         if (cancelled) return;
         setSavedBlob(rec ? rec.blob : null);
       } catch (e) {
@@ -90,7 +106,7 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
     return () => {
       cancelled = true;
     };
-  }, [userEmail, exercise.id]);
+  }, [userEmail, exercise.id, clienteId]);
 
   // Mantém a Object URL do vídeo salvo sincronizada, revogando a anterior.
   useEffect(() => {
@@ -121,6 +137,14 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
     const id = setInterval(() => setRecSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, [phase]);
+
+  // Para sozinho no teto de duração (evita gravação infinita acumulando tudo em memória).
+  useEffect(() => {
+    if (phase === 'recording' && recSeconds >= MAX_REC_SECONDS) {
+      recorderRef.current?.stop();
+      showToast(`⏱️ Gravação encerrada: limite de ${MAX_REC_SECONDS / 60} minutos.`, 'warning');
+    }
+  }, [phase, recSeconds, showToast]);
 
   useEffect(() => {
     if (liveVideoRef.current && streamRef.current && (phase === 'live' || phase === 'recording')) {
@@ -216,30 +240,31 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
   async function handleSaveReview() {
     if (!reviewBlob || !userEmail) return;
     try {
-      await savePersonalVideo(userEmail, exercise.id, reviewBlob);
+      await savePersonalVideo(userEmail, exercise.id, reviewBlob, clienteId);
       setSavedBlob(reviewBlob);
       setReviewBlob(null);
       setPhase('idle');
       showToast('✅ Vídeo salvo neste dispositivo!', 'success');
     } catch (e) {
       console.error('PersonalVideoRecorder: falha ao salvar vídeo local', e);
-      showToast('⚠️ Não foi possível salvar o vídeo neste dispositivo.', 'error');
+      showToast(e instanceof VideoStorageFullError ? FULL_MSG : '⚠️ Não foi possível salvar o vídeo neste dispositivo.', 'error');
     }
   }
 
   async function handleGallerySelect(file: File | undefined) {
     if (!file || !userEmail) return;
     if (!file.type.startsWith('video/')) return showToast('⚠️ Selecione um arquivo de vídeo.', 'warning');
-    if (file.size > 300 * 1024 * 1024) {
-      showToast('⚠️ Vídeo grande — pode demorar ou não caber no armazenamento do dispositivo.', 'warning');
+    if (file.size > MAX_GALLERY_BYTES) {
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+      return showToast(`⚠️ Vídeo grande demais (máximo ${MAX_GALLERY_BYTES / 1024 / 1024} MB). Escolha um arquivo menor.`, 'warning');
     }
     try {
-      await savePersonalVideo(userEmail, exercise.id, file);
+      await savePersonalVideo(userEmail, exercise.id, file, clienteId);
       setSavedBlob(file);
       showToast('✅ Vídeo salvo neste dispositivo!', 'success');
     } catch (e) {
       console.error('PersonalVideoRecorder: falha ao salvar vídeo da galeria', e);
-      showToast('⚠️ Não foi possível salvar o vídeo neste dispositivo.', 'error');
+      showToast(e instanceof VideoStorageFullError ? FULL_MSG : '⚠️ Não foi possível salvar o vídeo neste dispositivo.', 'error');
     } finally {
       if (galleryInputRef.current) galleryInputRef.current.value = '';
     }
@@ -253,7 +278,7 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
     });
     if (!ok) return;
     try {
-      await deletePersonalVideo(userEmail, exercise.id);
+      await deletePersonalVideo(userEmail, exercise.id, clienteId);
       setSavedBlob(null);
       showToast('🗑️ Vídeo removido deste dispositivo', 'success');
     } catch (e) {

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useExerciseStore } from '../store/useExerciseStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useUIStore } from '../store/useUIStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { countPersonalVideosByExercise, deletePersonalVideosByExercise } from '../lib/localVideoStore';
 import { MUSCLE_COLOR } from '../data/muscleColors';
 import type { Exercise } from '../types/exercise';
 import { ExerciseCreatorPanel } from '../components/banco/ExerciseCreatorPanel';
@@ -40,11 +42,19 @@ export function BancoView() {
   const editingExercise = editingId ? exercises.find((e) => e.id === editingId) : undefined;
 
   async function handleDelete(ex: Exercise) {
-    const ok = await useConfirmStore.getState().ask(`Remover "${exerciseName(ex)}" do banco?`, {
+    const email = useAuthStore.getState().user?.email;
+    const comVideo = email ? await countPersonalVideosByExercise(email, ex.id).catch(() => 0) : 0;
+    const aviso = comVideo > 0 ? ' Os vídeos pessoais deste exercício salvos neste dispositivo também serão apagados.' : '';
+    const ok = await useConfirmStore.getState().ask(`Remover "${exerciseName(ex)}" do banco?${aviso}`, {
       confirmLabel: 'Remover',
       danger: true,
     });
     if (!ok) return;
+    if (email && comVideo > 0) {
+      void deletePersonalVideosByExercise(email, ex.id).catch((e) =>
+        console.error('BancoView: falha ao apagar vídeos locais do exercício', e)
+      );
+    }
     removeExercise(ex.id);
     showToast('🗑️ Exercício removido', 'success');
     if (editingId === ex.id) setEditingId(null);
