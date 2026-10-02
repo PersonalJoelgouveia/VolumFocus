@@ -164,6 +164,23 @@ describe.skipIf(!disponivel)('assessmentPhotoStore — isolamento por dono', () 
     expect(await chavesDoBanco()).toEqual(['uidA:af-10_front', 'uidB:af-11_front']);
   });
 
+  it('assessmentId forjado com ":" não alcança nem "adota" a foto de outra conta (via caminho de legado)', async () => {
+    setLocalOwner('uidB');
+    await savePhoto('al-9', 'af-1', 'front', blob('foto-de-B'), dim);
+
+    setLocalOwner('uidA');
+    const forjado = 'uidB:af-1'; // chave legada `${id}_front` == chave namespaced de B
+    expect(await getPhoto(forjado, 'front')).toBeNull();
+    expect(await getPhotosByAssessment(forjado)).toEqual({ assessmentId: forjado });
+    await deletePhoto(forjado, 'front');
+    await deletePhotosByAssessment(forjado);
+    await expect(savePhoto('al-1', forjado, 'front', blob('x'), dim)).rejects.toThrow();
+
+    expect(await chavesDoBanco()).toEqual(['uidB:af-1_front']); // intacta, no namespace de B
+    setLocalOwner('uidB');
+    expect(await lerTexto((await getPhoto('af-1', 'front'))!.blob)).toBe('foto-de-B');
+  });
+
   it('não deixa conexões abertas (deleteDatabase não fica bloqueado)', async () => {
     setLocalOwner('uidA');
     await savePhoto('al-1', 'af-1', 'front', blob('a'), dim);

@@ -10,6 +10,7 @@ vi.mock('../assessmentPhotoStore', () => ({
 }));
 
 import { enforceLocalOwner, hasLocalMedia, wipeLocalData } from '../localDataLifecycle';
+import { clearLocalOwnerMemory, setLocalOwner } from '../localOwner';
 import {
   carregarRascunhoOnline,
   limparRascunhosExpirados,
@@ -81,8 +82,14 @@ describe('wipeLocalData', () => {
 });
 
 describe('rascunho online: expiração', () => {
-  beforeEach(() => void installLocalStorage());
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    installLocalStorage();
+    setLocalOwner('uidA'); // o rascunho só é gravado para uma conta autenticada
+  });
+  afterEach(() => {
+    clearLocalOwnerMemory();
+    vi.unstubAllGlobals();
+  });
 
   const draft = (updatedAt: string) => ({ assessmentId: 'af-1', step: 'review', updatedAt, data: {} });
 

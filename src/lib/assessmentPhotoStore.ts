@@ -96,6 +96,18 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+/**
+ * `assessmentId` vem de fora (campo do documento do Firestore, rascunho local) e entra na
+ * CHAVE do banco. Um id com ':' poderia forjar a chave de outro dono (`${uid}:...`) pelo
+ * caminho de legado e "adotar" a foto dele. Só formato seguro é aceito; qualquer outro é
+ * tratado como "sem foto" (leitura) ou ignorado (exclusão).
+ */
+const ID_SEGURO = /^[A-Za-z0-9_-]{1,128}$/;
+
+function idValido(assessmentId: string): boolean {
+  return typeof assessmentId === 'string' && ID_SEGURO.test(assessmentId);
+}
+
 /** Dono local atual. Sem conta autenticada não há foto acessível (falha segura). */
 function currentOwner(): string {
   const uid = getLocalOwner();
@@ -171,6 +183,7 @@ export async function savePhoto(
   blob: Blob,
   dimensoes: { width: number; height: number }
 ): Promise<PhotoMetadata> {
+  if (!idValido(assessmentId)) throw new Error('Identificador de avaliação inválido para foto');
   const owner = currentOwner();
   const metadata: PhotoMetadata = {
     id: photoId(owner, assessmentId, pose),
@@ -193,6 +206,7 @@ export async function savePhoto(
 
 /** Registro completo (metadados + blob) de uma pose específica, ou `null` se não capturada. */
 export async function getPhoto(assessmentId: string, pose: PhotoPose): Promise<PhotoRecord | null> {
+  if (!idValido(assessmentId)) return null;
   const owner = currentOwner();
   return withStore<PhotoRecord | null>('readwrite', (store, done) => {
     store.get(photoId(owner, assessmentId, pose)).onsuccess = (ev) => {
@@ -208,6 +222,7 @@ export async function getPhoto(assessmentId: string, pose: PhotoPose): Promise<P
 
 /** As referências das 4 poses de uma avaliação DO DONO ATUAL, via índice (sem varrer o store todo). */
 export async function getPhotosByAssessment(assessmentId: string): Promise<AssessmentPhotos> {
+  if (!idValido(assessmentId)) return { assessmentId };
   const owner = currentOwner();
   return withStore<AssessmentPhotos>('readwrite', (store, done) => {
     store.index(INDEX_ASSESSMENT).getAllKeys(assessmentId).onsuccess = (ev) => {
@@ -232,6 +247,7 @@ export async function getPhotosByAssessment(assessmentId: string): Promise<Asses
 
 /** Remove a foto daquela pose (do dono atual, e a cópia legada, se ainda existir). */
 export async function deletePhoto(assessmentId: string, pose: PhotoPose): Promise<void> {
+  if (!idValido(assessmentId)) return;
   const owner = currentOwner();
   return withStore<void>('readwrite', (store, done) => {
     store.delete(photoId(owner, assessmentId, pose));
@@ -242,6 +258,7 @@ export async function deletePhoto(assessmentId: string, pose: PhotoPose): Promis
 
 /** Remove TODAS as fotos de uma avaliação (exclusão da avaliação / avaliação nova cancelada / rascunho vencido). */
 export async function deletePhotosByAssessment(assessmentId: string): Promise<void> {
+  if (!idValido(assessmentId)) return;
   const owner = currentOwner();
   return withStore<void>('readwrite', (store, done) => {
     for (const pose of PHOTO_POSES) {

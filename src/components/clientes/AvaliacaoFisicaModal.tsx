@@ -215,6 +215,7 @@ export function AvaliacaoFisicaModal({
   if (step === 'online-form') {
     return (
       <OnlineAssessmentForm
+        key={alunoId}
         alunoId={alunoId}
         onCancel={editando ? handleCancelarEdicao : () => setStep('resumo')}
         assessmentExistente={editando ?? undefined}

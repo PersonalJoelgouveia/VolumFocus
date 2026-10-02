@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
+import { useUIStore } from '../../store/useUIStore';
 import { calcularIdade } from '../../types/aluno';
 import { FotosComparativas } from '../avaliacao/FotosComparativas';
 import {
@@ -18,8 +19,8 @@ import {
   validarAltura,
   validarPeso,
   validarValorCircunferencia,
-  type OnlinePointFormState,
 } from '../../utils/onlineAssessment';
+import { sanearEstadoOnline, type OnlineFormState } from '../../utils/onlineDraftSanitize';
 import type { PhysicalAssessment } from '../../types/assessment';
 import { OnlineAnthropometry } from './OnlineAnthropometry';
 import { OnlineCircumferenceGuide } from './OnlineCircumferenceGuide';
@@ -41,17 +42,6 @@ const STEP_LABELS: Record<Step, string> = {
   questionario: 'Questionário',
   revisao: 'Revisão',
 };
-
-interface OnlineFormState {
-  data: string;
-  maoDominante: 'direita' | 'esquerda' | '';
-  objetivoPrincipal: string;
-  nivelExperiencia: string;
-  peso: string;
-  altura: string;
-  pontosCircunferencia: OnlinePointFormState[];
-  questionario: PhysicalAssessment['questionnaire'];
-}
 
 function estadoInicial(): OnlineFormState {
   return {
@@ -119,11 +109,19 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExis
   // sentido no fluxo de autoavaliação do próprio Aluno, nunca ao editar.
   useEffect(() => {
     if (editando) return;
-    const rascunho = carregarRascunhoOnline<OnlineFormState>(alunoId);
+    const rascunho = carregarRascunhoOnline(alunoId);
     if (rascunho) {
-      setAssessmentId(rascunho.assessmentId);
-      setStep(rascunho.step as Step);
-      setForm(rascunho.data);
+      // Conteúdo vindo do localStorage nunca é confiável: valida o formato e a etapa
+      // (rascunho de versão antiga/corrompido não pode derrubar a tela).
+      const dados = sanearEstadoOnline(rascunho.data, estadoInicial());
+      const etapa = (STEPS as readonly string[]).includes(rascunho.step) ? (rascunho.step as Step) : null;
+      if (dados && etapa) {
+        setAssessmentId(rascunho.assessmentId);
+        setStep(etapa);
+        setForm(dados);
+      } else {
+        limparRascunhoOnline(alunoId);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alunoId]);
@@ -136,7 +134,9 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExis
       updatedAt: new Date().toISOString(),
       data: dadosAtualizados ?? form,
     };
-    salvarRascunhoOnline(alunoId, draft);
+    if (!salvarRascunhoOnline(alunoId, draft)) {
+      useUIStore.getState().showToast('⚠️ Não foi possível salvar o rascunho neste dispositivo.', 'warning');
+    }
   }
 
   function irPara(proximoStep: Step) {
