@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAlunoStore } from '../store/useAlunoStore';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AvaliacaoFisicaModal } from '../components/clientes/AvaliacaoFisicaModal';
 
 /**
@@ -42,5 +43,9 @@ export function MinhaAvaliacaoFisicaView({ onClose }: { onClose: () => void }) {
 
   if (!meuAlunoId) return null;
 
-  return <AvaliacaoFisicaModal alunoId={meuAlunoId} onClose={onClose} readOnly />;
+  return (
+    <ErrorBoundary area="a Avaliação Física" onClose={onClose}>
+      <AvaliacaoFisicaModal alunoId={meuAlunoId} onClose={onClose} readOnly />
+    </ErrorBoundary>
+  );
 }

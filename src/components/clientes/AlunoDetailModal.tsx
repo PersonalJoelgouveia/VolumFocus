@@ -9,6 +9,7 @@ import { buildGroupedRows } from '../../utils/dayLogGrouping';
 import { deletePhotosByAluno } from '../../lib/assessmentPhotoStore';
 import { deletePersonalVideosByCliente } from '../../lib/localVideoStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { ErrorBoundary } from '../ErrorBoundary';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
 import './ClientesView.css';
 
@@ -205,7 +206,9 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
       </div>
 
       {avaliacaoOpen && (
-        <AvaliacaoFisicaModal alunoId={alunoId} onClose={() => setAvaliacaoOpen(false)} />
+        <ErrorBoundary area="a Avaliação Física" onClose={() => setAvaliacaoOpen(false)}>
+          <AvaliacaoFisicaModal alunoId={alunoId} onClose={() => setAvaliacaoOpen(false)} />
+        </ErrorBoundary>
       )}
     </div>
   );

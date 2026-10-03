@@ -1,4 +1,4 @@
-import { collection, db, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc } from './firebase';
+import { collection, db, deleteDoc, doc, getDocs, limit, orderBy, query, setDoc, updateDoc } from './firebase';
 import type { TreinoNotificacao } from '../types/notification';
 
 /**
@@ -11,15 +11,11 @@ import type { TreinoNotificacao } from '../types/notification';
  * plana, com o id determinístico abaixo, é mais simples de consultar e
  * naturalmente idempotente (mesmo papel do `dedupeKey` original).
  *
- * IMPORTANTE — requer regra nova no Firestore (ainda não publicada):
- *   match /notificacoesTreinos/{id} {
- *     allow create: if request.auth != null
- *       && request.resource.data.alunoEmail == request.auth.token.email.lower();
- *     allow read, update: if request.auth != null
- *       && request.auth.token.email.lower() in PT_EMAILS;
- *   }
- * (mesmo espírito das regras já publicadas para `alunos`/`backups` — ver
- * auditoria de cibersegurança de agosto/2026.)
+ * SEGURANÇA — regras em `firestore.rules`: o aluno só CRIA (aluno cadastrado, campos
+ * fixos, `id == id do documento`, `alunoEmail` == e-mail do token, `lida == false`);
+ * ler, marcar lida e apagar é só do Personal. Como o aluno não lê, a idempotência
+ * não usa `getDoc`: reenviar o mesmo id vira um `update`, que a regra nega
+ * (`permission-denied` = a notificação do dia já existe).
  */
 
 function slug(email: string): string {
@@ -46,9 +42,6 @@ export async function registrarTreinoConcluido(
   const dataTreino = new Date().toISOString().slice(0, 10);
   const id = `${slug(emailLc)}_${dataTreino}_${dia}`;
 
-  const existing = await getDoc(notifDocRef(id));
-  if (existing.exists()) return;
-
   const notificacao: TreinoNotificacao = {
     id,
     alunoEmail: emailLc,
@@ -58,7 +51,13 @@ export async function registrarTreinoConcluido(
     lida: false,
     criadaEm: new Date().toISOString(),
   };
-  await setDoc(notifDocRef(id), notificacao);
+  try {
+    await setDoc(notifDocRef(id), notificacao);
+  } catch (e) {
+    // Já registrada hoje (o 2º setDoc é um update, negado pelas regras): não é erro.
+    if ((e as { code?: string } | null)?.code === 'permission-denied') return;
+    throw e;
+  }
 }
 
 /** Lista as notificações mais recentes (lado do Personal). Equivale a ntf_loadTreinos() + ntf_render(). */

@@ -1,0 +1,129 @@
+rules_version = '2';
+
+// =============================================================================
+// VolumFocus — Firestore Security Rules  (PROPOSTA, ainda NÃO publicada)
+//
+// Modelo: o frontend NÃO é fronteira de confiança. Quem é quem vem SEMPRE de
+// request.auth.token (e-mail verificado pelo Google), nunca de campos enviados.
+//   - Personal (PT_EMAILS): lê/escreve tudo.   <-- manter igual a PT_EMAILS em
+//     src/store/useAuthStore.ts E em storage.rules.
+//   - Aluno: só o próprio caminho /alunos/{seu e-mail}/..., e só CRIA a própria
+//     avaliação online (campos fixos) e a notificação de treino concluído.
+//   - Todo o resto: negado (default deny).
+//
+// ANTES DE PUBLICAR: rodar rules-tests/ no Emulator e conferir no Rules
+// Playground. Exporte as regras atuais do Console como backup.
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- identidade (sempre derivada do token) --------------------------------
+    function logado() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function emailToken() {
+      return request.auth.token.email.lower();
+    }
+    function ehPT() {
+      return logado() &&
+        emailToken() in ['joelgouveia16@gmail.com', 'personaljoelgouveia@gmail.com'];
+    }
+    function ehDono(email) {
+      return logado() && emailToken() == email;
+    }
+    function cadastrado(email) {
+      return exists(/databases/$(database)/documents/alunos/$(email));
+    }
+    // Aluno autenticado E já cadastrado pelo Personal.
+    function alunoLogadoCadastrado() {
+      let e = emailToken();
+      return logado() && exists(/databases/$(database)/documents/alunos/$(e));
+    }
+
+    // ---- avaliação online criada pelo ALUNO -----------------------------------
+    // Só campos esperados; sem `review`/`evaluator`; status fixo; id == id do
+    // documento; faixas numéricas plausíveis. (O Personal não passa por aqui.)
+    function avaliacaoOnlineValida(email, id) {
+      let d = request.resource.data;
+      return ehDono(email)
+        && cadastrado(email)
+        && d.keys().hasOnly(['id', 'alunoId', 'date', 'protocol', 'notes', 'anthropometry',
+                             'circumferences', 'skinfolds', 'results', 'createdAt', 'updatedAt',
+                             'status', 'submittedBy', 'questionnaire'])
+        && d.keys().hasAll(['id', 'alunoId', 'date', 'protocol', 'anthropometry',
+                            'circumferences', 'skinfolds', 'results', 'createdAt', 'updatedAt',
+                            'status', 'submittedBy'])
+        && d.id == id
+        && d.protocol == 'online'
+        && d.submittedBy == 'aluno'
+        && d.status == 'enviada'
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && d.date is string && d.date.size() <= 40
+        && d.createdAt is string && d.createdAt.size() <= 40
+        && d.updatedAt is string && d.updatedAt.size() <= 40
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 5000))
+        && d.anthropometry is map
+        && d.anthropometry.keys().hasOnly(['peso', 'altura', 'imc'])
+        && d.anthropometry.peso is number && d.anthropometry.peso >= 20 && d.anthropometry.peso <= 500
+        && d.anthropometry.altura is number && d.anthropometry.altura >= 50 && d.anthropometry.altura <= 260
+        && d.anthropometry.imc is number && d.anthropometry.imc >= 5 && d.anthropometry.imc <= 100
+        && d.circumferences is list && d.circumferences.size() <= 60
+        && d.skinfolds is map
+        && d.results is map
+        && d.results.keys().hasOnly(['relacaoCinturaQuadril', 'relacaoCinturaEstatura'])
+        && (!('questionnaire' in d) || d.questionnaire is map);
+    }
+
+    // ---- notificação "treino concluído" ---------------------------------------
+    function notificacaoValida(id) {
+      let d = request.resource.data;
+      return (ehPT() || alunoLogadoCadastrado())
+        && d.keys().hasOnly(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm'])
+        && d.keys().hasAll(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm'])
+        && id.size() <= 200
+        && d.id == id
+        && d.alunoEmail == emailToken()
+        && d.lida == false
+        && d.alunoNome is string && d.alunoNome.size() <= 120
+        && d.dia is number && d.dia >= 0 && d.dia <= 31
+        && d.dataTreino is string && d.dataTreino.size() <= 20
+        && d.criadaEm is string && d.criadaEm.size() <= 40;
+    }
+
+    // ---- /alunos/{email} -------------------------------------------------------
+    match /alunos/{email} {
+      // `get` do próprio e-mail também vale para doc inexistente (é o gate do app).
+      allow get: if ehPT() || ehDono(email);
+      allow list: if ehPT();
+      allow create, update, delete: if ehPT();
+
+      match /avaliacoesFisicas/{id} {
+        allow get, list: if ehPT() || ehDono(email);
+        allow update, delete: if ehPT();
+        allow create: if ehPT() || avaliacaoOnlineValida(email, id);
+      }
+
+      // Prontuário: só o Personal (o aluno NUNCA lê).
+      match /anotacoes/{id} {
+        allow read, delete: if ehPT();
+        allow create, update: if ehPT()
+          && request.resource.data.alunoId is string
+          && request.resource.data.conteudo is string
+          && request.resource.data.conteudo.size() <= 200000;
+      }
+    }
+
+    // ---- /notificacoesTreinos/{id} --------------------------------------------
+    match /notificacoesTreinos/{id} {
+      allow create: if notificacaoValida(id);
+      allow read, update, delete: if ehPT();
+    }
+
+    // ---- /backups/{email}: cada usuário só no próprio -------------------------
+    match /backups/{email} {
+      allow read, write: if ehDono(email);
+    }
+
+    // Qualquer outro caminho: negado.
+  }
+}

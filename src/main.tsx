@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './styles/layout.css';
 import './index.css';
 import App from './App.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { initTheme } from './store/useThemeStore';
 import { initLocale } from './store/useLocaleStore';
 
@@ -12,6 +13,8 @@ initLocale();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );

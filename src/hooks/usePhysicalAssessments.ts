@@ -64,7 +64,14 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
     setLoading(true);
     setError(null);
 
-    listAssessments(email)
+    listAssessments(email, (ids) => {
+      if (!cancelled) {
+        showToast(
+          `⚠️ ${ids.length} avaliação(ões) com dados inválidos foi(ram) ignorada(s). Se for inesperado, verifique no Firebase.`,
+          'warning'
+        );
+      }
+    })
       .then((remotas) => {
         if (!cancelled) setAvaliacoes(alunoId, remotas);
       })
@@ -79,7 +86,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
     return () => {
       cancelled = true;
     };
-  }, [email, alunoId, setAvaliacoes, tentativa]);
+  }, [email, alunoId, setAvaliacoes, showToast, tentativa]);
 
   const retry = useCallback(() => setTentativa((n) => n + 1), []);
 

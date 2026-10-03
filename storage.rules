@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// VolumFocus — Storage Rules (PROPOSTA, ainda NÃO publicada).
+// Imagens de exercício são públicas para leitura (o app exibe a todos os alunos),
+// mas SÓ o Personal (PT_EMAILS, igual a firestore.rules/useAuthStore.ts) escreve.
+// Fotos corporais e vídeos NÃO passam pelo Firebase (ficam só no dispositivo).
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function ehPT() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['joelgouveia16@gmail.com', 'personaljoelgouveia@gmail.com'];
+    }
+
+    match /exercicios/{exerciseId}/{fileName} {
+      allow read: if true;
+      allow create, update: if ehPT()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if ehPT();
+    }
+
+    // Qualquer outro caminho: negado.
+  }
+}

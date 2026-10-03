@@ -42,7 +42,7 @@ function valorNumerico(v: unknown): string {
   return '';
 }
 
-function sanearQuestionario(raw: unknown): OnlineQuestionnaireData {
+export function sanearQuestionario(raw: unknown): OnlineQuestionnaireData {
   if (!ehObjeto(raw)) return {};
   const q: OnlineQuestionnaireData = {};
   const t = (k: keyof OnlineQuestionnaireData, max: number) => {
