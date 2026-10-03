@@ -1,0 +1,18 @@
+# dependências e build
+node_modules/
+dist/
+dist-ssr/
+coverage/
+
+# segredos e configuração local (NUNCA versionar)
+.env
+.env.*
+!.env.example
+*.pem
+serviceAccount*.json
+
+# artefatos
+*.zip
+*.patch
+*.log
+.DS_Store

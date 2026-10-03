@@ -8,6 +8,8 @@ import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
 import { deletePhotosByAluno } from '../../lib/assessmentPhotoStore';
 import { deletePersonalVideosByCliente } from '../../lib/localVideoStore';
+import { limparRascunhoOnline } from '../../lib/onlineAssessmentDraftStore';
+import { useSessionStore } from '../../store/useSessionStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
@@ -45,7 +47,7 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   function handleExcluir() {
     useConfirmStore
       .getState()
-      .ask(`Remover ${aluno!.nome} da lista de alunos? As fotos de avaliação e os vídeos deste aluno salvos neste dispositivo também serão apagados.`, {
+      .ask(`Remover ${aluno!.nome} da lista de alunos? Serão apagados neste dispositivo: fotos, vídeos, rascunhos, sessão aberta e o cache de avaliações e anotações. Nada é apagado na nuvem, e o acesso do aluno ao app NÃO é revogado.`, {
         confirmLabel: 'Remover',
         danger: true,
       })
@@ -60,6 +62,9 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
             console.error('AlunoDetailModal: falha ao apagar vídeos locais do aluno', e)
           );
         }
+        limparRascunhoOnline(aluno!.id);
+        const sessoes = useSessionStore.getState();
+        sessoes.sessions.filter((s) => s.alunoId === aluno!.id).forEach((s) => sessoes.fecharSessao(s.id));
         removeAluno(aluno!.id);
         showToast('🗑️ Aluno removido', 'success');
         onClose();

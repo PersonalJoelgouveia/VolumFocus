@@ -80,7 +80,9 @@ export const useAlunoStore = create<AlunoState>()(
 
       addAluno: (data) => {
         const aluno: Aluno = {
-          id: `aluno-${Date.now()}`,
+          // Sufixo aleatório: só `Date.now()` colidia para alunos criados no mesmo milissegundo
+          // (importação em lote) e um id repetido mistura fotos, rascunhos, vídeos e notas dos dois.
+          id: `aluno-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           status: 'ativo',
           rotina: criarRotinaVazia(),
           ...data,
@@ -94,7 +96,17 @@ export const useAlunoStore = create<AlunoState>()(
           alunos: state.alunos.map((a) => (a.id === id ? { ...a, ...patch } : a)),
         })),
 
-      removeAluno: (id) => set((state) => ({ alunos: state.alunos.filter((a) => a.id !== id) })),
+      // Remove também o cache local de avaliações e anotações do aluno (antes ficavam em
+      // `jg3_alunos` para sempre: antropometria e prontuário de quem já saiu da lista).
+      // A nuvem não é tocada — o histórico permanece lá e volta se o aluno for readicionado.
+      removeAluno: (id) =>
+        set((state) => {
+          const { [id]: _avaliacoes, ...avaliacoes } = state.avaliacoes;
+          const { [id]: _notas, ...notas } = state.notas;
+          void _avaliacoes;
+          void _notas;
+          return { alunos: state.alunos.filter((a) => a.id !== id), avaliacoes, notas };
+        }),
 
       getAluno: (id) => get().alunos.find((a) => a.id === id),
 
