@@ -10,6 +10,7 @@ import { DayExerciseList } from '../components/registro/DayExerciseList';
 import { ConjugarBar } from '../components/registro/ConjugarBar';
 import { SessionTabsBar } from '../components/registro/SessionTabsBar';
 import { AlunoRotinaSyncBanner } from '../components/registro/AlunoRotinaSyncBanner';
+import { MinhasRotinasSection } from '../components/registro/MinhasRotinasSection';
 import { RegistroActionsMenu } from '../components/registro/RegistroActionsMenu';
 import { QuickNoteButton } from '../components/registro/QuickNotePanel';
 import { useSessionStore } from '../store/useSessionStore';
@@ -31,6 +32,7 @@ export function RegistroView() {
   const setDayLog = useWorkoutStore((s) => s.setDayLog);
 
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
+  const isAlunoMode = useUIStore((s) => s.isAlunoMode);
   const activeSessionId = useSessionStore((s) => s.activeSessionId);
   const sessions = useSessionStore((s) => s.sessions);
   const activeSessao = activeSessionId ? sessions.find((s) => s.id === activeSessionId) : undefined;
@@ -180,6 +182,8 @@ export function RegistroView() {
           />
         </div>
       </div>
+
+      {isAlunoMode && <MinhasRotinasSection />}
 
       <div className="level-pill">
         {DAYS.map((day, i) => (
