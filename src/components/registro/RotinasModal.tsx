@@ -6,8 +6,11 @@ import { useConfirmStore } from '../../store/useConfirmStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useRotinaSyncStore } from '../../store/useRotinaSyncStore';
+import { useSessionStore } from '../../store/useSessionStore';
+import { useAlunoStore } from '../../store/useAlunoStore';
 import { fetchPublishedRotina } from '../../lib/alunoRepository';
-import { buildWeekLogFromAlunoRotina } from '../../utils/importAlunoRotina';
+import { criarRotinaAluno } from '../../lib/alunoRotinasRepository';
+import { buildAlunoRotinaFromWeekLog, buildWeekLogFromAlunoRotina } from '../../utils/importAlunoRotina';
 import type { AlunoRotina } from '../../types/aluno';
 import { DAYS_SHORT } from '../../types/workout';
 import './RotinasModal.css';
@@ -56,6 +59,17 @@ export function RotinasModal() {
   const [ptAtualizadoEm, setPtAtualizadoEm] = useState<string | null>(null);
   const [ptImporting, setPtImporting] = useState(false);
 
+  // Sessão de aluno em foco (Personal acompanhando um aluno): "Salvar Atual"
+  // grava a semana como NOVA rotina ativa do aluno, em vez de em Rotinas Salvas.
+  // Selecionamos os arrays brutos (referência estável) e resolvemos fora do seletor.
+  const role = useAuthStore((s) => s.role);
+  const sessions = useSessionStore((s) => s.sessions);
+  const activeSessionId = useSessionStore((s) => s.activeSessionId);
+  const alunos = useAlunoStore((s) => s.alunos);
+  const sessaoAtiva = role === 'personal' && activeSessionId ? sessions.find((x) => x.id === activeSessionId) : undefined;
+  const alunoDaSessao = sessaoAtiva ? alunos.find((a) => a.id === sessaoAtiva.alunoId) : undefined;
+  const [salvandoAluno, setSalvandoAluno] = useState(false);
+
   useEffect(() => {
     if (!isOpen || !isAlunoMode || !user?.email) return;
     setPtState('loading');
@@ -98,9 +112,50 @@ export function RotinasModal() {
     }
   }
 
+  async function handleSalvarParaAluno(trimmed: string) {
+    const primeiroNome = (alunoDaSessao?.nome ?? sessaoAtiva?.alunoNome ?? 'aluno').split(' ')[0];
+    // Sessão aberta mas sem e-mail resolvível: NÃO cai no salvamento pessoal (iria pro lugar errado).
+    if (!alunoDaSessao?.email || !user?.email) {
+      return showToast('⚠️ Não foi possível identificar o e-mail do aluno desta sessão.', 'error');
+    }
+    const { rotina, exerciciosNaoResolvidos } = buildAlunoRotinaFromWeekLog(weekLog, exercises);
+    if (rotina.every((d) => d.exercicios.length === 0)) {
+      return showToast('⚠️ A semana atual está vazia. Adicione exercícios antes de salvar.', 'warning');
+    }
+    const aviso = exerciciosNaoResolvidos.length
+      ? ` ${exerciciosNaoResolvidos.length} exercício(s) não encontrado(s) no banco serão omitidos.`
+      : '';
+    const ok = await useConfirmStore.getState().ask(
+      `Salvar "${trimmed}" como a nova rotina ativa de ${primeiroNome}? A rotina ativa anterior será mantida, mas desativada.${aviso}`,
+      { confirmLabel: 'Salvar Rotina' }
+    );
+    if (!ok) return;
+
+    setSalvandoAluno(true);
+    try {
+      await criarRotinaAluno(alunoDaSessao.email, {
+        nome: trimmed,
+        personalEmail: user.email,
+        rotina,
+        ativa: true,
+      });
+      setNome('');
+      showToast(`✅ Rotina "${trimmed}" salva e ativada para ${primeiroNome}!`, 'success');
+    } catch (e) {
+      console.error('RotinasModal: falha ao salvar rotina do aluno', e);
+      showToast('⚠️ Não foi possível salvar a rotina do aluno. Tente novamente.', 'error');
+    } finally {
+      setSalvandoAluno(false);
+    }
+  }
+
   function handleSalvar() {
     const trimmed = nome.trim();
     if (!trimmed) return showToast('⚠️ Digite um nome para a rotina', 'warning');
+    if (sessaoAtiva) {
+      if (!salvandoAluno) void handleSalvarParaAluno(trimmed);
+      return;
+    }
     salvar(trimmed, weekLog);
     setNome('');
     showToast('✅ Rotina salva!', 'success');
@@ -162,6 +217,11 @@ export function RotinasModal() {
           </div>
         )}
 
+        {sessaoAtiva && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--teal)', marginBottom: 8 }}>
+            👤 Sessão de {sessaoAtiva.alunoNome}: "Salvar Atual" cria uma nova rotina para este aluno e a torna a rotina ativa.
+          </p>
+        )}
         <div className="rotinas-create-block">
           <input
             type="text"
@@ -170,8 +230,8 @@ export function RotinasModal() {
             onChange={(e) => setNome(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSalvar()}
           />
-          <button className="btn btn-primary btn-sm" onClick={handleSalvar}>
-            💾 Salvar Atual
+          <button className="btn btn-primary btn-sm" onClick={handleSalvar} disabled={salvandoAluno}>
+            {salvandoAluno ? 'Salvando…' : '💾 Salvar Atual'}
           </button>
         </div>
 
