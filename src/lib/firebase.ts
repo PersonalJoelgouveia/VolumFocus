@@ -13,6 +13,7 @@ import {
   limit,
   startAfter,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -60,5 +61,6 @@ export {
   limit,
   startAfter,
   getDocs,
+  writeBatch,
 };
 export { ref, uploadBytes, getDownloadURL, deleteObject };

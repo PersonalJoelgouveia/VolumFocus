@@ -197,6 +197,53 @@ describe('/alunos/{email}/anotacoes — prontuário só do Personal', () => {
   });
 });
 
+const rotina = (id: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  nome: 'Hipertrofia A',
+  rotina: Array.from({ length: 7 }, () => ({ tipo: 'Descanso Total', exercicios: [] })),
+  ativa: false,
+  criadaEm: '2026-10-05T12:00:00.000Z',
+  atualizadaEm: '2026-10-05T12:00:00.000Z',
+  personalEmail: PT,
+  ...extra,
+});
+
+describe('/alunos/{email}/rotinas — só o Personal escreve; aluno lê as próprias', () => {
+  const ref = (c: ReturnType<typeof ctxPT>, email: string, id: string) => doc(c, 'alunos', email, 'rotinas', id);
+
+  it('Personal cria rotina válida com o próprio personalEmail', async () => {
+    await assertSucceeds(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1')));
+  });
+  it('Personal NÃO forja personalEmail de outro na criação, nem grava campo extra/estrutura inválida', async () => {
+    await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { personalEmail: 'outro@x.com' })));
+    await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { extra: 1 })));
+    await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { rotina: [] })));
+    await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('outro-id')));
+  });
+  it('aluno não escreve nem na própria subcoleção', async () => {
+    await assertFails(setDoc(ref(ctxA(), ALUNO_A, 'r1'), rotina('r1', { personalEmail: ALUNO_A })));
+  });
+  it('aluno lê as próprias rotinas, não as de outro; estranho e anônimo não leem', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'alunos', ALUNO_A, 'rotinas', 'r1'), rotina('r1'));
+    });
+    await assertSucceeds(getDoc(ref(ctxA(), ALUNO_A, 'r1')));
+    await assertSucceeds(getDocs(collection(ctxA(), 'alunos', ALUNO_A, 'rotinas')));
+    await assertFails(getDoc(ref(ctxB(), ALUNO_A, 'r1')));
+    await assertFails(getDoc(ref(ctxEstranho(), ALUNO_A, 'r1')));
+    await assertFails(getDoc(ref(ctxAnon(), ALUNO_A, 'r1')));
+  });
+  it('Personal atualiza (ativa) e exclui; aluno não', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'alunos', ALUNO_A, 'rotinas', 'r1'), rotina('r1'));
+    });
+    await assertFails(updateDoc(ref(ctxA(), ALUNO_A, 'r1'), { ativa: true }));
+    await assertSucceeds(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { ativa: true, atualizadaEm: '2026-10-06T00:00:00.000Z' }));
+    await assertFails(deleteDoc(ref(ctxA(), ALUNO_A, 'r1')));
+    await assertSucceeds(deleteDoc(ref(ctxPT(), ALUNO_A, 'r1')));
+  });
+});
+
 describe('/notificacoesTreinos — aluno cadastrado só cria a própria', () => {
   const ref = (db: ReturnType<typeof ctxA>, id: string) => doc(db, 'notificacoesTreinos', id);
   it('aluno cadastrado cria a própria', async () => {

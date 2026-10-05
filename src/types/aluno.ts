@@ -70,6 +70,23 @@ export interface Aluno {
   rotina: AlunoRotina;
 }
 
+/**
+ * Rotina nomeada do aluno, persistida em `alunos/{email}/rotinas/{id}`.
+ * Um aluno pode ter várias; no máximo UMA com `ativa === true`.
+ * `rotina` reaproveita o mesmo schema semanal de `Aluno.rotina`.
+ * Datas em ISO string (mesma convenção do restante do Firestore do app).
+ */
+export interface AlunoRotinaSalva {
+  id: string;
+  nome: string;
+  rotina: AlunoRotina;
+  ativa: boolean;
+  criadaEm: string;
+  atualizadaEm: string;
+  /** E-mail (minúsculo) do Personal que criou/atualizou a rotina. */
+  personalEmail: string;
+}
+
 /** Rotina vazia (7 dias de "Descanso Total") — equivale a cli_diaVazio(). */
 export function criarRotinaVazia(): AlunoRotina {
   return DAYS_SHORT.map(() => ({ tipo: 'Descanso Total', exercicios: [] }));
