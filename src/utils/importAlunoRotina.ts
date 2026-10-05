@@ -1,7 +1,14 @@
-import type { AlunoExercicio, AlunoRotina } from '../types/aluno';
+import type {
+  AlunoExercicio,
+  AlunoExercicioCardio,
+  AlunoExercicioForca,
+  AlunoRotina,
+  AlunoRotinaDia,
+} from '../types/aluno';
 import { isAlunoExercicioCardio } from '../types/aluno';
 import type { Exercise } from '../types/exercise';
-import type { CardioLogEntry, StrengthLogEntry, WeekLog } from '../types/workout';
+import { DAYS_SHORT, isCardioLogEntry } from '../types/workout';
+import type { CardioLogEntry, StrengthLogEntry, WeekLog, WorkoutLogEntry } from '../types/workout';
 import type { HrZone } from '../types/cardio';
 import { genLogEntryId } from './logEntryId';
 
@@ -130,4 +137,96 @@ export function buildWeekLogFromAlunoRotina(
   });
 
   return { weekLog, novosExercicios };
+}
+
+// ---------------------------------------------------------------------------
+// Caminho inverso: WeekLog → AlunoRotina (PRESCRIÇÃO, não histórico de execução)
+// ---------------------------------------------------------------------------
+
+export interface WeekLogToRotinaResult {
+  rotina: AlunoRotina;
+  /** `exId` de entradas omitidas por não existirem no banco (não dá pra obter o nome). */
+  exerciciosNaoResolvidos: string[];
+}
+
+export interface WeekLogToRotinaOptions {
+  /** Rótulo (`tipo`) de cada dia, por índice 0-6 — ex.: o `tipo` de uma rotina
+   *  anterior do aluno. Só vale pra dias COM exercício; dia vazio é sempre
+   *  "Descanso Total" (mesma regra de useAlunoStore). */
+  tiposDia?: readonly (string | undefined)[];
+}
+
+/** Rótulo usado quando o dia tem exercício mas não há `tipo` conhecido
+ *  (mesmo padrão de useAlunoStore ao sair de "Descanso Total"). */
+const TIPO_DIA_PADRAO = 'Treino Personalizado';
+
+function numeroFinito(n: unknown, fallback: number): number {
+  return typeof n === 'number' && Number.isFinite(n) ? n : fallback;
+}
+
+/** Reps prescritas: janela do Personal (min-max) quando existe, senão o número base. */
+function formatarReps(e: StrengthLogEntry): string {
+  if (e.repRangeMin !== undefined && e.repRangeMax !== undefined) return `${e.repRangeMin}-${e.repRangeMax}`;
+  return String(numeroFinito(e.reps, 10));
+}
+
+/**
+ * Converte o `WeekLog` (Semana Atual) numa `AlunoRotina` — inverso de
+ * `buildWeekLogFromAlunoRotina`. Guarda só o que PRESCREVE o treino
+ * (exercício, ordem, séries, reps, carga base, agrupamento, notas); descarta
+ * estado de execução/progresso (`doneSerie`, `serieLoads`/`serieReps` por série,
+ * `distance`, `avgHr`, `id` da instância, `hrZone` derivada) — e nunca olha
+ * `exDone`/`weekPSE`, que vivem fora do WeekLog. Sempre devolve 7 dias, com
+ * objetos novos (nenhuma referência compartilhada com o `weekLog`).
+ */
+export function buildAlunoRotinaFromWeekLog(
+  weekLog: WeekLog,
+  exercises: readonly Exercise[],
+  options: WeekLogToRotinaOptions = {}
+): WeekLogToRotinaResult {
+  const nomePorId = new Map(exercises.map((e) => [e.id, e.name.trim()] as const));
+  const exerciciosNaoResolvidos: string[] = [];
+
+  function converter(entry: WorkoutLogEntry): AlunoExercicio | null {
+    const nome = nomePorId.get(entry.exId);
+    if (!nome) {
+      exerciciosNaoResolvidos.push(entry.exId);
+      return null;
+    }
+    const extras = {
+      ...(entry.notes ? { notes: entry.notes } : {}),
+      ...(entry.groupId ? { groupId: entry.groupId } : {}),
+      ...(entry.groupType ? { groupType: entry.groupType } : {}),
+    };
+
+    if (isCardioLogEntry(entry)) {
+      const ex: AlunoExercicioCardio = {
+        nome,
+        cardio: true,
+        duracao: `${numeroFinito(entry.duration, 20)} min`,
+        intensidade: String(numeroFinito(entry.intensity, 5)),
+        ...extras,
+      };
+      return ex;
+    }
+    const ex: AlunoExercicioForca = {
+      nome,
+      series: numeroFinito(entry.sets, 0),
+      reps: formatarReps(entry),
+      carga: numeroFinito(entry.load, 0),
+      ...extras,
+    };
+    return ex;
+  }
+
+  const rotina: AlunoRotina = DAYS_SHORT.map((_, dayIdx): AlunoRotinaDia => {
+    const exercicios = (weekLog[dayIdx] ?? []).flatMap((entry) => {
+      const ex = converter(entry);
+      return ex ? [ex] : [];
+    });
+    if (!exercicios.length) return { tipo: 'Descanso Total', exercicios: [] };
+    return { tipo: options.tiposDia?.[dayIdx]?.trim() || TIPO_DIA_PADRAO, exercicios };
+  });
+
+  return { rotina, exerciciosNaoResolvidos };
 }
