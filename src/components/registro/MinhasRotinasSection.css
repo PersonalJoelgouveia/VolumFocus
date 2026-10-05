@@ -20,3 +20,13 @@
 }
 .mrs-pills { display: flex; gap: 4px; flex-wrap: wrap; }
 .mrs-readonly { font-size: 0.72rem; color: var(--text-3); margin: 6px 0 4px; }
+.mrs-voltar { margin-bottom: 12px; }
+.mrs-voltar-fim { margin-top: 14px; }
+.mrs-detalhe-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mrs-detalhe-nome { font-family: var(--font-title); font-size: 1.05rem; font-weight: 700; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.mrs-semana { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.mrs-dia { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--rs); padding: 12px 14px; }
+.mrs-dia-descanso { opacity: 0.75; }
+.mrs-dia-count { font-weight: 500; color: var(--text-3); }
+.mrs-descanso { font-size: 0.74rem; color: var(--text-3); margin-top: 4px; }
+.mrs-ord { color: var(--text-3); font-family: var(--font-mono); font-size: 0.72rem; }

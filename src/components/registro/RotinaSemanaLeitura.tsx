@@ -1,52 +1,51 @@
-import { useState } from 'react';
-import { DAYS, DAYS_SHORT } from '../../types/workout';
+import { DAYS, GROUP_LABELS } from '../../types/workout';
 import { isAlunoExercicioCardio } from '../../types/aluno';
-import type { AlunoRotina } from '../../types/aluno';
+import type { AlunoRotina, AlunoRotinaDia } from '../../types/aluno';
 import '../clientes/ClientesView.css';
 
 /**
- * Prescrição semanal em MODO LEITURA (barra de dias + lista de exercícios), com
- * as mesmas classes `cli-*` de AlunoDetailModal/MinhaRotinaView. Puramente
- * visual: não lê nem escreve em nenhum store de treino.
+ * Prescrição semanal COMPLETA em MODO LEITURA: os 7 dias empilhados, cada um com
+ * seus exercícios na ordem prescrita. Usa as mesmas classes `cli-*` de
+ * AlunoDetailModal/MinhaRotinaView. Puramente visual: não lê nem escreve em
+ * nenhum store de treino.
+ *
+ * O schema da rotina (`AlunoExercicio`) não tem campos próprios de descanso ou
+ * método: quando o Personal os registrou, estão em `notes` (exibido) e em
+ * `groupType` (Bi-Set/Tri-Set/Superset/Circuito, exibido como chip).
  */
 export function RotinaSemanaLeitura({ rotina }: { rotina: AlunoRotina }) {
-  const [activeDay, setActiveDay] = useState(() => {
-    const primeiro = rotina.findIndex((d) => d.exercicios.length > 0);
-    return primeiro >= 0 ? primeiro : 0;
-  });
-  const dia = rotina[activeDay];
-
   return (
-    <>
-      <div className="cli-days-bar">
-        {DAYS_SHORT.map((label, d) => {
-          const count = rotina[d]?.exercicios.length ?? 0;
-          return (
-            <button
-              key={label}
-              className={`cli-day-btn${activeDay === d ? ' active' : ''}`}
-              onClick={() => setActiveDay(d)}
-            >
-              <div className="cli-dl">{label}</div>
-              <div className="cli-ds">{count > 0 ? `${count}ex` : '-'}</div>
-            </button>
-          );
-        })}
+    <div className="mrs-semana">
+      {DAYS.map((nomeDia, d) => (
+        <DiaLeitura key={nomeDia} nomeDia={nomeDia} dia={rotina[d]} />
+      ))}
+    </div>
+  );
+}
+
+function DiaLeitura({ nomeDia, dia }: { nomeDia: string; dia: AlunoRotinaDia | undefined }) {
+  const exercicios = dia?.exercicios ?? [];
+  return (
+    <section className={`mrs-dia${exercicios.length === 0 ? ' mrs-dia-descanso' : ''}`}>
+      <div className="cli-day-type" style={{ marginBottom: exercicios.length ? 10 : 0 }}>
+        {nomeDia} — {dia?.tipo ?? 'Descanso Total'}
+        {exercicios.length > 0 && (
+          <span className="mrs-dia-count">
+            {' '}
+            · {exercicios.length} ex.
+          </span>
+        )}
       </div>
 
-      <div className="cli-day-type">
-        {DAYS[activeDay]} — {dia?.tipo ?? 'Descanso Total'}
-      </div>
-
-      <div className="cli-ex-list">
-        {!dia || dia.exercicios.length === 0 ? (
-          <div className="cli-rest-day">💤 Dia de descanso — nenhum exercício programado.</div>
-        ) : (
-          dia.exercicios.map((ex, i) => (
+      {exercicios.length === 0 ? (
+        <div className="mrs-descanso">💤 Dia de descanso — nenhum exercício programado.</div>
+      ) : (
+        <div className="cli-ex-list">
+          {exercicios.map((ex, i) => (
             <div className="cli-ex-item" key={i}>
               <div className="cli-ex-info">
                 <div className="cli-ex-name" title={ex.nome}>
-                  {ex.nome}
+                  <span className="mrs-ord">{i + 1}.</span> {ex.nome}
                 </div>
                 <div className="cli-ex-detail">
                   {isAlunoExercicioCardio(ex) ? (
@@ -64,6 +63,7 @@ export function RotinaSemanaLeitura({ rotina }: { rotina: AlunoRotina }) {
                       {ex.sugestao && <span className="cli-ex-chip cli-ex-chip-sug">▲ {ex.sugestao}kg</span>}
                     </>
                   )}
+                  {ex.groupType && <span className="cli-ex-chip cli-ex-chip-sug">{GROUP_LABELS[ex.groupType]}</span>}
                 </div>
                 {ex.notes && (
                   <div style={{ fontSize: '0.65rem', color: 'var(--teal)', marginTop: 6, fontStyle: 'italic' }}>
@@ -72,9 +72,9 @@ export function RotinaSemanaLeitura({ rotina }: { rotina: AlunoRotina }) {
                 )}
               </div>
             </div>
-          ))
-        )}
-      </div>
-    </>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

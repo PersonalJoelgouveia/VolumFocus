@@ -44,6 +44,7 @@ export function RegistroView() {
 
   const checkEntries = useProgressStore((s) => s.checkEntries);
 
+  const [rotinaAbertaId, setRotinaAbertaId] = useState<string | null>(null);
   const [mode, setMode] = useState<ListMode>('normal');
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [groupType, setGroupType] = useState<GroupType>('biset');
@@ -128,6 +129,25 @@ export function RegistroView() {
     showToast('Grupo desfeito.', 'success');
   }
 
+  // Aluno vendo o detalhe de uma rotina salva: tela própria (somente leitura). A
+  // Semana Atual não é tocada — o estado dela continua nos stores e volta ao fechar.
+  if (isAlunoMode && rotinaAbertaId) {
+    return (
+      <div>
+        <div className="sec-row">
+          <div className="page-title">
+            Treinos <span className="tag">ROTINA</span>
+          </div>
+        </div>
+        <MinhasRotinasSection
+          abertaId={rotinaAbertaId}
+          onAbrir={setRotinaAbertaId}
+          onVoltar={() => setRotinaAbertaId(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       {isPersonalMode && <SessionTabsBar />}
@@ -183,7 +203,7 @@ export function RegistroView() {
         </div>
       </div>
 
-      {isAlunoMode && <MinhasRotinasSection />}
+      {isAlunoMode && <MinhasRotinasSection abertaId={null} onAbrir={setRotinaAbertaId} onVoltar={() => setRotinaAbertaId(null)} />}
 
       <div className="level-pill">
         {DAYS.map((day, i) => (

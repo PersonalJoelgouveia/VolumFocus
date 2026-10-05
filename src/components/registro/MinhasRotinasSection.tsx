@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import {
   selectRotinasOrdenadas,
@@ -17,23 +17,30 @@ function dataCurta(iso: string): string {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR');
 }
 
+interface MinhasRotinasSectionProps {
+  /** Rotina aberta no detalhe (estado controlado por RegistroView), ou null = lista. */
+  abertaId: string | null;
+  onAbrir: (id: string) => void;
+  onVoltar: () => void;
+}
+
 /**
  * Seção "Rotinas" do aluno em Treinos: cards com TODAS as rotinas dele (a ativa
- * primeiro, marcada "Atual"). Tocar num card abre a prescrição semanal em modo
- * leitura — NÃO importa nada para a Semana Atual e não toca no useWorkoutStore.
+ * primeiro, marcada "Atual"). Tocar num card abre o DETALHE da rotina (semana
+ * completa, somente leitura) no lugar da lista, com botão para voltar — NÃO
+ * importa nada para a Semana Atual e não toca no useWorkoutStore.
  *
  * Dados: useMinhasRotinasStore (identidade vem do Firebase Auth, leitura única).
  * Sem controles de Personal: é somente leitura.
  */
-export function MinhasRotinasSection() {
+export function MinhasRotinasSection({ abertaId, onAbrir, onVoltar }: MinhasRotinasSectionProps) {
   const email = useAuthStore((s) => s.user?.email);
   const rotinas = useMinhasRotinasStore(selectRotinasOrdenadas);
   const status = useMinhasRotinasStore(selectStatusMinhasRotinas);
   const erro = useMinhasRotinasStore((s) => s.erro);
   const carregar = useMinhasRotinasStore((s) => s.carregar);
 
-  // Guarda só o id; a rotina é resolvida na lista atual (nunca fica cópia obsoleta).
-  const [abertaId, setAbertaId] = useState<string | null>(null);
+  // Só o id é guardado; a rotina é resolvida na lista atual (nunca fica cópia obsoleta).
   const aberta = abertaId ? rotinas.find((r) => r.id === abertaId) : undefined;
 
   useEffect(() => {
@@ -41,6 +48,39 @@ export function MinhasRotinasSection() {
   }, [email, carregar]);
 
   if (status === 'nao-autorizado') return null;
+
+  if (abertaId) {
+    return (
+      <section className="mrs" aria-label="Detalhe da rotina">
+        <button className="btn btn-ghost btn-sm mrs-voltar" onClick={onVoltar}>
+          ← Voltar às rotinas
+        </button>
+
+        {!aberta ? (
+          <div className="mrs-note">
+            {status === 'carregando' ? 'Carregando rotina…' : 'Esta rotina não está mais disponível.'}
+          </div>
+        ) : (
+          <>
+            <div className="mrs-detalhe-head">
+              <div className="mrs-detalhe-nome">{aberta.nome}</div>
+              {aberta.ativa && <span className="mrs-badge">Atual</span>}
+            </div>
+            <div className="routine-meta">
+              {resumirRotina(aberta.rotina).diasComTreino.length} dias de treino ·{' '}
+              {resumirRotina(aberta.rotina).totalExercicios} exercícios
+              {aberta.atualizadaEm && ` · atualizada em ${dataCurta(aberta.atualizadaEm)}`}
+            </div>
+            <p className="mrs-readonly">Somente leitura — abrir a rotina não altera seu treino da semana.</p>
+            <RotinaSemanaLeitura key={aberta.id} rotina={aberta.rotina} />
+            <button className="btn btn-ghost btn-sm btn-full mrs-voltar-fim" onClick={onVoltar}>
+              ← Voltar às rotinas
+            </button>
+          </>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="mrs" aria-label="Rotinas">
@@ -60,28 +100,11 @@ export function MinhasRotinasSection() {
       {rotinas.length > 0 && (
         <div className="mrs-list">
           {rotinas.map((r) => (
-            <CartaoRotina key={r.id} rotina={r} onAbrir={() => setAbertaId(r.id)} />
+            <CartaoRotina key={r.id} rotina={r} onAbrir={() => onAbrir(r.id)} />
           ))}
         </div>
       )}
 
-      {aberta && (
-        <div className="modal-backdrop" onClick={() => setAbertaId(null)}>
-          <div className="cli-detail-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
-            <div className="modal-header">
-              <h2>
-                {aberta.nome} {aberta.ativa && <span className="mrs-badge">Atual</span>}
-              </h2>
-              <button className="modal-close" onClick={() => setAbertaId(null)} aria-label="Fechar">
-                ×
-              </button>
-            </div>
-            {aberta.atualizadaEm && <div className="cli-last">Atualizada em: {dataCurta(aberta.atualizadaEm)}</div>}
-            <p className="mrs-readonly">Somente leitura — abrir a rotina não altera seu treino da semana.</p>
-            <RotinaSemanaLeitura key={aberta.id} rotina={aberta.rotina} />
-          </div>
-        </div>
-      )}
     </section>
   );
 }
