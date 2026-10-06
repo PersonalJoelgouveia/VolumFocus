@@ -208,39 +208,61 @@ const rotina = (id: string, extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
-describe('/alunos/{email}/rotinas — só o Personal escreve; aluno lê as próprias', () => {
+describe('/alunos/{email}/rotinas — só o Personal escreve; aluno lê as próprias; sem delete', () => {
   const ref = (c: ReturnType<typeof ctxPT>, email: string, id: string) => doc(c, 'alunos', email, 'rotinas', id);
+  const semear = async (id = 'r1', extra: Record<string, unknown> = {}, email = ALUNO_A) =>
+    env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'alunos', email, 'rotinas', id), rotina(id, extra));
+    });
 
-  it('Personal cria rotina válida com o próprio personalEmail', async () => {
+  it('PT cria rotina válida para aluno cadastrado, com o próprio personalEmail', async () => {
     await assertSucceeds(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1')));
   });
-  it('Personal NÃO forja personalEmail de outro na criação, nem grava campo extra/estrutura inválida', async () => {
+  it('PT NÃO cria para e-mail sem cadastro, nem forja autoria, nem foge do formato', async () => {
+    await assertFails(setDoc(ref(ctxPT(), 'fantasma@x.com', 'r1'), rotina('r1')));
     await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { personalEmail: 'outro@x.com' })));
     await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { extra: 1 })));
     await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { rotina: [] })));
+    await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { ativa: 'sim' })));
+    await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('r1', { nome: '' })));
     await assertFails(setDoc(ref(ctxPT(), ALUNO_A, 'r1'), rotina('outro-id')));
   });
-  it('aluno não escreve nem na própria subcoleção', async () => {
-    await assertFails(setDoc(ref(ctxA(), ALUNO_A, 'r1'), rotina('r1', { personalEmail: ALUNO_A })));
+  it('PT ativa/desativa e edita; id, criadaEm e personalEmail são imutáveis', async () => {
+    await semear('r1', { personalEmail: 'personaljoelgouveia@gmail.com' });
+    await assertSucceeds(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { ativa: true, atualizadaEm: '2026-10-06T00:00:00.000Z' }));
+    await assertSucceeds(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { nome: 'Novo nome' }));
+    await assertFails(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { personalEmail: PT }));
+    await assertFails(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { criadaEm: '2020-01-01T00:00:00.000Z' }));
+    await assertFails(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { id: 'r2' }));
+    await assertFails(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { rotina: [] }));
   });
-  it('aluno lê as próprias rotinas, não as de outro; estranho e anônimo não leem', async () => {
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'alunos', ALUNO_A, 'rotinas', 'r1'), rotina('r1'));
-    });
+  it('aluno lê (get/list) só as próprias', async () => {
+    await semear('r1');
+    await semear('rb', {}, ALUNO_B);
     await assertSucceeds(getDoc(ref(ctxA(), ALUNO_A, 'r1')));
     await assertSucceeds(getDocs(collection(ctxA(), 'alunos', ALUNO_A, 'rotinas')));
+    await assertFails(getDoc(ref(ctxA(), ALUNO_B, 'rb')));
+    await assertFails(getDocs(collection(ctxA(), 'alunos', ALUNO_B, 'rotinas')));
     await assertFails(getDoc(ref(ctxB(), ALUNO_A, 'r1')));
+  });
+  it('estranho, anônimo e e-mail NÃO verificado não leem', async () => {
+    await semear('r1');
     await assertFails(getDoc(ref(ctxEstranho(), ALUNO_A, 'r1')));
     await assertFails(getDoc(ref(ctxAnon(), ALUNO_A, 'r1')));
+    await assertFails(getDoc(ref(ctxFalsoA(), ALUNO_A, 'r1')));
+    await assertFails(getDocs(collection(ctxFalsoA(), 'alunos', ALUNO_A, 'rotinas')));
   });
-  it('Personal atualiza (ativa) e exclui; aluno não', async () => {
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'alunos', ALUNO_A, 'rotinas', 'r1'), rotina('r1'));
-    });
+  it('aluno NÃO cria, NÃO altera (nem `ativa`) e NÃO apaga — nem na própria subcoleção', async () => {
+    await semear('r1');
+    await assertFails(setDoc(ref(ctxA(), ALUNO_A, 'novo'), rotina('novo', { personalEmail: ALUNO_A })));
     await assertFails(updateDoc(ref(ctxA(), ALUNO_A, 'r1'), { ativa: true }));
-    await assertSucceeds(updateDoc(ref(ctxPT(), ALUNO_A, 'r1'), { ativa: true, atualizadaEm: '2026-10-06T00:00:00.000Z' }));
+    await assertFails(updateDoc(ref(ctxA(), ALUNO_A, 'r1'), { nome: 'minha' }));
     await assertFails(deleteDoc(ref(ctxA(), ALUNO_A, 'r1')));
-    await assertSucceeds(deleteDoc(ref(ctxPT(), ALUNO_A, 'r1')));
+    await assertFails(setDoc(ref(ctxB(), ALUNO_A, 'r1'), rotina('r1')));
+  });
+  it('ninguém apaga, nem o Personal (histórico preservado)', async () => {
+    await semear('r1');
+    await assertFails(deleteDoc(ref(ctxPT(), ALUNO_A, 'r1')));
   });
 });
 

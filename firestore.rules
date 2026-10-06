@@ -75,20 +75,38 @@ service cloud.firestore {
     }
 
     // ---- rotinas do aluno: alunos/{email}/rotinas/{id} -------------------------
-    // Só o Personal escreve; o aluno lê as próprias. Campos fixos, 7 dias.
-    // `personalEmail` precisa ser o do PT que CRIA (não forjável); no update ele
-    // só precisa continuar string (outro PT pode ativar/editar rotina alheia).
-    function rotinaValida(id) {
+    // Só o Personal (PT_EMAILS) escreve; o aluno só LÊ as próprias. Ninguém apaga
+    // (histórico preservado). Usa as funções de identidade acima — nada novo de auth.
+    //
+    // Formato fixo: id == id do documento; `rotina` = 7 dias; `ativa` booleano.
+    function rotinaFormatoValido(id) {
       let d = request.resource.data;
       return d.keys().hasOnly(['id', 'nome', 'rotina', 'ativa', 'criadaEm', 'atualizadaEm', 'personalEmail'])
         && d.keys().hasAll(['id', 'nome', 'rotina', 'ativa', 'criadaEm', 'atualizadaEm', 'personalEmail'])
         && d.id == id
+        && id.size() <= 128
         && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
         && d.rotina is list && d.rotina.size() == 7
         && d.ativa is bool
         && d.criadaEm is string && d.criadaEm.size() <= 40
         && d.atualizadaEm is string && d.atualizadaEm.size() <= 40
         && d.personalEmail is string && d.personalEmail.size() <= 254;
+    }
+    // Criar: PT, para um aluno JÁ cadastrado (não cria lixo em caminho de quem não existe),
+    // e `personalEmail` é o do próprio token — não dá para forjar autoria.
+    function rotinaCriacaoValida(email, id) {
+      return ehPT()
+        && cadastrado(email)
+        && rotinaFormatoValido(id)
+        && request.resource.data.personalEmail == emailToken();
+    }
+    // Atualizar (editar conteúdo, ativar/desativar): PT; id, criadaEm e autoria são imutáveis.
+    function rotinaAtualizacaoValida(id) {
+      return ehPT()
+        && rotinaFormatoValido(id)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.criadaEm == resource.data.criadaEm
+        && request.resource.data.personalEmail == resource.data.personalEmail;
     }
 
     // ---- notificação "treino concluído" ---------------------------------------
@@ -122,10 +140,9 @@ service cloud.firestore {
 
       match /rotinas/{id} {
         allow get, list: if ehPT() || ehDono(email);
-        allow delete: if ehPT();
-        allow create: if ehPT() && rotinaValida(id)
-          && request.resource.data.personalEmail == emailToken();
-        allow update: if ehPT() && rotinaValida(id);
+        allow create: if rotinaCriacaoValida(email, id);
+        allow update: if rotinaAtualizacaoValida(id);
+        allow delete: if false;
       }
 
       // Prontuário: só o Personal (o aluno NUNCA lê).
