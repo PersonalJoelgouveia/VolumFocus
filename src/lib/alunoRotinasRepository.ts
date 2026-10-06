@@ -1,6 +1,8 @@
 import { collection, db, doc, getDoc, getDocs, orderBy, query, writeBatch } from './firebase';
 import { criarRotinaVazia } from '../types/aluno';
-import type { AlunoRotina, AlunoRotinaSalva } from '../types/aluno';
+import type { AlunoExercicio, AlunoRotina, AlunoRotinaSalva } from '../types/aluno';
+import { DAYS_SHORT } from '../types/workout';
+import { ordenarRotinasAluno } from '../utils/ordenarRotinasAluno';
 
 /**
  * Repository das rotinas do aluno (várias por aluno) — subcoleção
@@ -31,6 +33,23 @@ function semUndefined<T>(valor: T): T {
   return JSON.parse(JSON.stringify(valor)) as T;
 }
 
+/**
+ * As regras só garantem "lista de 7"; o conteúdo dos dias não é validado no servidor.
+ * Normaliza para SEMPRE 7 dias com `exercicios` array de objetos com `nome` — um documento
+ * malformado não pode derrubar a tela do aluno (resumo/lista assumem esse formato).
+ */
+function normalizarRotina(bruta: unknown[]): AlunoRotina {
+  return DAYS_SHORT.map((_, i) => {
+    const dia = bruta[i] && typeof bruta[i] === 'object' ? (bruta[i] as Record<string, unknown>) : {};
+    const exercicios = Array.isArray(dia.exercicios)
+      ? (dia.exercicios.filter(
+          (e) => e && typeof e === 'object' && typeof (e as { nome?: unknown }).nome === 'string'
+        ) as AlunoExercicio[])
+      : [];
+    return { tipo: typeof dia.tipo === 'string' && dia.tipo ? dia.tipo : 'Descanso Total', exercicios };
+  });
+}
+
 function validarRotinaRemota(data: unknown, docId: string): AlunoRotinaSalva | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;
@@ -39,7 +58,7 @@ function validarRotinaRemota(data: unknown, docId: string): AlunoRotinaSalva | n
   return {
     id: docId,
     nome: d.nome,
-    rotina: d.rotina as AlunoRotina,
+    rotina: normalizarRotina(d.rotina),
     ativa: d.ativa,
     criadaEm: typeof d.criadaEm === 'string' ? d.criadaEm : '',
     atualizadaEm: typeof d.atualizadaEm === 'string' ? d.atualizadaEm : '',
@@ -84,8 +103,8 @@ export async function obterRotinaAluno(studentEmail: string, rotinaId: string): 
 
 /** Rotina ativa do aluno, ou `null` se nenhuma estiver ativa. */
 export async function obterRotinaAtiva(studentEmail: string): Promise<AlunoRotinaSalva | null> {
-  const todas = await listarRotinasAluno(studentEmail);
-  return todas.find((r) => r.ativa) ?? null;
+  const todas = ordenarRotinasAluno(await listarRotinasAluno(studentEmail));
+  return todas.find((r) => r.ativa) ?? null; // mesma regra da lista: a ativa mais recente
 }
 
 /**

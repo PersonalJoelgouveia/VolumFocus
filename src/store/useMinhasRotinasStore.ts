@@ -107,12 +107,15 @@ async function executarCarga(email: string | null): Promise<void> {
     const rotinas = await listarRotinasAluno(email);
     // Chamada mais nova em andamento, ou a conta mudou durante a leitura: descarta.
     if (token !== tokenCarga || resolverEmailDoAlunoAutenticado() !== email) return;
+    // Se, por corrida entre dois Personals, houver mais de uma `ativa`, vale a de `atualizadaEm`
+    // mais recente — a mesma que aparece primeiro na lista ordenada (nunca duas respostas diferentes).
+    const ordenadas = ordenarRotinasAluno(rotinas);
     set({
       status: 'pronto',
       donoEmail: email,
       rotinas,
-      ativa: rotinas.find((r) => r.ativa) ?? null,
-      ordenadas: ordenarRotinasAluno(rotinas),
+      ativa: ordenadas[0]?.ativa ? ordenadas[0] : null,
+      ordenadas,
       erro: null,
     });
   } catch (e) {

@@ -71,6 +71,18 @@ describe('useMinhasRotinasStore', () => {
     expect(selectRotinasOrdenadas(s)).toBe(selectRotinasOrdenadas(useMinhasRotinasStore.getState()));
   });
 
+  it('duas ativas (corrida entre Personals): `ativa` é a de atualizadaEm mais recente, igual à 1ª da lista', async () => {
+    logarComo('a@x.com');
+    h.listar.mockResolvedValue([
+      r('criada-por-ultimo-mas-velha', true, '2026-10-01T00:00:00.000Z'),
+      r('atualizada-por-ultimo', true, '2026-10-05T00:00:00.000Z'),
+    ]);
+    await useMinhasRotinasStore.getState().carregar();
+    const s = useMinhasRotinasStore.getState();
+    expect(s.ativa?.id).toBe('atualizada-por-ultimo');
+    expect(s.ordenadas[0].id).toBe(s.ativa?.id);
+  });
+
   it('sem rotinas: pronto, lista vazia estável e ativa null', async () => {
     logarComo('a@x.com');
     h.listar.mockResolvedValue([]);

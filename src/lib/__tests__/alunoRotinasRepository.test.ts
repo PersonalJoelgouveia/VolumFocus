@@ -95,4 +95,24 @@ describe('alunoRotinasRepository', () => {
     getDocs.mockResolvedValue({ docs: [docRot('x', false)] });
     expect(await obterRotinaAtiva('a@x.com')).toBeNull();
   });
+
+  it('documento com dias malformados é normalizado para 7 dias válidos (não derruba a tela)', async () => {
+    getDocs.mockResolvedValue({
+      docs: [
+        docRot('mal', true, { rotina: [null, { tipo: 5, exercicios: 'x' }, { tipo: 'Peito', exercicios: [{ nome: 'Supino' }, null, { series: 3 }] }] }),
+      ],
+    });
+    const [r] = await listarRotinasAluno('a@x.com');
+    expect(r.rotina).toHaveLength(7);
+    expect(r.rotina[0]).toEqual({ tipo: 'Descanso Total', exercicios: [] });
+    expect(r.rotina[1]).toEqual({ tipo: 'Descanso Total', exercicios: [] });
+    expect(r.rotina[2]).toEqual({ tipo: 'Peito', exercicios: [{ nome: 'Supino' }] });
+  });
+
+  it('obterRotinaAtiva com duas ativas devolve a de atualizadaEm mais recente', async () => {
+    getDocs.mockResolvedValue({
+      docs: [docRot('velha', true, { atualizadaEm: '2026-10-01' }), docRot('nova', true, { atualizadaEm: '2026-10-05' })],
+    });
+    expect((await obterRotinaAtiva('a@x.com'))?.id).toBe('nova');
+  });
 });
