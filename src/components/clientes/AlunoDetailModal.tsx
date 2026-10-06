@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -23,6 +23,9 @@ interface AlunoDetailModalProps {
 }
 
 import { RotinasDoAlunoSection } from './RotinasDoAlunoSection';
+import { selectRotinasDoAluno, useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
+import { rotinaSemExercicios } from '../../utils/resumoRotina';
+import type { AlunoRotinaSalva } from '../../types/aluno';
 /**
  * Sucessor de #modal-cli-aluno (cli_openAluno/cli_renderMiniPerfil/
  * cli_renderDaysBar/cli_renderDayContent, index.html ~10603-10716):
@@ -37,6 +40,42 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
 
   const initialDay = aluno?.rotina.findIndex((d) => d.exercicios.length > 0) ?? -1;
   const [activeDay, setActiveDay] = useState(initialDay >= 0 ? initialDay : 0);
+  const setRotinaDia = useAlunoStore((s) => s.setRotinaDia);
+  const rotinasNuvem = useRotinasDoAlunoStore(selectRotinasDoAluno(aluno?.email ?? ''));
+  const hidratou = useRef(false);
+  const [origemRascunho, setOrigemRascunho] = useState<string | null>(null);
+
+  /** Copia a rotina da nuvem para o rascunho local de edição (a semana Seg–Dom abaixo). */
+  function carregarNoRascunho(r: AlunoRotinaSalva) {
+    const copia = JSON.parse(JSON.stringify(r.rotina)) as AlunoRotinaSalva['rotina'];
+    copia.forEach((dia, d) => setRotinaDia(alunoId, d, dia));
+    setOrigemRascunho(r.nome);
+    const primeiro = copia.findIndex((d) => d.exercicios.length > 0);
+    setActiveDay(primeiro >= 0 ? primeiro : 0);
+  }
+
+  // A semana abaixo é o rascunho local; se ele ainda está EM BRANCO e o aluno tem rotina
+  // atual na nuvem, mostra essa rotina (uma vez por abertura — nunca sobrescreve rascunho com conteúdo).
+  useEffect(() => {
+    if (hidratou.current || !aluno || rotinasNuvem.status !== 'pronto') return;
+    hidratou.current = true;
+    if (rotinasNuvem.ativa && rotinaSemExercicios(aluno.rotina)) carregarNoRascunho(rotinasNuvem.ativa);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rotinasNuvem.status]);
+
+  async function handleEditarRotinaDaNuvem(r: AlunoRotinaSalva) {
+    if (!aluno) return;
+    if (!rotinaSemExercicios(aluno.rotina)) {
+      const ok = await useConfirmStore.getState().ask(
+        `Carregar "${r.nome}" no editor? O rascunho atual da semana de ${aluno.nome.split(' ')[0]} será substituído (a rotina publicada na nuvem não muda até você usar Salvar & Publicar).`,
+        { confirmLabel: 'Carregar no Editor' }
+      );
+      if (!ok) return;
+    }
+    carregarNoRascunho(r);
+    const primeiro = r.rotina.findIndex((d) => d.exercicios.length > 0);
+    onEditarRotina(primeiro >= 0 ? primeiro : 0);
+  }
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
 
@@ -158,7 +197,13 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           </div>
         )}
 
-        <RotinasDoAlunoSection email={aluno.email} />
+        <RotinasDoAlunoSection email={aluno.email} onEditar={(r) => void handleEditarRotinaDaNuvem(r)} />
+
+        {origemRascunho && (
+          <div className="cli-last" style={{ marginBottom: 8 }}>
+            Semana abaixo carregada da rotina "{origemRascunho}". Edite e use Salvar &amp; Publicar para criar uma nova rotina atual.
+          </div>
+        )}
 
         <div className="cli-days-bar">
           {DAYS_SHORT.map((label, d) => {

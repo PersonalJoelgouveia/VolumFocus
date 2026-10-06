@@ -37,7 +37,16 @@ export function CartaoRotina({ rotina, onAbrir }: { rotina: AlunoRotinaSalva; on
 }
 
 /** Detalhe SOMENTE LEITURA de uma rotina (semana completa) + botões de voltar. Nunca grava nada. */
-export function DetalheRotinaLeitura({ rotina, onVoltar }: { rotina: AlunoRotinaSalva; onVoltar: () => void }) {
+export function DetalheRotinaLeitura({
+  rotina,
+  onVoltar,
+  onEditar,
+}: {
+  rotina: AlunoRotinaSalva;
+  onVoltar: () => void;
+  /** Só o Personal passa isto: carrega a rotina no editor (a publicação cria uma NOVA versão). */
+  onEditar?: () => void;
+}) {
   const { diasComTreino, totalExercicios } = resumirRotina(rotina.rotina);
   return (
     <>
@@ -53,6 +62,16 @@ export function DetalheRotinaLeitura({ rotina, onVoltar }: { rotina: AlunoRotina
         {rotina.atualizadaEm && ` · atualizada em ${dataCurta(rotina.atualizadaEm)}`}
       </div>
       <p className="mrs-readonly">Somente leitura — abrir a rotina não altera o treino da semana.</p>
+      {onEditar && (
+        <>
+          <button className="btn btn-primary btn-sm btn-full" onClick={onEditar}>
+            ✎ Editar esta rotina
+          </button>
+          <p className="mrs-readonly">
+            Abre no editor como rascunho. Ao usar "Salvar &amp; Publicar", é criada uma nova rotina atual e esta fica no histórico.
+          </p>
+        </>
+      )}
       <RotinaSemanaLeitura key={rotina.id} rotina={rotina.rotina} />
       <button className="btn btn-ghost btn-sm btn-full mrs-voltar-fim" onClick={onVoltar}>
         ← Voltar às rotinas

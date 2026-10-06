@@ -55,7 +55,18 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
       addExercicio(alunoId, day, ex);
       showToast('✅ Exercício adicionado', 'success');
     } else if (typeof exercicioIdx === 'number') {
-      updateExercicio(alunoId, day, exercicioIdx, ex);
+      const anterior = aluno?.rotina[day]?.exercicios[exercicioIdx];
+      const preservado: AlunoExercicio = { ...ex };
+      if (anterior) {
+        if (anterior.groupId && !preservado.groupId) {
+          preservado.groupId = anterior.groupId;
+          preservado.groupType = anterior.groupType;
+        }
+        if (anterior.exercicioInfo && !preservado.exercicioInfo && anterior.nome === ex.nome) {
+          preservado.exercicioInfo = anterior.exercicioInfo;
+        }
+      }
+      updateExercicio(alunoId, day, exercicioIdx, preservado);
       showToast('✅ Exercício atualizado', 'success');
     }
     setExercicioIdx(null);

@@ -18,3 +18,8 @@ export function resumirRotina(rotina: AlunoRotina): ResumoRotina {
   });
   return { diasComTreino, totalExercicios };
 }
+
+/** Nenhum dia tem exercício (rascunho/semana em branco). */
+export function rotinaSemExercicios(rotina: AlunoRotina): boolean {
+  return rotina.every((dia) => dia.exercicios.length === 0);
+}

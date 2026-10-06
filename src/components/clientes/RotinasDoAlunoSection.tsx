@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { selectRotinasDoAluno, useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
+import type { AlunoRotinaSalva } from '../../types/aluno';
 import { CartaoRotina, DetalheRotinaLeitura } from '../registro/RotinaCartoes';
 import '../registro/MinhasRotinasSection.css';
 
@@ -9,7 +10,14 @@ import '../registro/MinhasRotinasSection.css';
  * ("Atual"); tocar numa rotina abre a semana em MODO LEITURA, sem tocar na execução do
  * aluno nem na Semana Atual de ninguém.
  */
-export function RotinasDoAlunoSection({ email }: { email: string }) {
+export function RotinasDoAlunoSection({
+  email,
+  onEditar,
+}: {
+  email: string;
+  /** Carrega a rotina aberta no editor do Personal (rascunho local). */
+  onEditar?: (rotina: AlunoRotinaSalva) => void;
+}) {
   const { status, ordenadas, erro } = useRotinasDoAlunoStore(selectRotinasDoAluno(email));
   const carregar = useRotinasDoAlunoStore((s) => s.carregar);
   const [abertaId, setAbertaId] = useState<string | null>(null);
@@ -23,7 +31,7 @@ export function RotinasDoAlunoSection({ email }: { email: string }) {
     return (
       <section className="mrs" aria-label="Detalhe da rotina">
         {aberta ? (
-          <DetalheRotinaLeitura rotina={aberta} onVoltar={() => setAbertaId(null)} />
+          <DetalheRotinaLeitura rotina={aberta} onVoltar={() => setAbertaId(null)} onEditar={onEditar ? () => onEditar(aberta) : undefined} />
         ) : (
           <>
             <button className="btn btn-ghost btn-sm mrs-voltar" onClick={() => setAbertaId(null)}>
