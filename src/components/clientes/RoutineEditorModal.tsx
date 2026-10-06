@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
 import { isAlunoExercicioCardio } from '../../types/aluno';
 import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
 import { useReorderDrag } from '../../hooks/useReorderDrag';
-import { syncRotinaToCloud } from '../../lib/alunoRepository';
+import { publicarRotinaParaAluno } from '../../lib/publicarRotinaAluno';
 import { ExercicioFormModal } from './ExercicioFormModal';
 import { ImportRotinaModal } from './ImportRotinaModal';
 import './ClientesView.css';
@@ -68,14 +69,20 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
 
   async function handlePublicar() {
     setPublishing(true);
-    const ok = await syncRotinaToCloud(aluno!.email, aluno!.rotina);
+    const personalEmail = useAuthStore.getState().user?.email ?? '';
+    const { multiplas, legado } = await publicarRotinaParaAluno(aluno!.email, aluno!.rotina, personalEmail);
     setPublishing(false);
-    if (!ok) {
+    if (!multiplas && !legado) {
       showToast('⚠️ Não foi possível publicar — confira a conexão e o e-mail do aluno', 'warning');
       return;
     }
     marcarPublicadoHoje(alunoId);
-    showToast(`☁️ Rotina de ${aluno!.nome.split(' ')[0]} publicada com sucesso!`, 'success');
+    if (multiplas) {
+      showToast(`☁️ Rotina de ${aluno!.nome.split(' ')[0]} publicada com sucesso!`, 'success');
+    } else {
+      // Só o formato antigo foi gravado: o aluno SEM rotinas novas recebe; quem já tem, não.
+      showToast('⚠️ Publicada no formato antigo, mas não entrou no histórico de rotinas do aluno. Tente publicar de novo.', 'warning');
+    }
     onClose();
   }
 
