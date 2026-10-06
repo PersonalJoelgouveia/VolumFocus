@@ -22,6 +22,7 @@ interface AlunoDetailModalProps {
   onEditarRotina: (day: number) => void;
 }
 
+import { RotinasDoAlunoSection } from './RotinasDoAlunoSection';
 /**
  * Sucessor de #modal-cli-aluno (cli_openAluno/cli_renderMiniPerfil/
  * cli_renderDaysBar/cli_renderDayContent, index.html ~10603-10716):
@@ -156,6 +157,8 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
             </button>
           </div>
         )}
+
+        <RotinasDoAlunoSection email={aluno.email} />
 
         <div className="cli-days-bar">
           {DAYS_SHORT.map((label, d) => {

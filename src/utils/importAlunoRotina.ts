@@ -6,7 +6,8 @@ import type {
   AlunoRotinaDia,
 } from '../types/aluno';
 import { isAlunoExercicioCardio } from '../types/aluno';
-import type { Exercise } from '../types/exercise';
+import { MUSCLE_GROUPS } from '../types/exercise';
+import type { Exercise, MuscleGroup } from '../types/exercise';
 import { DAYS_SHORT, isCardioLogEntry } from '../types/workout';
 import type { CardioLogEntry, StrengthLogEntry, WeekLog, WorkoutLogEntry } from '../types/workout';
 import type { HrZone } from '../types/cardio';
@@ -84,12 +85,19 @@ export function buildWeekLogFromAlunoRotina(
     if (existing) return existing.id;
 
     const isCardio = isAlunoExercicioCardio(ex);
+    // Exercício que o importador ainda não tem (ex.: custom do Personal): usa os metadados
+    // gravados na rotina; sem eles (rotina antiga), cai no padrão genérico de sempre.
+    const info = ex.exercicioInfo;
+    const agonistaValido =
+      info && (info.agonist === 'Cardio' || (MUSCLE_GROUPS as readonly string[]).includes(info.agonist));
+    const grupos = (l: unknown) =>
+      Array.isArray(l) ? l.filter((m): m is MuscleGroup => (MUSCLE_GROUPS as readonly string[]).includes(m)) : [];
     const novo: Exercise = {
       id: `imp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: ex.nome.trim(),
-      agonist: isCardio ? 'Cardio' : 'Peito',
-      synergist: [],
-      stabilizer: [],
+      agonist: isCardio ? 'Cardio' : agonistaValido && info.agonist !== 'Cardio' ? info.agonist : 'Peito',
+      synergist: grupos(info?.synergist),
+      stabilizer: grupos(info?.stabilizer),
       ...(isCardio ? { type: 'cardio' as const } : {}),
     };
     addExercise(novo);
@@ -184,16 +192,22 @@ export function buildAlunoRotinaFromWeekLog(
   exercises: readonly Exercise[],
   options: WeekLogToRotinaOptions = {}
 ): WeekLogToRotinaResult {
-  const nomePorId = new Map(exercises.map((e) => [e.id, e.name.trim()] as const));
+  const porId = new Map(exercises.map((e) => [e.id, e] as const));
   const exerciciosNaoResolvidos: string[] = [];
 
   function converter(entry: WorkoutLogEntry): AlunoExercicio | null {
-    const nome = nomePorId.get(entry.exId);
-    if (!nome) {
+    const exercicio = porId.get(entry.exId);
+    if (!exercicio) {
       exerciciosNaoResolvidos.push(entry.exId);
       return null;
     }
+    const nome = exercicio.name.trim();
     const extras = {
+      exercicioInfo: {
+        agonist: exercicio.agonist,
+        synergist: [...exercicio.synergist],
+        stabilizer: [...exercicio.stabilizer],
+      },
       ...(entry.notes ? { notes: entry.notes } : {}),
       ...(entry.groupId ? { groupId: entry.groupId } : {}),
       ...(entry.groupType ? { groupType: entry.groupType } : {}),

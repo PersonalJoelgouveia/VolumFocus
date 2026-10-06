@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
 import { DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
 import { isAlunoExercicioCardio } from '../../types/aluno';
 import type { AlunoExercicio } from '../../types/aluno';
@@ -77,6 +78,7 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
       return;
     }
     marcarPublicadoHoje(alunoId);
+    if (multiplas) void useRotinasDoAlunoStore.getState().carregar(aluno!.email);
     if (multiplas) {
       showToast(`☁️ Rotina de ${aluno!.nome.split(' ')[0]} publicada com sucesso!`, 'success');
     } else {

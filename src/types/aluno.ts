@@ -11,6 +11,7 @@
 
 import { DAYS_SHORT } from './workout';
 import type { GroupType } from './workout';
+import type { ExerciseAgonist, MuscleGroup } from './exercise';
 
 export type AlunoStatus = 'ativo' | 'inativo';
 
@@ -22,7 +23,23 @@ interface AlunoGroupable {
   groupType?: GroupType;
 }
 
-export interface AlunoExercicioForca extends AlunoGroupable {
+/**
+ * Metadados musculares do exercício, gravados junto da prescrição. Servem SÓ para quem
+ * importa a rotina e ainda não tem esse exercício (ex.: um exercício custom criado pelo
+ * Personal): sem isso ele nasceria com agonista genérico. Opcional — rotinas antigas não têm.
+ * Exibição não depende disso (a rotina carrega o `nome`).
+ */
+export interface AlunoExercicioInfo {
+  agonist: ExerciseAgonist;
+  synergist: MuscleGroup[];
+  stabilizer: MuscleGroup[];
+}
+
+interface AlunoExercicioBase extends AlunoGroupable {
+  exercicioInfo?: AlunoExercicioInfo;
+}
+
+export interface AlunoExercicioForca extends AlunoExercicioBase {
   nome: string;
   cardio?: undefined;
   series: number;
@@ -33,7 +50,7 @@ export interface AlunoExercicioForca extends AlunoGroupable {
   notes?: string;
 }
 
-export interface AlunoExercicioCardio extends AlunoGroupable {
+export interface AlunoExercicioCardio extends AlunoExercicioBase {
   nome: string;
   cardio: true;
   duracao: string;

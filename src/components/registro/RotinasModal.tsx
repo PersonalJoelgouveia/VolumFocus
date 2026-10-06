@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useAlunoStore } from '../../store/useAlunoStore';
+import { useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
 import { resolverRotinaAtivaDoAluno } from '../../lib/rotinaAtivaAluno';
 import type { RotinaAtivaResolvida } from '../../lib/rotinaAtivaAluno';
 import { criarRotinaAluno } from '../../lib/alunoRotinasRepository';
@@ -134,6 +135,8 @@ export function RotinasModal() {
         ativa: true,
       });
       setNome('');
+      // Mini perfil do aluno passa a refletir a nova ativa sem recarregar a página.
+      void useRotinasDoAlunoStore.getState().carregar(alunoDaSessao.email);
       showToast(`✅ Rotina "${trimmed}" salva e ativada para ${primeiroNome}!`, 'success');
     } catch (e) {
       console.error('RotinasModal: falha ao salvar rotina do aluno', e);

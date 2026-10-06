@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AlunoRotina } from '../../types/aluno';
+import { criarRotinaVazia } from '../../types/aluno';
 import type { Exercise } from '../../types/exercise';
 import type { StrengthLogEntry, WeekLog } from '../../types/workout';
 import { buildAlunoRotinaFromWeekLog, buildWeekLogFromAlunoRotina } from '../importAlunoRotina';
@@ -27,6 +28,20 @@ const rotinaOriginal = (): AlunoRotina => [
   { tipo: 'Descanso Total', exercicios: [] },
 ];
 
+/** Metadados que a volta passa a gravar, vindos do banco de exercícios. */
+const infoDe = (id: string) => {
+  const e = exercicios.find((x) => x.id === id)!;
+  return { exercicioInfo: { agonist: e.agonist, synergist: e.synergist, stabilizer: e.stabilizer } };
+};
+const comInfo = (rotina: AlunoRotina): AlunoRotina =>
+  rotina.map((d) => ({
+    ...d,
+    exercicios: d.exercicios.map((ex) => ({
+      ...ex,
+      ...infoDe(ex.nome === 'Supino Reto' ? 'e1' : ex.nome === 'Esteira' ? 'c1' : 'e2'),
+    })),
+  }));
+
 describe('buildAlunoRotinaFromWeekLog', () => {
   it('round-trip: rotina → WeekLog → rotina preserva nome, ordem, séries, reps, carga, notas e grupo', () => {
     const { weekLog } = buildWeekLogFromAlunoRotina(rotinaOriginal(), exercicios, () => undefined);
@@ -34,7 +49,7 @@ describe('buildAlunoRotinaFromWeekLog', () => {
       tiposDia: ['Peito A'],
     });
     expect(exerciciosNaoResolvidos).toEqual([]);
-    expect(rotina).toEqual(rotinaOriginal());
+    expect(rotina).toEqual(comInfo(rotinaOriginal()));
   });
 
   it('sempre devolve 7 dias, mesmo com WeekLog vazio ou com chaves fora de 0-6', () => {
@@ -58,8 +73,8 @@ describe('buildAlunoRotinaFromWeekLog', () => {
     };
     const dia = buildAlunoRotinaFromWeekLog(weekLog, exercicios).rotina[2];
     expect(dia.tipo).toBe('Treino Personalizado');
-    expect(dia.exercicios[0]).toEqual({ nome: 'Supino Reto', series: 3, reps: '10', carga: 50 });
-    expect(dia.exercicios[1]).toEqual({ nome: 'Esteira', cardio: true, duracao: '30 min', intensidade: '7' });
+    expect(dia.exercicios[0]).toEqual({ nome: 'Supino Reto', series: 3, reps: '10', carga: 50, ...infoDe('e1') });
+    expect(dia.exercicios[1]).toEqual({ nome: 'Esteira', cardio: true, duracao: '30 min', intensidade: '7', ...infoDe('c1') });
     const json = JSON.stringify(dia);
     for (const campo of ['doneSerie', 'serieLoads', 'serieReps', 'distance', 'avgHr', 'hrZone', 'le-1']) {
       expect(json).not.toContain(campo);
@@ -99,5 +114,49 @@ describe('buildAlunoRotinaFromWeekLog', () => {
     const { weekLog } = buildWeekLogFromAlunoRotina(rotinaOriginal(), exercicios, () => undefined);
     const { rotina } = buildAlunoRotinaFromWeekLog(weekLog, exercicios);
     expect(JSON.parse(JSON.stringify(rotina))).toEqual(rotina);
+  });
+
+  it('exercício CUSTOM: o nome e os metadados musculares vão na rotina e sobrevivem à serialização', () => {
+    const custom: Exercise = { id: 'custom-1', name: 'Remada Cavalinho Minha', agonist: 'Costas', synergist: ['Bíceps'], stabilizer: ['Abdômen'] };
+    const weekLog: WeekLog = { 1: [{ exId: 'custom-1', sets: 4, reps: 8, load: 30, serieLoads: [], serieReps: [] }] };
+    const { rotina, exerciciosNaoResolvidos } = buildAlunoRotinaFromWeekLog(weekLog, [...exercicios, custom]);
+    expect(exerciciosNaoResolvidos).toEqual([]);
+    const gravada = JSON.parse(JSON.stringify(rotina)) as AlunoRotina; // o que o Firestore guarda
+    expect(gravada[1].exercicios[0]).toMatchObject({
+      nome: 'Remada Cavalinho Minha',
+      exercicioInfo: { agonist: 'Costas', synergist: ['Bíceps'], stabilizer: ['Abdômen'] },
+    });
+  });
+
+  it('aluno SEM o exercício custom: ao importar, ele é criado com os metadados corretos (não "Peito" genérico)', () => {
+    const custom: Exercise = { id: 'custom-1', name: 'Remada Cavalinho Minha', agonist: 'Costas', synergist: ['Bíceps'], stabilizer: [] };
+    const weekLog: WeekLog = { 1: [{ exId: 'custom-1', sets: 4, reps: 8, load: 30, serieLoads: [], serieReps: [] }] };
+    const gravada = JSON.parse(JSON.stringify(buildAlunoRotinaFromWeekLog(weekLog, [custom]).rotina)) as AlunoRotina;
+
+    const bancoDoAluno: Exercise[] = []; // não tem o custom
+    const criados: Exercise[] = [];
+    const { weekLog: semanaDoAluno, novosExercicios } = buildWeekLogFromAlunoRotina(gravada, bancoDoAluno, (e) => criados.push(e));
+    expect(novosExercicios).toEqual(['Remada Cavalinho Minha']);
+    expect(criados[0]).toMatchObject({ name: 'Remada Cavalinho Minha', agonist: 'Costas', synergist: ['Bíceps'], stabilizer: [] });
+    expect(semanaDoAluno[1][0].exId).toBe(criados[0].id);
+  });
+
+  it('rotina ANTIGA (sem exercicioInfo) continua importando com o padrão genérico de sempre', () => {
+    const antiga: AlunoRotina = rotinaOriginal();
+    antiga[3] = { tipo: 'X', exercicios: [{ nome: 'Exercício Inédito', series: 3, reps: '10', carga: 0 }] };
+    const criados: Exercise[] = [];
+    buildWeekLogFromAlunoRotina(antiga, exercicios, (e) => criados.push(e));
+    expect(criados[0]).toMatchObject({ name: 'Exercício Inédito', agonist: 'Peito', synergist: [], stabilizer: [] });
+  });
+
+  it('metadados adulterados/inválidos na rotina não entram no banco', () => {
+    const r = criarRotinaVazia();
+    r[0] = {
+      tipo: 'X',
+      exercicios: [{ nome: 'Estranho', series: 1, reps: '1', carga: 0, exercicioInfo: { agonist: 'Hacker' as never, synergist: ['Peito', 'Lixo'] as never, stabilizer: 'x' as never } }],
+    };
+    const criados: Exercise[] = [];
+    buildWeekLogFromAlunoRotina(r, [], (e) => criados.push(e));
+    expect(criados[0]).toMatchObject({ agonist: 'Peito', synergist: ['Peito'], stabilizer: [] });
   });
 });

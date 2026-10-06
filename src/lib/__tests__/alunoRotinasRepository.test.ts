@@ -115,4 +115,24 @@ describe('alunoRotinasRepository', () => {
     });
     expect((await obterRotinaAtiva('a@x.com'))?.id).toBe('nova');
   });
+
+  it('criar nova ativa NÃO muta o conteúdo nem o atualizadaEm da rotina antiga — só `ativa: false`', async () => {
+    getDocs.mockResolvedValue({ docs: [docRot('A', true)] });
+    await criarRotinaAluno('a@x.com', { nome: 'B', personalEmail: 'p@x.com', ativa: true });
+    expect(batchUpdate).toHaveBeenCalledTimes(1);
+    expect(batchUpdate.mock.calls[0][0]).toEqual({ id: 'A' });
+    expect(batchUpdate.mock.calls[0][1]).toEqual({ ativa: false }); // nenhum outro campo
+    expect(batchSet).toHaveBeenCalledTimes(1); // a nova é um documento NOVO (set), nunca um overwrite da antiga
+    expect(batchSet.mock.calls[0][0].id).not.toBe('A');
+  });
+
+  it('reativar uma antiga atualiza o atualizadaEm DELA (a versão muda para o aluno re-sincronizar)', async () => {
+    getDoc.mockResolvedValue({ exists: () => true });
+    getDocs.mockResolvedValue({ docs: [docRot('B', true), docRot('A', false)] });
+    await definirRotinaAtiva('a@x.com', 'A');
+    const ativando = batchUpdate.mock.calls.find(([, d]) => d.ativa === true)!;
+    expect(ativando[1]).toHaveProperty('atualizadaEm');
+    const desativando = batchUpdate.mock.calls.find(([, d]) => d.ativa === false)!;
+    expect(desativando[1]).toEqual({ ativa: false });
+  });
 });

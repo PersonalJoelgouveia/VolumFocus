@@ -129,7 +129,7 @@ export async function criarRotinaAluno(studentEmail: string, input: CriarRotinaI
   };
 
   const batch = writeBatch(db);
-  if (nova.ativa) await desativarOutras(batch, studentEmail, nova.id, agora);
+  if (nova.ativa) await desativarOutras(batch, studentEmail, nova.id);
   batch.set(ref, semUndefined(nova));
   await batch.commit();
   return nova;
@@ -145,22 +145,25 @@ export async function definirRotinaAtiva(studentEmail: string, rotinaId: string)
 
   const agora = new Date().toISOString();
   const batch = writeBatch(db);
-  await desativarOutras(batch, studentEmail, rotinaId, agora);
+  await desativarOutras(batch, studentEmail, rotinaId);
   batch.update(rotinaDocRef(studentEmail, rotinaId), { ativa: true, atualizadaEm: agora });
   await batch.commit();
 }
 
-/** Enfileira no batch a desativação de toda rotina ativa diferente de `exceptoId`. */
+/**
+ * Enfileira no batch a desativação de toda rotina ativa diferente de `exceptoId`.
+ * Só vira `ativa: false`: o conteúdo e o `atualizadaEm` da rotina antiga ficam como estavam
+ * (`atualizadaEm` = última vez que o CONTEÚDO/ativação foi mexido, não que foi substituída).
+ */
 async function desativarOutras(
   batch: ReturnType<typeof writeBatch>,
   studentEmail: string,
-  exceptoId: string,
-  agora: string
+  exceptoId: string
 ): Promise<void> {
   const snap = await getDocs(rotinasCol(studentEmail));
   for (const d of snap.docs) {
     if (d.id !== exceptoId && d.data().ativa === true) {
-      batch.update(d.ref, { ativa: false, atualizadaEm: agora });
+      batch.update(d.ref, { ativa: false });
     }
   }
 }
