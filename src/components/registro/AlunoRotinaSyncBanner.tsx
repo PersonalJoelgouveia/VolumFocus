@@ -5,30 +5,25 @@ import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useRotinaSyncStore } from '../../store/useRotinaSyncStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
-import { fetchPublishedRotina } from '../../lib/alunoRepository';
-import { buildWeekLogFromAlunoRotina } from '../../utils/importAlunoRotina';
-import type { AlunoRotina } from '../../types/aluno';
+import { resolverRotinaAtivaDoAluno } from '../../lib/rotinaAtivaAluno';
+import type { RotinaAtivaResolvida } from '../../lib/rotinaAtivaAluno';
+import { decidirSincronizacao } from '../../utils/rotinaSync';
+import { aplicarRotinaNaSemana } from '../../utils/aplicarRotinaNaSemana';
 import './AlunoRotinaSyncBanner.css';
 
-function isWeekLogEmpty(weekLog: ReturnType<typeof useWorkoutStore.getState>['weekLog']): boolean {
-  return Object.values(weekLog).every((dayLog) => !dayLog || dayLog.length === 0);
-}
-
 /**
- * Fecha o gap real que fazia rotinas publicadas "nunca aparecerem" pro
- * aluno: antes, a importação (utils/importAlunoRotina.ts) só existia
- * como um botão dentro de Minha Rotina — fácil de nunca ser descoberto.
- * Agora, ao abrir Treinos → Semana Atual:
+ * Sincroniza a ROTINA ATIVA do aluno (`ativa === true` em `alunos/{email}/rotinas`;
+ * legado `alunos/{email}.rotina` só se ele não tem rotinas — ver lib/rotinaAtivaAluno)
+ * com Treinos → Semana Atual. Verifica ao abrir Treinos e ao voltar para o app.
  *
- * - Se o aluno ainda não tem NADA logado nesta semana, importa
- *   automaticamente e sem perguntar (não existe risco de sobrescrever
- *   progresso, porque não há progresso nenhum ainda).
- * - Se já existe algo logado, nunca sobrescreve sozinho — mostra este
- *   banner com a opção de importar agora ou ignorar.
+ * Quando o Personal troca a rotina ativa (a "versão" muda):
+ * - Semana vazia, ou SEM progresso e ainda idêntica à última importada (o aluno
+ *   não mexeu em nada): a nova rotina vira a semana, sem perguntar.
+ * - Qualquer progresso (série/exercício concluído, PSE, cardio medido) ou edição
+ *   do aluno: NUNCA sobrescreve sozinho — mostra este banner (importar / agora não).
  *
- * Compara `atualizadoEm` da rotina publicada com o que já foi visto
- * neste dispositivo (useRotinaSyncStore) — nunca importa nem avisa duas
- * vezes pra mesma versão publicada.
+ * Nunca importa nem avisa duas vezes para a mesma versão (useRotinaSyncStore).
+ * Rotinas históricas não são tocadas: só lê.
  */
 export function AlunoRotinaSyncBanner() {
   const user = useAuthStore((s) => s.user);
@@ -36,62 +31,78 @@ export function AlunoRotinaSyncBanner() {
   const showToast = useUIStore((s) => s.showToast);
   const exercises = useExerciseStore((s) => s.exercises);
   const addExercise = useExerciseStore((s) => s.addExercise);
-  const lastSeenAt = useRotinaSyncStore((s) => s.lastSeenAt);
   const setLastSeenAt = useRotinaSyncStore((s) => s.setLastSeenAt);
 
-  const [pending, setPending] = useState<{ rotina: AlunoRotina; atualizadoEm: string } | null>(null);
+  const [pending, setPending] = useState<RotinaAtivaResolvida | null>(null);
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (!isAlunoMode || !user?.email) return;
     let cancelled = false;
+    let rodando = false;
 
-    (async () => {
+    async function verificar() {
+      if (rodando) return;
+      rodando = true;
       try {
-        const result = await fetchPublishedRotina(user.email!);
-        if (cancelled || !result) return;
+        const resolvida = await resolverRotinaAtivaDoAluno();
+        if (cancelled || !resolvida) return;
+        // Estado lido AGORA (não o capturado na montagem): o aluno pode ter treinado desde então.
+        const sync = useRotinaSyncStore.getState();
+        if (resolvida.version === sync.lastSeenAt) return; // já vista/tratada
 
-        const version = result.atualizadoEm ?? 'sem-data';
-        if (version === lastSeenAt) return; // já vista/tratada
+        const w = useWorkoutStore.getState();
+        const bancoAtual = useExerciseStore.getState().exercises;
+        const decisao = decidirSincronizacao({
+          weekLog: w.weekLog,
+          exDone: w.exDone,
+          weekPSE: w.weekPSE,
+          exercises: bancoAtual,
+          fingerprintImportada: sync.lastImportedFingerprint,
+        });
 
-        const weekLogAtual = useWorkoutStore.getState().weekLog;
-        if (isWeekLogEmpty(weekLogAtual)) {
-          // Nada logado ainda — seguro importar direto, sem perguntar.
-          const { weekLog } = buildWeekLogFromAlunoRotina(result.rotina, exercises, addExercise);
-          useWorkoutStore.setState({ weekLog });
-          setLastSeenAt(version);
-          showToast('✅ Sua rotina foi carregada automaticamente na Semana Atual!', 'success');
+        if (decisao === 'substituir') {
+          aplicarRotinaNaSemana(resolvida, bancoAtual, useExerciseStore.getState().addExercise, 'substituir-semana');
+          setPending(null);
+          showToast(
+            resolvida.nome
+              ? `✅ Sua rotina atual "${resolvida.nome}" foi carregada na Semana Atual!`
+              : '✅ Sua rotina foi carregada automaticamente na Semana Atual!',
+            'success'
+          );
         } else {
-          // Já existe progresso — nunca sobrescreve sozinho, só avisa.
-          setPending({ rotina: result.rotina, atualizadoEm: version });
+          setPending(resolvida);
         }
       } catch (e) {
-        console.error('AlunoRotinaSyncBanner: falha ao verificar rotina publicada', e);
+        console.error('AlunoRotinaSyncBanner: falha ao verificar rotina ativa', e);
+      } finally {
+        rodando = false;
       }
-    })();
+    }
 
+    // Offline/sem rede: a verificação falha em silêncio e a Semana Atual local segue intacta.
+    void verificar();
+    const aoVoltar = () => {
+      if (document.visibilityState === 'visible') void verificar();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', aoVoltar);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAlunoMode, user?.email]);
-
-  if (!pending) return null;
+  }, [isAlunoMode, user?.email, showToast]);
 
   async function handleImportar() {
     if (!pending) return;
     const ok = await useConfirmStore.getState().ask(
-      'Importar a rotina atualizada pelo seu Personal? Isso substitui o que já estiver registrado nos dias com exercícios prescritos.',
+      'Importar a rotina atual definida pelo seu Personal? Isso substitui o que já estiver registrado nos dias com exercícios prescritos (e zera o progresso desses dias).',
       { confirmLabel: 'Importar Agora' }
     );
     if (!ok) return;
 
     setImporting(true);
     try {
-      const { weekLog, novosExercicios } = buildWeekLogFromAlunoRotina(pending.rotina, exercises, addExercise);
-      const current = useWorkoutStore.getState().weekLog;
-      useWorkoutStore.setState({ weekLog: { ...current, ...weekLog } });
-      setLastSeenAt(pending.atualizadoEm);
+      const { novosExercicios } = aplicarRotinaNaSemana(pending, exercises, addExercise, 'mesclar-dias');
       const extra = novosExercicios.length ? ` (${novosExercicios.length} exercício(s) novo(s) criado(s) no banco)` : '';
       showToast(`✅ Rotina importada!${extra}`, 'success');
       setPending(null);
@@ -105,15 +116,20 @@ export function AlunoRotinaSyncBanner() {
 
   function handleDispensar() {
     if (!pending) return;
-    setLastSeenAt(pending.atualizadoEm);
+    setLastSeenAt(pending.version);
     setPending(null);
   }
+
+  if (!pending) return null;
 
   return (
     <div className="rotina-sync-banner">
       <span className="rotina-sync-icon">🔔</span>
       <div className="rotina-sync-text">
-        <strong>Seu Personal atualizou sua rotina.</strong> Quer importar pra Semana Atual agora?
+        <strong>
+          {pending.nome ? `Seu Personal definiu a rotina atual "${pending.nome}".` : 'Seu Personal atualizou sua rotina.'}
+        </strong>{' '}
+        Sua Semana Atual já tem treino registrado, então ela não foi aplicada. Quer importar agora?
       </div>
       <div className="rotina-sync-actions">
         <button className="btn btn-ghost btn-sm" onClick={handleDispensar} disabled={importing}>

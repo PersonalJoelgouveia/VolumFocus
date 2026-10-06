@@ -5,13 +5,13 @@ import { useRotinaStore } from '../../store/useRotinaStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
-import { useRotinaSyncStore } from '../../store/useRotinaSyncStore';
 import { useSessionStore } from '../../store/useSessionStore';
 import { useAlunoStore } from '../../store/useAlunoStore';
-import { fetchPublishedRotina } from '../../lib/alunoRepository';
+import { resolverRotinaAtivaDoAluno } from '../../lib/rotinaAtivaAluno';
+import type { RotinaAtivaResolvida } from '../../lib/rotinaAtivaAluno';
 import { criarRotinaAluno } from '../../lib/alunoRotinasRepository';
-import { buildAlunoRotinaFromWeekLog, buildWeekLogFromAlunoRotina } from '../../utils/importAlunoRotina';
-import type { AlunoRotina } from '../../types/aluno';
+import { buildAlunoRotinaFromWeekLog } from '../../utils/importAlunoRotina';
+import { aplicarRotinaNaSemana } from '../../utils/aplicarRotinaNaSemana';
 import { DAYS_SHORT } from '../../types/workout';
 import './RotinasModal.css';
 
@@ -53,10 +53,8 @@ export function RotinasModal() {
   const user = useAuthStore((s) => s.user);
   const exercises = useExerciseStore((s) => s.exercises);
   const addExercise = useExerciseStore((s) => s.addExercise);
-  const setLastSeenAt = useRotinaSyncStore((s) => s.setLastSeenAt);
   const [ptState, setPtState] = useState<PtLoadState>('idle');
-  const [ptRotina, setPtRotina] = useState<AlunoRotina | null>(null);
-  const [ptAtualizadoEm, setPtAtualizadoEm] = useState<string | null>(null);
+  const [ptRotina, setPtRotina] = useState<RotinaAtivaResolvida | null>(null);
   const [ptImporting, setPtImporting] = useState(false);
 
   // Sessão de aluno em foco (Personal acompanhando um aluno): "Salvar Atual"
@@ -73,11 +71,10 @@ export function RotinasModal() {
   useEffect(() => {
     if (!isOpen || !isAlunoMode || !user?.email) return;
     setPtState('loading');
-    fetchPublishedRotina(user.email)
+    resolverRotinaAtivaDoAluno()
       .then((result) => {
         if (!result) return setPtState('empty');
-        setPtRotina(result.rotina);
-        setPtAtualizadoEm(result.atualizadoEm);
+        setPtRotina(result);
         setPtState('ready');
       })
       .catch((e) => {
@@ -98,10 +95,7 @@ export function RotinasModal() {
 
     setPtImporting(true);
     try {
-      const { weekLog: novoWeekLog, novosExercicios } = buildWeekLogFromAlunoRotina(ptRotina, exercises, addExercise);
-      const current = useWorkoutStore.getState().weekLog;
-      useWorkoutStore.setState({ weekLog: { ...current, ...novoWeekLog } });
-      if (ptAtualizadoEm) setLastSeenAt(ptAtualizadoEm);
+      const { novosExercicios } = aplicarRotinaNaSemana(ptRotina, exercises, addExercise, 'mesclar-dias');
       const extra = novosExercicios.length ? ` (${novosExercicios.length} exercício(s) novo(s) criado(s) no banco)` : '';
       showToast(`✅ Rotina do Personal importada!${extra}`, 'success');
     } catch (e) {
@@ -199,16 +193,12 @@ export function RotinasModal() {
             {ptState === 'empty' && <div className="routine-meta">Seu Personal ainda não publicou uma rotina.</div>}
             {ptState === 'ready' && ptRotina && (
               <>
-                {ptAtualizadoEm && (
-                  <div className="routine-meta">
-                    Publicada em: {new Date(ptAtualizadoEm).toLocaleString('pt-BR')}
-                  </div>
-                )}
+                {ptRotina.nome && <div className="routine-meta">Rotina atual: {ptRotina.nome}</div>}
                 <button
                   className="btn btn-primary btn-sm btn-full"
                   style={{ marginTop: 8 }}
                   onClick={handleImportarDoPersonal}
-                  disabled={ptImporting || ptRotina.every((d) => d.exercicios.length === 0)}
+                  disabled={ptImporting || ptRotina.rotina.every((d) => d.exercicios.length === 0)}
                 >
                   {ptImporting ? 'Importando…' : '📥 Importar Rotina do Personal'}
                 </button>

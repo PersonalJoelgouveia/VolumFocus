@@ -64,47 +64,63 @@ const ESTADO_INICIAL = {
 };
 
 let tokenCarga = 0;
+/** Leitura em andamento: chamadas simultâneas (seção + sync) compartilham a mesma promessa. */
+let emAndamento: { email: string; promessa: Promise<void> } | null = null;
 
 export const useMinhasRotinasStore = create<MinhasRotinasState>()((set) => ({
   ...ESTADO_INICIAL,
 
-  carregar: async () => {
-    const token = ++tokenCarga;
+  carregar: () => {
     const email = resolverEmailDoAlunoAutenticado();
-    if (!email) {
-      set({ ...ESTADO_INICIAL, status: 'nao-autorizado', erro: 'Faça login como aluno para ver suas rotinas.' });
-      return;
-    }
-    set((s) => ({
-      // Outra conta nos dados em memória? Não reaproveita nada dela.
-      ...(s.donoEmail === email ? { status: 'carregando' as const } : { ...ESTADO_INICIAL, status: 'carregando' as const }),
-      donoEmail: email,
-      erro: null,
-    }));
-    try {
-      const rotinas = await listarRotinasAluno(email);
-      // Chamada mais nova em andamento, ou a conta mudou durante a leitura: descarta.
-      if (token !== tokenCarga || resolverEmailDoAlunoAutenticado() !== email) return;
-      set({
-        status: 'pronto',
-        donoEmail: email,
-        rotinas,
-        ativa: rotinas.find((r) => r.ativa) ?? null,
-        ordenadas: ordenarRotinasAluno(rotinas),
-        erro: null,
+    if (email && emAndamento?.email === email) return emAndamento.promessa;
+    const promessa = executarCarga(email);
+    if (email) {
+      emAndamento = { email, promessa };
+      void promessa.finally(() => {
+        if (emAndamento?.promessa === promessa) emAndamento = null;
       });
-    } catch (e) {
-      if (token !== tokenCarga) return;
-      console.error('useMinhasRotinasStore: falha ao carregar rotinas', e);
-      set({ status: 'erro', erro: 'Não foi possível carregar suas rotinas. Tente novamente.' });
     }
+    return promessa;
   },
 
   limpar: () => {
     tokenCarga++;
+    emAndamento = null;
     set({ ...ESTADO_INICIAL });
   },
 }));
+
+async function executarCarga(email: string | null): Promise<void> {
+  const set = useMinhasRotinasStore.setState;
+  const token = ++tokenCarga;
+  if (!email) {
+    set({ ...ESTADO_INICIAL, status: 'nao-autorizado', erro: 'Faça login como aluno para ver suas rotinas.' });
+    return;
+  }
+  set((s) => ({
+    // Outra conta nos dados em memória? Não reaproveita nada dela.
+    ...(s.donoEmail === email ? { status: 'carregando' as const } : { ...ESTADO_INICIAL, status: 'carregando' as const }),
+    donoEmail: email,
+    erro: null,
+  }));
+  try {
+    const rotinas = await listarRotinasAluno(email);
+    // Chamada mais nova em andamento, ou a conta mudou durante a leitura: descarta.
+    if (token !== tokenCarga || resolverEmailDoAlunoAutenticado() !== email) return;
+    set({
+      status: 'pronto',
+      donoEmail: email,
+      rotinas,
+      ativa: rotinas.find((r) => r.ativa) ?? null,
+      ordenadas: ordenarRotinasAluno(rotinas),
+      erro: null,
+    });
+  } catch (e) {
+    if (token !== tokenCarga) return;
+    console.error('useMinhasRotinasStore: falha ao carregar rotinas', e);
+    set({ status: 'erro', erro: 'Não foi possível carregar suas rotinas. Tente novamente.' });
+  }
+}
 
 /** Seletores (leituras diretas do estado — referências estáveis). */
 export const selectTodasRotinas = (s: MinhasRotinasState): readonly AlunoRotinaSalva[] => s.rotinas;
