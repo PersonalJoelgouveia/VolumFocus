@@ -1,6 +1,6 @@
 import { DAYS, GROUP_LABELS } from '../../types/workout';
 import { isAlunoExercicioCardio } from '../../types/aluno';
-import type { AlunoRotina, AlunoRotinaDia } from '../../types/aluno';
+import type { AlunoExercicio, AlunoRotina, AlunoRotinaDia } from '../../types/aluno';
 import '../clientes/ClientesView.css';
 
 /**
@@ -40,41 +40,48 @@ function DiaLeitura({ nomeDia, dia }: { nomeDia: string; dia: AlunoRotinaDia | u
       {exercicios.length === 0 ? (
         <div className="mrs-descanso">💤 Dia de descanso — nenhum exercício programado.</div>
       ) : (
-        <div className="cli-ex-list">
-          {exercicios.map((ex, i) => (
-            <div className="cli-ex-item" key={i}>
-              <div className="cli-ex-info">
-                <div className="cli-ex-name" title={ex.nome}>
-                  <span className="mrs-ord">{i + 1}.</span> {ex.nome}
-                </div>
-                <div className="cli-ex-detail">
-                  {isAlunoExercicioCardio(ex) ? (
-                    <>
-                      <span className="cli-ex-chip">{ex.duracao}</span>
-                      <span className="cli-ex-chip">Intensidade: {ex.intensidade}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="cli-ex-chip">
-                        {ex.series}×{ex.reps}
-                      </span>
-                      <span className="cli-ex-chip">{ex.carga}kg</span>
-                      {ex.rir != null && <span className="cli-ex-chip">RIR {ex.rir}</span>}
-                      {ex.sugestao && <span className="cli-ex-chip cli-ex-chip-sug">▲ {ex.sugestao}kg</span>}
-                    </>
-                  )}
-                  {ex.groupType && <span className="cli-ex-chip cli-ex-chip-sug">{GROUP_LABELS[ex.groupType]}</span>}
-                </div>
-                {ex.notes && (
-                  <div style={{ fontSize: '0.65rem', color: 'var(--teal)', marginTop: 6, fontStyle: 'italic' }}>
-                    # {ex.notes}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ListaExerciciosLeitura exercicios={exercicios} />
       )}
     </section>
+  );
+}
+
+/** Lista de exercícios em leitura (ordem prescrita, séries×reps, carga, método e observação). */
+export function ListaExerciciosLeitura({ exercicios }: { exercicios: AlunoExercicio[] }) {
+  return (
+    <div className="cli-ex-list">
+      {exercicios.map((ex, i) => (
+        <div className="cli-ex-item" key={i}>
+          <div className="cli-ex-info">
+            <div className="cli-ex-name" title={ex.nome}>
+              <span className="mrs-ord">{i + 1}.</span> {ex.nome}
+            </div>
+            <div className="cli-ex-detail">
+              {isAlunoExercicioCardio(ex) ? (
+                <>
+                  <span className="cli-ex-chip">{ex.duracao}</span>
+                  <span className="cli-ex-chip">Intensidade: {ex.intensidade}</span>
+                </>
+              ) : (
+                <>
+                  <span className="cli-ex-chip">
+                    {ex.series}×{ex.reps}
+                  </span>
+                  <span className="cli-ex-chip">{ex.carga}kg</span>
+                  {ex.rir != null && <span className="cli-ex-chip">RIR {ex.rir}</span>}
+                  {ex.sugestao && <span className="cli-ex-chip cli-ex-chip-sug">▲ {ex.sugestao}kg</span>}
+                </>
+              )}
+              {ex.groupType && <span className="cli-ex-chip cli-ex-chip-sug">{GROUP_LABELS[ex.groupType]}</span>}
+            </div>
+            {ex.notes && (
+              <div style={{ fontSize: '0.65rem', color: 'var(--teal)', marginTop: 6, fontStyle: 'italic' }}>
+                # {ex.notes}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

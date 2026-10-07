@@ -3,7 +3,8 @@ import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
-import { DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
+import { DAYS, DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
+import { useConfirmStore } from '../../store/useConfirmStore';
 import { isAlunoExercicioCardio } from '../../types/aluno';
 import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
@@ -41,6 +42,9 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
   const [exercicioIdx, setExercicioIdx] = useState<number | null | 'new'>(null);
   const [publishing, setPublishing] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [replicarOpen, setReplicarOpen] = useState(false);
+  const [alvos, setAlvos] = useState<number[]>([]);
+  const setRotinaDia = useAlunoStore((s) => s.setRotinaDia);
 
   function handleReorder(fromIdx: number, toIdx: number) {
     reorderExercicios(alunoId, day, fromIdx, toIdx);
@@ -70,6 +74,23 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
       showToast('✅ Exercício atualizado', 'success');
     }
     setExercicioIdx(null);
+  }
+
+  async function handleReplicar() {
+    if (!alvos.length) return;
+    const origem = aluno!.rotina[day];
+    const comConteudo = alvos.filter((d) => aluno!.rotina[d].exercicios.length > 0);
+    if (comConteudo.length) {
+      const ok = await useConfirmStore.getState().ask(
+        `Substituir o treino de ${comConteudo.map((d) => DAYS_SHORT[d]).join(', ')} por uma cópia de ${DAYS_SHORT[day]}?`,
+        { confirmLabel: 'Substituir', danger: true }
+      );
+      if (!ok) return;
+    }
+    alvos.forEach((d) => setRotinaDia(alunoId, d, JSON.parse(JSON.stringify(origem))));
+    showToast(`✅ Treino de ${DAYS_SHORT[day]} replicado em ${alvos.map((d) => DAYS_SHORT[d]).join(', ')}`, 'success');
+    setAlvos([]);
+    setReplicarOpen(false);
   }
 
   function handleRemoveExercicio() {
@@ -182,7 +203,7 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
           <div className="cli-day-type" style={{ margin: 0 }}>
             {dia.tipo}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="cli-ed-head-actions">
             {dia.exercicios.length > 1 && (
               <button className="btn btn-ghost btn-sm" onClick={() => setReorderMode((v) => !v)}>
                 {reorderMode ? '✓ Concluir' : '↕️ Reordenar'}
@@ -199,8 +220,35 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
             <button className="btn btn-ghost btn-sm" onClick={() => setImportOpen(true)}>
               📥 Importar Treino
             </button>
+            {dia.exercicios.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setReplicarOpen((v) => !v)} aria-expanded={replicarOpen}>
+                📋 Replicar em outros dias
+              </button>
+            )}
           </div>
         </div>
+
+        {replicarOpen && (
+          <div className="cli-rep-panel">
+            <div className="cli-last">Copiar o treino de {DAYS[day]} para (ex.: A/B/C repetidos na semana):</div>
+            <div className="cli-rep-chips">
+              {DAYS_SHORT.map((label, d) => (
+                <button
+                  key={label}
+                  className={`cli-rep-chip${alvos.includes(d) ? ' on' : ''}`}
+                  disabled={d === day}
+                  aria-pressed={alvos.includes(d)}
+                  onClick={() => setAlvos((a) => (a.includes(d) ? a.filter((x) => x !== d) : [...a, d]))}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-primary btn-sm" disabled={!alvos.length} onClick={() => void handleReplicar()}>
+              Replicar{alvos.length ? ` em ${alvos.length} dia${alvos.length === 1 ? '' : 's'}` : ''}
+            </button>
+          </div>
+        )}
 
         <div className="cli-ed-day-content">
           {dia.exercicios.length === 0 ? (
@@ -233,9 +281,11 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
           )}
         </div>
 
-        <button className="btn-block-primary" style={{ marginTop: 16 }} disabled={publishing} onClick={handlePublicar}>
-          {publishing ? 'Publicando…' : `☁️ Salvar & Publicar para ${aluno.nome.split(' ')[0]}`}
-        </button>
+        <div className="cli-sticky-actions">
+          <button className="btn-block-primary" disabled={publishing} onClick={handlePublicar}>
+            {publishing ? 'Publicando…' : `☁️ Salvar & Publicar para ${aluno.nome.split(' ')[0]}`}
+          </button>
+        </div>
       </div>
 
       {exercicioIdx !== null && (

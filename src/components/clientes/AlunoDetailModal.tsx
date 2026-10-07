@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
-import { DAYS, DAYS_SHORT, GROUP_LABELS } from '../../types/workout';
+import { GROUP_LABELS } from '../../types/workout';
 import { calcularIdade, iniciais, isAlunoExercicioCardio } from '../../types/aluno';
 import type { AlunoExercicio } from '../../types/aluno';
 import { buildGroupedRows } from '../../utils/dayLogGrouping';
@@ -23,9 +23,11 @@ interface AlunoDetailModalProps {
   onEditarRotina: (day: number) => void;
 }
 
+import '../registro/MinhasRotinasSection.css';
 import { RotinasDoAlunoSection } from './RotinasDoAlunoSection';
 import { selectRotinasDoAluno, useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
 import { rotinaSemExercicios } from '../../utils/resumoRotina';
+import { agruparTreinosDaSemana, formatarDias } from '../../utils/agruparTreinos';
 import type { AlunoRotinaSalva } from '../../types/aluno';
 /**
  * Sucessor de #modal-cli-aluno (cli_openAluno/cli_renderMiniPerfil/
@@ -84,6 +86,8 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
 
   const idade = calcularIdade(aluno.dataNascimento);
   const dia = aluno.rotina[activeDay];
+  const { treinos, descanso } = agruparTreinosDaSemana(aluno.rotina);
+  const treinoAtual = treinos.find((t) => t.dias.includes(activeDay));
 
   function handleExcluir() {
     useConfirmStore
@@ -217,6 +221,9 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
             <button className="btn btn-ghost btn-sm" style={{ marginTop: 4 }} onClick={onEditPerfil}>
               ✏️ Editar dados cadastrais
             </button>
+            <button className="btn btn-danger btn-sm" style={{ marginTop: 4 }} onClick={handleExcluir}>
+              🗑️ Excluir aluno
+            </button>
           </div>
         )}
 
@@ -228,27 +235,32 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           </div>
         )}
 
-        <div className="cli-days-bar">
-          {DAYS_SHORT.map((label, d) => {
-            const count = aluno.rotina[d].exercicios.length;
-            return (
+        {treinos.length > 0 ? (
+          <div className="mrs-tabs" role="tablist" aria-label="Treinos da rotina">
+            {treinos.map((t) => (
               <button
-                key={label}
-                className={`cli-day-btn${activeDay === d ? ' active' : ''}`}
-                onClick={() => setActiveDay(d)}
+                key={t.letra}
+                role="tab"
+                aria-selected={t === treinoAtual}
+                className={`mrs-tab${t === treinoAtual ? ' active' : ''}`}
+                onClick={() => setActiveDay(t.dias[0])}
               >
-                <div className="cli-dl">{label}</div>
-                <div className="cli-ds">{count > 0 ? `${count}ex` : '-'}</div>
+                <span className="mrs-tab-letra">Treino {t.letra}</span>
+                <span className="mrs-tab-dias">{formatarDias(t.dias)}</span>
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : null}
 
-        <div className="cli-day-type">{dia.tipo}</div>
+        {treinoAtual && (
+          <div className="cli-day-type">
+            {dia.tipo} · {dia.exercicios.length} ex.
+          </div>
+        )}
 
         <div className="cli-ex-list">
           {dia.exercicios.length === 0 ? (
-            <div className="cli-rest-day">💤 Dia de descanso — nenhum exercício programado.</div>
+            <div className="cli-rest-day">💤 Nenhum treino montado ainda. Use "Editar Rotina" para começar.</div>
           ) : (
             buildGroupedRows(dia.exercicios).map((row) =>
               row.kind === 'free' ? (
@@ -271,16 +283,16 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           )}
         </div>
 
-        <button className="btn btn-primary" style={{ width: '100%', marginBottom: 8 }} onClick={() => void handleIniciarRotina()}>
-          ▶ Iniciar Rotina
-        </button>
+        {descanso.length > 0 && treinos.length > 0 && (
+          <div className="mrs-descanso mrs-descanso-fim">💤 Descanso: {formatarDias(descanso)}</div>
+        )}
 
-        <div className="cli-detail-actions">
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onEditarRotina(activeDay)}>
-            ✎ Editar Rotina — {DAYS[activeDay]}
+        <div className="cli-detail-actions cli-sticky-actions">
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => void handleIniciarRotina()}>
+            ▶ Iniciar Rotina
           </button>
-          <button className="btn btn-danger btn-sm" onClick={handleExcluir}>
-            Excluir
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => onEditarRotina(treinoAtual ? treinoAtual.dias[0] : activeDay)}>
+            ✎ Editar{treinoAtual ? ` Treino ${treinoAtual.letra}` : ''}
           </button>
         </div>
       </div>

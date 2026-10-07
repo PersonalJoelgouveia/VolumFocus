@@ -30,3 +30,19 @@
 .mrs-dia-count { font-weight: 500; color: var(--text-3); }
 .mrs-descanso { font-size: 0.74rem; color: var(--text-3); margin-top: 4px; }
 .mrs-ord { color: var(--text-3); font-family: var(--font-mono); font-size: 0.72rem; }
+.mrs-treinos { margin-top: 10px; }
+.mrs-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: none; }
+.mrs-tabs::-webkit-scrollbar { display: none; }
+.mrs-tab {
+  flex: 1 0 auto; min-width: 88px; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: 6px 10px; cursor: pointer; font: inherit; color: var(--text-2);
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--rs);
+}
+.mrs-tab:hover { border-color: var(--border-md); }
+.mrs-tab.active { border-color: var(--teal); background: var(--teal-glow); }
+.mrs-tab-letra { font-family: var(--font-title); font-size: 0.78rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.mrs-tab.active .mrs-tab-letra { color: var(--teal); }
+.mrs-tab-dias { font-size: 0.6rem; color: var(--text-3); font-family: var(--font-mono); white-space: nowrap; }
+.mrs-descanso-fim { margin-top: 12px; }
+.mrs-toggle-semana { margin: 12px 0 0; }
+.mrs-mais { margin-top: 8px; }

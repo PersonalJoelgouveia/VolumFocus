@@ -279,3 +279,21 @@
 }
 
 .cli-ex-sub-hint { font-size: 0.78rem; color: var(--text-3); line-height: 1.5; margin-bottom: 14px; }
+
+/* Barra de ações fixa no rodapé do painel (evita rolar até o fim para iniciar/editar). */
+.cli-sticky-actions {
+  position: sticky;
+  bottom: -20px;
+  margin: 16px -20px -20px;
+  padding: 12px 20px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  z-index: 2;
+}
+.cli-sticky-actions .btn { min-height: 44px; }
+.cli-rep-panel { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--rs); padding: 12px; margin-bottom: 10px; }
+.cli-rep-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.cli-rep-chip { min-width: 48px; min-height: 40px; cursor: pointer; font: inherit; font-size: 0.74rem; font-weight: 700; color: var(--text-2); background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--rs); }
+.cli-rep-chip.on { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+.cli-rep-chip:disabled { opacity: 0.4; cursor: default; }
+.cli-ed-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }

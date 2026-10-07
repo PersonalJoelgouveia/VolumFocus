@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { selectRotinasDoAluno, useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
 import type { AlunoRotinaSalva } from '../../types/aluno';
-import { CartaoRotina, DetalheRotinaLeitura } from '../registro/RotinaCartoes';
+import { DetalheRotinaLeitura, ListaCartoesRotina } from '../registro/RotinaCartoes';
 import '../registro/MinhasRotinasSection.css';
 
 /**
@@ -62,13 +62,7 @@ export function RotinasDoAlunoSection({
         <div className="mrs-note">Este aluno não tem rotina ativa no momento.</div>
       )}
 
-      {ordenadas.length > 0 && (
-        <div className="mrs-list">
-          {ordenadas.map((r) => (
-            <CartaoRotina key={r.id} rotina={r} onAbrir={() => setAbertaId(r.id)} />
-          ))}
-        </div>
-      )}
+      {ordenadas.length > 0 && <ListaCartoesRotina rotinas={ordenadas} onAbrir={setAbertaId} />}
     </section>
   );
 }

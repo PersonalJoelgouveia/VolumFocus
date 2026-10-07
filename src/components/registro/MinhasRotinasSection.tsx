@@ -5,7 +5,7 @@ import {
   selectStatusMinhasRotinas,
   useMinhasRotinasStore,
 } from '../../store/useMinhasRotinasStore';
-import { CartaoRotina, DetalheRotinaLeitura } from './RotinaCartoes';
+import { DetalheRotinaLeitura, ListaCartoesRotina } from './RotinaCartoes';
 import './MinhasRotinasSection.css';
 
 interface MinhasRotinasSectionProps {
@@ -74,13 +74,7 @@ export function MinhasRotinasSection({ abertaId, onAbrir, onVoltar }: MinhasRoti
         <div className="mrs-note">Seu Personal ainda não criou rotinas para você.</div>
       )}
 
-      {rotinas.length > 0 && (
-        <div className="mrs-list">
-          {rotinas.map((r) => (
-            <CartaoRotina key={r.id} rotina={r} onAbrir={() => onAbrir(r.id)} />
-          ))}
-        </div>
-      )}
+      {rotinas.length > 0 && <ListaCartoesRotina rotinas={rotinas} onAbrir={onAbrir} />}
 
     </section>
   );
