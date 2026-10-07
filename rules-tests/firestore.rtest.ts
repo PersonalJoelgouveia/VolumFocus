@@ -328,3 +328,36 @@ describe('default deny', () => {
     await assertFails(getDoc(doc(ctxA(), 'alunos', ALUNO_A, 'outra', 'x')));
   });
 });
+
+describe('/alunos/{email}/cargas/atuais — aluno (o próprio) e Personal gravam; ambos leem', () => {
+  const ref = (c: ReturnType<typeof ctxPT>, email: string, id = 'atuais') => doc(c, 'alunos', email, 'cargas', id);
+  const dados = (extra: Record<string, unknown> = {}) => ({
+    cargas: { supino_reto: { carga: 42.5, em: '2026-10-07T12:00:00.000Z', por: 'aluno' } },
+    atualizadoEm: '2026-10-07T12:00:00.000Z',
+    ...extra,
+  });
+
+  it('aluno grava e lê as próprias cargas; Personal também', async () => {
+    await assertSucceeds(setDoc(ref(ctxA(), ALUNO_A), dados(), { merge: true }));
+    await assertSucceeds(getDoc(ref(ctxA(), ALUNO_A)));
+    await assertSucceeds(setDoc(ref(ctxPT(), ALUNO_A), dados(), { merge: true }));
+    await assertSucceeds(getDoc(ref(ctxPT(), ALUNO_A)));
+  });
+  it('aluno NÃO acessa as cargas de outro aluno; estranho/anônimo/e-mail não verificado não acessam', async () => {
+    await assertFails(setDoc(ref(ctxA(), ALUNO_B), dados()));
+    await assertFails(getDoc(ref(ctxA(), ALUNO_B)));
+    await assertFails(getDoc(ref(ctxB(), ALUNO_A)));
+    await assertFails(setDoc(ref(ctxEstranho(), ALUNO_A), dados()));
+    await assertFails(getDoc(ref(ctxAnon(), ALUNO_A)));
+    await assertFails(setDoc(ref(ctxFalsoA(), ALUNO_A), dados()));
+  });
+  it('só o documento `atuais`, só os campos esperados, sem delete e sem list', async () => {
+    await assertFails(setDoc(ref(ctxA(), ALUNO_A, 'outro'), dados()));
+    await assertFails(setDoc(ref(ctxA(), ALUNO_A), dados({ extra: 1 })));
+    await assertFails(setDoc(ref(ctxA(), ALUNO_A), dados({ cargas: 'x' })));
+    await assertSucceeds(setDoc(ref(ctxA(), ALUNO_A), dados()));
+    await assertFails(deleteDoc(ref(ctxA(), ALUNO_A)));
+    await assertFails(deleteDoc(ref(ctxPT(), ALUNO_A)));
+    await assertFails(getDocs(collection(ctxPT(), 'alunos', ALUNO_A, 'cargas')));
+  });
+});

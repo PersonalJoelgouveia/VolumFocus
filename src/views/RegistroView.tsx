@@ -1,3 +1,4 @@
+import { useCargasCompartilhadasSync } from '../hooks/useCargasCompartilhadasSync';
 import { useState } from 'react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { useUIStore } from '../store/useUIStore';
@@ -25,6 +26,7 @@ import type { ListMode } from '../components/registro/ExerciseListItem';
  * cada linha oferece apenas "Remover" como controle direto.
  */
 export function RegistroView() {
+  useCargasCompartilhadasSync();
   const selectedDay = useWorkoutStore((s) => s.selectedDay);
   const selectDay = useWorkoutStore((s) => s.selectDay);
   const weekLog = useWorkoutStore((s) => s.weekLog);

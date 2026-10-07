@@ -145,6 +145,21 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // Cargas "vivas" (peso atual por exercício): aluno e Personal gravam, ambos leem.
+      // Documento único `atuais`; nunca apaga. Forma validada; conteúdo do mapa limitado em tamanho.
+      match /cargas/{id} {
+        allow get: if ehPT() || ehDono(email);
+        allow list: if false;
+        allow create, update: if id == 'atuais'
+          && (ehPT() || (ehDono(email) && cadastrado(email)))
+          && request.resource.data.keys().hasOnly(['cargas', 'atualizadoEm'])
+          && request.resource.data.cargas is map
+          && request.resource.data.cargas.size() <= 300
+          && request.resource.data.atualizadoEm is string
+          && request.resource.data.atualizadoEm.size() <= 40;
+        allow delete: if false;
+      }
+
       // Prontuário: só o Personal (o aluno NUNCA lê).
       match /anotacoes/{id} {
         allow read, delete: if ehPT();

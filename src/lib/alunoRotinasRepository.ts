@@ -3,6 +3,7 @@ import { criarRotinaVazia } from '../types/aluno';
 import type { AlunoExercicio, AlunoRotina, AlunoRotinaSalva } from '../types/aluno';
 import { DAYS_SHORT } from '../types/workout';
 import { ordenarRotinasAluno } from '../utils/ordenarRotinasAluno';
+import { limparCargasCompartilhadas } from './cargasCompartilhadas';
 
 /**
  * Repository das rotinas do aluno (várias por aluno) — subcoleção
@@ -132,6 +133,8 @@ export async function criarRotinaAluno(studentEmail: string, input: CriarRotinaI
   if (nova.ativa) await desativarOutras(batch, studentEmail, nova.id);
   batch.set(ref, semUndefined(nova));
   await batch.commit();
+  // Prescrição nova = referência nova: cargas "vivas" antigas não podem sobrescrevê-la (best-effort).
+  if (nova.ativa) await limparCargasCompartilhadas(studentEmail);
   return nova;
 }
 

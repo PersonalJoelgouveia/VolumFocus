@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { DayIndex, ExDoneMap, TrainingLevel, WeekLog, WorkoutDayLog, WorkoutLogEntry } from '../types/workout';
+import type { DayIndex, ExDoneMap, StrengthLogEntry, TrainingLevel, WeekLog, WorkoutDayLog, WorkoutLogEntry } from '../types/workout';
 import { exDoneKey } from '../types/workout';
 
 interface WorkoutState {
@@ -38,6 +38,13 @@ interface WorkoutState {
   clearDayDone: (day: number) => void;
 }
 
+type CargaListener = (exId: string, novaCarga: number) => void;
+let cargaListener: CargaListener | null = null;
+/** Quem quiser saber de edições de peso (sync Personal ⇄ aluno) se registra aqui; `null` desliga. */
+export function setCargaEditadaListener(fn: CargaListener | null): void {
+  cargaListener = fn;
+}
+
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
@@ -62,14 +69,22 @@ export const useWorkoutStore = create<WorkoutState>()(
           return { weekLog: { ...state.weekLog, [day]: [...current, entry] } };
         }),
 
-      updateLogEntry: (day, index, patch) =>
+      updateLogEntry: (day, index, patch) => {
+        const antes = get().weekLog[day]?.[index];
         set((state) => {
           const current = state.weekLog[day] ?? [];
           if (!current[index]) return state;
           const updated = [...current];
           updated[index] = { ...updated[index], ...patch } as WorkoutLogEntry;
           return { weekLog: { ...state.weekLog, [day]: updated } };
-        }),
+        });
+        // Só edição de peso feita pelo usuário (patch explícito) — não passa por aqui o que é aplicado por sync.
+        if (antes && antes.type !== 'cardio' && 'exId' in antes && cargaListener) {
+          const patchForca = patch as Partial<StrengthLogEntry>;
+          const nova = patchForca.load ?? patchForca.serieLoads?.[0];
+          if (typeof nova === 'number' && nova !== antes.load) cargaListener(antes.exId, nova);
+        }
+      },
 
       removeLogEntry: (day, index) =>
         set((state) => {
