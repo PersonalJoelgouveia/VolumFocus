@@ -10,6 +10,7 @@ import { deletePhotosByAluno } from '../../lib/assessmentPhotoStore';
 import { deletePersonalVideosByCliente } from '../../lib/localVideoStore';
 import { limparRascunhoOnline } from '../../lib/onlineAssessmentDraftStore';
 import { useSessionStore } from '../../store/useSessionStore';
+import { iniciarSessaoComRotina } from '../../lib/iniciarSessaoComRotina';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
@@ -109,6 +110,28 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
         showToast('🗑️ Aluno removido', 'success');
         onClose();
       });
+  }
+
+  async function handleIniciarRotina() {
+    if (rotinaSemExercicios(aluno!.rotina)) {
+      showToast('⚠️ A rotina está vazia — monte ou carregue uma rotina antes de iniciar.', 'warning');
+      return;
+    }
+    const existente = useSessionStore.getState().sessions.some((s) => s.alunoId === aluno!.id);
+    if (existente) {
+      const ok = await useConfirmStore.getState().ask(
+        `${aluno!.nome.split(' ')[0]} já tem uma sessão aberta. Carregar esta rotina substitui a semana dessa sessão (progresso incluso).`,
+        { confirmLabel: 'Substituir e Iniciar', danger: true }
+      );
+      if (!ok) return;
+    }
+    const r = iniciarSessaoComRotina(aluno!.id, aluno!.nome, aluno!.rotina);
+    if (!r.ok) {
+      showToast('⚠️ Limite de sessões simultâneas atingido. Encerre uma sessão para iniciar outra.', 'warning');
+      return;
+    }
+    showToast(`✅ Sessão de ${aluno!.nome.split(' ')[0]} iniciada com a rotina carregada`, 'success');
+    onClose();
   }
 
   function renderExItem(ex: AlunoExercicio, i: number) {
@@ -247,6 +270,10 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
             )
           )}
         </div>
+
+        <button className="btn btn-primary" style={{ width: '100%', marginBottom: 8 }} onClick={() => void handleIniciarRotina()}>
+          ▶ Iniciar Rotina
+        </button>
 
         <div className="cli-detail-actions">
           <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onEditarRotina(activeDay)}>
