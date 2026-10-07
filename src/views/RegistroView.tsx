@@ -1,10 +1,14 @@
+import { aplicarTreinoHoje, exerciciosNoDia } from '../lib/aplicarTreinoNoDia';
+import { useConfirmStore } from '../store/useConfirmStore';
+import type { TreinoAgrupado } from '../utils/agruparTreinos';
+import { getTodayDayIndex } from '../utils/dayIndex';
 import { useCargasCompartilhadasSync } from '../hooks/useCargasCompartilhadasSync';
 import { useState } from 'react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { useUIStore } from '../store/useUIStore';
 import { useTimerStore } from '../store/useTimerStore';
 import { useProgressStore } from '../store/useProgressStore';
-import { DAYS } from '../types/workout';
+import { DAYS, DAYS_SHORT } from '../types/workout';
 import type { GroupType, StrengthLogEntry } from '../types/workout';
 import { isCardioLogEntry } from '../types/workout';
 import { DayExerciseList } from '../components/registro/DayExerciseList';
@@ -50,6 +54,23 @@ export function RegistroView() {
   const [mode, setMode] = useState<ListMode>('normal');
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [groupType, setGroupType] = useState<GroupType>('biset');
+
+  /** Aluno: coloca o treino escolhido (A/B/C…) no dia de hoje da Semana Atual, avisando se há sobreposição. */
+  async function handleUsarTreino(treino: TreinoAgrupado) {
+    const hoje = getTodayDayIndex();
+    const n = exerciciosNoDia(hoje);
+    if (n > 0) {
+      const ok = await useConfirmStore.getState().ask(
+        `Hoje (${DAYS_SHORT[hoje]}) já tem ${n} exercício${n === 1 ? '' : 's'} na Semana Atual. Substituir pelo Treino ${treino.letra}? O progresso de hoje será perdido.`,
+        { confirmLabel: `Substituir por Treino ${treino.letra}`, danger: true }
+      );
+      if (!ok) return;
+    }
+    const { novosExercicios } = aplicarTreinoHoje(treino.dia);
+    const extra = novosExercicios.length ? ` (${novosExercicios.length} exercício(s) novo(s) no banco)` : '';
+    showToast(`✅ Treino ${treino.letra} aberto em ${DAYS_SHORT[hoje]}${extra}`, 'success');
+    setRotinaAbertaId(null);
+  }
 
   const freeCount = dayLog.filter((e) => !e.groupId).length;
 
@@ -145,6 +166,7 @@ export function RegistroView() {
           abertaId={rotinaAbertaId}
           onAbrir={setRotinaAbertaId}
           onVoltar={() => setRotinaAbertaId(null)}
+          onUsarTreino={(t) => void handleUsarTreino(t)}
         />
       </div>
     );
@@ -205,7 +227,7 @@ export function RegistroView() {
         </div>
       </div>
 
-      {isAlunoMode && <MinhasRotinasSection abertaId={null} onAbrir={setRotinaAbertaId} onVoltar={() => setRotinaAbertaId(null)} />}
+      {isAlunoMode && <MinhasRotinasSection abertaId={null} onAbrir={setRotinaAbertaId} onVoltar={() => setRotinaAbertaId(null)} onUsarTreino={(t) => void handleUsarTreino(t)} />}
 
       <div className="level-pill">
         {DAYS.map((day, i) => (

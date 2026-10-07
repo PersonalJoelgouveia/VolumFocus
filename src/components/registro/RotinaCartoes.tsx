@@ -5,6 +5,7 @@ import { DAYS_SHORT } from '../../types/workout';
 import type { AlunoRotinaSalva } from '../../types/aluno';
 import { RotinaSemanaLeitura } from './RotinaSemanaLeitura';
 import { RotinaTreinosLeitura } from './RotinaTreinosLeitura';
+import type { TreinoAgrupado } from '../../utils/agruparTreinos';
 import './RotinasModal.css';
 import './MinhasRotinasSection.css';
 
@@ -66,8 +67,13 @@ export function DetalheRotinaLeitura({
   rotina,
   onVoltar,
   onEditar,
+  onUsarTreino,
+  rotuloUsar,
 }: {
   rotina: AlunoRotinaSalva;
+  /** Abre o treino escolhido no dia de hoje (quem passa decide o destino e confirma sobreposição). */
+  onUsarTreino?: (treino: TreinoAgrupado) => void;
+  rotuloUsar?: string;
   onVoltar: () => void;
   /** Só o Personal passa isto: carrega a rotina no editor (a publicação cria uma NOVA versão). */
   onEditar?: () => void;
@@ -87,7 +93,7 @@ export function DetalheRotinaLeitura({
         {diasComTreino.length} dia{diasComTreino.length === 1 ? '' : 's'} de treino · {totalExercicios} exercícios
         {rotina.atualizadaEm && ` · atualizada em ${dataCurta(rotina.atualizadaEm)}`}
       </div>
-      <p className="mrs-readonly">Somente leitura — abrir não altera o treino da semana.</p>
+      <p className="mrs-readonly">Abrir a rotina não altera a Semana Atual — só ao tocar em "Usar treino".</p>
       {onEditar && (
         <>
           <button className="btn btn-primary btn-sm btn-full" onClick={onEditar}>
@@ -101,7 +107,7 @@ export function DetalheRotinaLeitura({
       {semanaCompleta ? (
         <RotinaSemanaLeitura key={rotina.id} rotina={rotina.rotina} />
       ) : (
-        <RotinaTreinosLeitura key={rotina.id} rotina={rotina.rotina} />
+        <RotinaTreinosLeitura key={rotina.id} rotina={rotina.rotina} onUsarTreino={onUsarTreino} rotuloUsar={rotuloUsar} />
       )}
       <button className="btn btn-ghost btn-sm btn-full mrs-toggle-semana" onClick={() => setSemanaCompleta((v) => !v)}>
         {semanaCompleta ? 'Ver só os treinos (A, B, C…)' : 'Ver semana completa (7 dias)'}

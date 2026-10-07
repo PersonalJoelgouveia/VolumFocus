@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
-import { GROUP_LABELS } from '../../types/workout';
-import { calcularIdade, iniciais, isAlunoExercicioCardio } from '../../types/aluno';
-import type { AlunoExercicio } from '../../types/aluno';
-import { buildGroupedRows } from '../../utils/dayLogGrouping';
+import { DAYS_SHORT } from '../../types/workout';
+import { calcularIdade, iniciais } from '../../types/aluno';
 import { deletePhotosByAluno } from '../../lib/assessmentPhotoStore';
 import { deletePersonalVideosByCliente } from '../../lib/localVideoStore';
 import { limparRascunhoOnline } from '../../lib/onlineAssessmentDraftStore';
 import { useSessionStore } from '../../store/useSessionStore';
-import { iniciarSessaoComRotina } from '../../lib/iniciarSessaoComRotina';
+import { exerciciosNoDiaDaSessao, iniciarSessaoComTreino } from '../../lib/aplicarTreinoNoDia';
+import { getTodayDayIndex } from '../../utils/dayIndex';
+import type { TreinoAgrupado } from '../../utils/agruparTreinos';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
@@ -27,44 +27,26 @@ import '../registro/MinhasRotinasSection.css';
 import { RotinasDoAlunoSection } from './RotinasDoAlunoSection';
 import { selectRotinasDoAluno, useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
 import { rotinaSemExercicios } from '../../utils/resumoRotina';
-import { agruparTreinosDaSemana, formatarDias } from '../../utils/agruparTreinos';
 import type { AlunoRotinaSalva } from '../../types/aluno';
 /**
  * Sucessor de #modal-cli-aluno (cli_openAluno/cli_renderMiniPerfil/
  * cli_renderDaysBar/cli_renderDayContent, index.html ~10603-10716):
- * mini-perfil colapsável + barra de dias + lista de exercícios do dia
- * selecionado, somente leitura. "Editar Rotina" abre o RoutineEditorModal
- * no mesmo dia.
+ * mini-perfil colapsável + Rotinas do aluno (rotina → treino A/B/C → iniciar hoje na
+ * sessão). "Editor de rotina" abre o RoutineEditorModal.
  */
 export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotina }: AlunoDetailModalProps) {
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const removeAluno = useAlunoStore((s) => s.removeAluno);
   const showToast = useUIStore((s) => s.showToast);
 
-  const initialDay = aluno?.rotina.findIndex((d) => d.exercicios.length > 0) ?? -1;
-  const [activeDay, setActiveDay] = useState(initialDay >= 0 ? initialDay : 0);
   const setRotinaDia = useAlunoStore((s) => s.setRotinaDia);
   const rotinasNuvem = useRotinasDoAlunoStore(selectRotinasDoAluno(aluno?.email ?? ''));
-  const hidratou = useRef(false);
-  const [origemRascunho, setOrigemRascunho] = useState<string | null>(null);
 
-  /** Copia a rotina da nuvem para o rascunho local de edição (a semana Seg–Dom abaixo). */
+  /** Copia a rotina da nuvem para o rascunho local que o editor (Criar Treino) usa. A nuvem não muda. */
   function carregarNoRascunho(r: AlunoRotinaSalva) {
     const copia = JSON.parse(JSON.stringify(r.rotina)) as AlunoRotinaSalva['rotina'];
     copia.forEach((dia, d) => setRotinaDia(alunoId, d, dia));
-    setOrigemRascunho(r.nome);
-    const primeiro = copia.findIndex((d) => d.exercicios.length > 0);
-    setActiveDay(primeiro >= 0 ? primeiro : 0);
   }
-
-  // A semana abaixo é o rascunho local; se ele ainda está EM BRANCO e o aluno tem rotina
-  // atual na nuvem, mostra essa rotina (uma vez por abertura — nunca sobrescreve rascunho com conteúdo).
-  useEffect(() => {
-    if (hidratou.current || !aluno || rotinasNuvem.status !== 'pronto') return;
-    hidratou.current = true;
-    if (rotinasNuvem.ativa && rotinaSemExercicios(aluno.rotina)) carregarNoRascunho(rotinasNuvem.ativa);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotinasNuvem.status]);
 
   async function handleEditarRotinaDaNuvem(r: AlunoRotinaSalva) {
     if (!aluno) return;
@@ -85,9 +67,6 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   if (!aluno) return null;
 
   const idade = calcularIdade(aluno.dataNascimento);
-  const dia = aluno.rotina[activeDay];
-  const { treinos, descanso } = agruparTreinosDaSemana(aluno.rotina);
-  const treinoAtual = treinos.find((t) => t.dias.includes(activeDay));
 
   function handleExcluir() {
     useConfirmStore
@@ -116,54 +95,32 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
       });
   }
 
-  async function handleIniciarRotina() {
-    if (rotinaSemExercicios(aluno!.rotina)) {
-      showToast('⚠️ A rotina está vazia — monte ou carregue uma rotina antes de iniciar.', 'warning');
-      return;
-    }
-    const existente = useSessionStore.getState().sessions.some((s) => s.alunoId === aluno!.id);
-    if (existente) {
+  /** Treino escolhido (A/B/C…) → sessão do aluno aberta no dia de HOJE, avisando se há sobreposição. */
+  async function handleIniciarTreino(treino: TreinoAgrupado) {
+    const hoje = getTodayDayIndex();
+    const n = exerciciosNoDiaDaSessao(aluno!.id, hoje);
+    if (n > 0) {
       const ok = await useConfirmStore.getState().ask(
-        `${aluno!.nome.split(' ')[0]} já tem uma sessão aberta. Carregar esta rotina substitui a semana dessa sessão (progresso incluso).`,
-        { confirmLabel: 'Substituir e Iniciar', danger: true }
+        `${aluno!.nome.split(' ')[0]} já tem ${n} exercício${n === 1 ? '' : 's'} em ${DAYS_SHORT[hoje]} na sessão aberta. Substituir pelo Treino ${treino.letra}? O progresso desse dia será perdido.`,
+        { confirmLabel: `Substituir por Treino ${treino.letra}`, danger: true }
       );
       if (!ok) return;
     }
-    const r = iniciarSessaoComRotina(aluno!.id, aluno!.nome, aluno!.rotina);
+    const r = iniciarSessaoComTreino(aluno!.id, aluno!.nome, treino.dia);
     if (!r.ok) {
       showToast('⚠️ Limite de sessões simultâneas atingido. Encerre uma sessão para iniciar outra.', 'warning');
       return;
     }
-    showToast(`✅ Sessão de ${aluno!.nome.split(' ')[0]} iniciada com a rotina carregada`, 'success');
+    showToast(`✅ Treino ${treino.letra} aberto em ${DAYS_SHORT[hoje]} na sessão de ${aluno!.nome.split(' ')[0]}`, 'success');
     onClose();
   }
 
-  function renderExItem(ex: AlunoExercicio, i: number) {
-    return (
-      <div className="cli-ex-item" key={i}>
-        <div className="cli-ex-info">
-          <div className="cli-ex-name" title={ex.nome}>
-            {ex.nome}
-          </div>
-          <div className="cli-ex-detail">
-            {isAlunoExercicioCardio(ex) ? (
-              <>
-                <span className="cli-ex-chip">{ex.duracao}</span>
-                <span className="cli-ex-chip">Intensidade: {ex.intensidade}</span>
-              </>
-            ) : (
-              <>
-                <span className="cli-ex-chip">
-                  {ex.series}×{ex.reps}
-                </span>
-                <span className="cli-ex-chip">{ex.carga}kg</span>
-                {ex.sugestao && <span className="cli-ex-chip cli-ex-chip-sug">▲ {ex.sugestao}kg</span>}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  /** Abre o editor no rascunho; se o rascunho está em branco, parte da rotina atual da nuvem. */
+  function handleAbrirEditor() {
+    if (rotinaSemExercicios(aluno!.rotina) && rotinasNuvem.ativa) carregarNoRascunho(rotinasNuvem.ativa);
+    const fonte = rotinaSemExercicios(aluno!.rotina) && rotinasNuvem.ativa ? rotinasNuvem.ativa.rotina : aluno!.rotina;
+    const primeiro = fonte.findIndex((d) => d.exercicios.length > 0);
+    onEditarRotina(primeiro >= 0 ? primeiro : 0);
   }
 
   return (
@@ -227,74 +184,13 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           </div>
         )}
 
-        <RotinasDoAlunoSection email={aluno.email} onEditar={(r) => void handleEditarRotinaDaNuvem(r)} />
+        <RotinasDoAlunoSection email={aluno.email} onEditar={(r) => void handleEditarRotinaDaNuvem(r)}
+          onUsarTreino={(_, t) => void handleIniciarTreino(t)}
+        />
 
-        {origemRascunho && (
-          <div className="cli-last" style={{ marginBottom: 8 }}>
-            Semana abaixo carregada da rotina "{origemRascunho}". Edite e use Salvar &amp; Publicar para criar uma nova rotina atual.
-          </div>
-        )}
-
-        {treinos.length > 0 ? (
-          <div className="mrs-tabs" role="tablist" aria-label="Treinos da rotina">
-            {treinos.map((t) => (
-              <button
-                key={t.letra}
-                role="tab"
-                aria-selected={t === treinoAtual}
-                className={`mrs-tab${t === treinoAtual ? ' active' : ''}`}
-                onClick={() => setActiveDay(t.dias[0])}
-              >
-                <span className="mrs-tab-letra">Treino {t.letra}</span>
-                <span className="mrs-tab-dias">{formatarDias(t.dias)}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {treinoAtual && (
-          <div className="cli-day-type">
-            {dia.tipo} · {dia.exercicios.length} ex.
-          </div>
-        )}
-
-        <div className="cli-ex-list">
-          {dia.exercicios.length === 0 ? (
-            <div className="cli-rest-day">💤 Nenhum treino montado ainda. Use "Editar Rotina" para começar.</div>
-          ) : (
-            buildGroupedRows(dia.exercicios).map((row) =>
-              row.kind === 'free' ? (
-                renderExItem(row.entry, row.index)
-              ) : (
-                <div className="cj-group" key={row.groupId}>
-                  <div className="cj-group-header">
-                    <span className="cj-group-badge">{GROUP_LABELS[row.members[0].entry.groupType ?? 'biset']}</span>
-                    <span className="cj-group-desc">{row.members.length} exercícios conjugados</span>
-                  </div>
-                  {row.members.map((m, k) => (
-                    <div key={m.index}>
-                      {k > 0 && <div className="cj-connector" />}
-                      {renderExItem(m.entry, m.index)}
-                    </div>
-                  ))}
-                </div>
-              )
-            )
-          )}
-        </div>
-
-        {descanso.length > 0 && treinos.length > 0 && (
-          <div className="mrs-descanso mrs-descanso-fim">💤 Descanso: {formatarDias(descanso)}</div>
-        )}
-
-        <div className="cli-detail-actions cli-sticky-actions">
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => void handleIniciarRotina()}>
-            ▶ Iniciar Rotina
-          </button>
-          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => onEditarRotina(treinoAtual ? treinoAtual.dias[0] : activeDay)}>
-            ✎ Editar{treinoAtual ? ` Treino ${treinoAtual.letra}` : ''}
-          </button>
-        </div>
+        <button className="btn btn-ghost btn-sm btn-full" style={{ marginTop: 12 }} onClick={handleAbrirEditor}>
+          ✎ Editor de rotina (criar / editar)
+        </button>
       </div>
 
       {avaliacaoOpen && (

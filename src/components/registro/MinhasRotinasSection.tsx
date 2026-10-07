@@ -6,6 +6,7 @@ import {
   useMinhasRotinasStore,
 } from '../../store/useMinhasRotinasStore';
 import { DetalheRotinaLeitura, ListaCartoesRotina } from './RotinaCartoes';
+import type { TreinoAgrupado } from '../../utils/agruparTreinos';
 import './MinhasRotinasSection.css';
 
 interface MinhasRotinasSectionProps {
@@ -13,6 +14,8 @@ interface MinhasRotinasSectionProps {
   abertaId: string | null;
   onAbrir: (id: string) => void;
   onVoltar: () => void;
+  /** Aluno tocou em "Usar treino": o pai confirma sobreposição e aplica no dia de hoje. */
+  onUsarTreino?: (treino: TreinoAgrupado) => void;
 }
 
 /**
@@ -24,7 +27,7 @@ interface MinhasRotinasSectionProps {
  * Dados: useMinhasRotinasStore (identidade vem do Firebase Auth, leitura única).
  * Sem controles de Personal: é somente leitura.
  */
-export function MinhasRotinasSection({ abertaId, onAbrir, onVoltar }: MinhasRotinasSectionProps) {
+export function MinhasRotinasSection({ abertaId, onAbrir, onVoltar, onUsarTreino }: MinhasRotinasSectionProps) {
   const email = useAuthStore((s) => s.user?.email);
   const rotinas = useMinhasRotinasStore(selectRotinasOrdenadas);
   const status = useMinhasRotinasStore(selectStatusMinhasRotinas);
@@ -44,7 +47,7 @@ export function MinhasRotinasSection({ abertaId, onAbrir, onVoltar }: MinhasRoti
     return (
       <section className="mrs" aria-label="Detalhe da rotina">
         {aberta ? (
-          <DetalheRotinaLeitura rotina={aberta} onVoltar={onVoltar} />
+          <DetalheRotinaLeitura rotina={aberta} onVoltar={onVoltar} onUsarTreino={onUsarTreino} rotuloUsar="Usar" />
         ) : (
           <>
             <button className="btn btn-ghost btn-sm mrs-voltar" onClick={onVoltar}>

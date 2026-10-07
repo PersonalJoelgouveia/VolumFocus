@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { selectRotinasDoAluno, useRotinasDoAlunoStore } from '../../store/useRotinasDoAlunoStore';
 import type { AlunoRotinaSalva } from '../../types/aluno';
+import type { TreinoAgrupado } from '../../utils/agruparTreinos';
 import { DetalheRotinaLeitura, ListaCartoesRotina } from '../registro/RotinaCartoes';
 import '../registro/MinhasRotinasSection.css';
 
@@ -13,10 +14,13 @@ import '../registro/MinhasRotinasSection.css';
 export function RotinasDoAlunoSection({
   email,
   onEditar,
+  onUsarTreino,
 }: {
   email: string;
   /** Carrega a rotina aberta no editor do Personal (rascunho local). */
   onEditar?: (rotina: AlunoRotinaSalva) => void;
+  /** Inicia a sessão do aluno com o treino escolhido, no dia de hoje. */
+  onUsarTreino?: (rotina: AlunoRotinaSalva, treino: TreinoAgrupado) => void;
 }) {
   const { status, ordenadas, erro } = useRotinasDoAlunoStore(selectRotinasDoAluno(email));
   const carregar = useRotinasDoAlunoStore((s) => s.carregar);
@@ -31,7 +35,10 @@ export function RotinasDoAlunoSection({
     return (
       <section className="mrs" aria-label="Detalhe da rotina">
         {aberta ? (
-          <DetalheRotinaLeitura rotina={aberta} onVoltar={() => setAbertaId(null)} onEditar={onEditar ? () => onEditar(aberta) : undefined} />
+          <DetalheRotinaLeitura rotina={aberta} onVoltar={() => setAbertaId(null)} onEditar={onEditar ? () => onEditar(aberta) : undefined}
+            onUsarTreino={onUsarTreino ? (t) => onUsarTreino(aberta, t) : undefined}
+            rotuloUsar="Iniciar"
+          />
         ) : (
           <>
             <button className="btn btn-ghost btn-sm mrs-voltar" onClick={() => setAbertaId(null)}>
