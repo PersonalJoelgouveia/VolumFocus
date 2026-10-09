@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useAuthStore } from '../../store/useAuthStore';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { calcularIdade } from '../../types/aluno';
@@ -107,8 +108,15 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExis
 
   // Carrega rascunho salvo (se houver) uma única vez, ao abrir — só faz
   // sentido no fluxo de autoavaliação do próprio Aluno, nunca ao editar.
+  // O rascunho é namespaceado por ownerUUID (resolvido logo após o login): espera ele existir, senão
+  // o rascunho não seria restaurado e o autosave seguinte sobrescreveria o antigo. Roda uma vez por (dono, cliente).
+  const ownerUUID = useAuthStore((s) => s.ownerUUID);
+  const restauradoPara = useRef<string | null>(null);
   useEffect(() => {
-    if (editando) return;
+    if (editando || !ownerUUID) return;
+    const escopo = `${ownerUUID}|${alunoId}`;
+    if (restauradoPara.current === escopo) return;
+    restauradoPara.current = escopo;
     const rascunho = carregarRascunhoOnline(alunoId);
     if (rascunho) {
       // Conteúdo vindo do localStorage nunca é confiável: valida o formato e a etapa
@@ -124,7 +132,7 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExis
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunoId]);
+  }, [alunoId, ownerUUID]);
 
   function salvarRascunho(proximoStep: Step, dadosAtualizados?: OnlineFormState) {
     if (editando) return; // edição não usa rascunho local

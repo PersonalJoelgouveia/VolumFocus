@@ -6,11 +6,11 @@ vi.mock('../backupRepository', () => ({
 
 const deletePhotosByAssessment = vi.fn().mockResolvedValue(undefined);
 vi.mock('../assessmentPhotoStore', () => ({
-  deletePhotosByAssessment: (id: string) => deletePhotosByAssessment(id),
+  deletePhotosByAssessment: (alunoId: string, id: string) => deletePhotosByAssessment(alunoId, id),
 }));
 
 import { enforceLocalOwner, hasLocalMedia, wipeLocalData } from '../localDataLifecycle';
-import { clearLocalOwnerMemory, setLocalOwner } from '../localOwner';
+import { clearLocalOwnerMemory, setLocalAuthUid, setLocalOwner, setLocalOwnerUUID } from '../localOwner';
 import {
   carregarRascunhoOnline,
   limparRascunhosExpirados,
@@ -84,10 +84,14 @@ describe('wipeLocalData', () => {
 describe('rascunho online: expiração', () => {
   beforeEach(() => {
     installLocalStorage();
-    setLocalOwner('uidA'); // o rascunho só é gravado para uma conta autenticada
+    // o rascunho só é gravado para uma conta autenticada com ownerUUID resolvido
+    setLocalOwner('uidA');
+    setLocalAuthUid('uidA', 'a@x.com');
+    setLocalOwnerUUID('uidA', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
   });
   afterEach(() => {
     clearLocalOwnerMemory();
+    setLocalAuthUid(null);
     vi.unstubAllGlobals();
   });
 
@@ -98,7 +102,7 @@ describe('rascunho online: expiração', () => {
     salvarRascunhoOnline('aluno-2', draft(iso(15)));
     expect(carregarRascunhoOnline('aluno-1')).not.toBeNull();
     expect(carregarRascunhoOnline('aluno-2')).toBeNull();
-    expect(localStorage.getItem('jg3_online_draft_aluno-2')).toBeNull();
+    expect(Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)).filter((k) => k?.includes('aluno-2'))).toEqual([]);
   });
 
   it('rascunho vencido descarta também as fotos da avaliação dele (e o recente não)', () => {
@@ -109,7 +113,7 @@ describe('rascunho online: expiração', () => {
     limparRascunhosExpirados();
 
     expect(deletePhotosByAssessment).toHaveBeenCalledTimes(1);
-    expect(deletePhotosByAssessment).toHaveBeenCalledWith('af-velho');
+    expect(deletePhotosByAssessment).toHaveBeenCalledWith('aluno-2', 'af-velho');
   });
 
   it('trata updatedAt ausente/ilegível como expirado (falha segura)', () => {
@@ -120,13 +124,14 @@ describe('rascunho online: expiração', () => {
   it('a varredura remove só os vencidos, de qualquer cliente', () => {
     salvarRascunhoOnline('aluno-1', draft(iso(1)));
     salvarRascunhoOnline('aluno-2', draft(iso(30)));
-    localStorage.setItem('jg3_online_draft_aluno-4', '{json quebrado');
+    localStorage.setItem('jg3_online_draft_aluno-4', '{json quebrado'); // legado ilegível
     localStorage.setItem('outra_chave', 'x');
 
     limparRascunhosExpirados();
 
-    expect(localStorage.getItem('jg3_online_draft_aluno-1')).not.toBeNull();
-    expect(localStorage.getItem('jg3_online_draft_aluno-2')).toBeNull();
+    const K = (a: string) => `jg3_online_draft_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa:${a}`;
+    expect(localStorage.getItem(K('aluno-1'))).not.toBeNull();
+    expect(localStorage.getItem(K('aluno-2'))).toBeNull();
     expect(localStorage.getItem('jg3_online_draft_aluno-4')).toBeNull();
     expect(localStorage.getItem('outra_chave')).toBe('x');
   });

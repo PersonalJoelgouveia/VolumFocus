@@ -105,3 +105,8 @@ export function getLocalOwnerUUID(): string | null {
 export function getLocalAuthEmail(): string | null {
   return memoryAuthUid ? memoryAuthEmail : null;
 }
+
+/** uid do Firebase da sessão autorizada atual, ou `null`. Só para adoção de dados legados por uid. */
+export function getLocalAuthUid(): string | null {
+  return memoryAuthUid;
+}

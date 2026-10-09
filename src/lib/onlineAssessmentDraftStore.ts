@@ -6,34 +6,53 @@
  * (localStorage, prefixo `jg3_`).
  *
  * Escopo local por design: o rascunho nunca vai pro Firestore — só a
- * avaliação finalizada ('enviada') é persistida na nuvem. Isso é
- * intencional (evita gravar dado parcial/inconsistente em produção) e é
- * suficiente pro caso de uso ("continuar depois no mesmo aparelho").
+ * avaliação finalizada ('enviada') é persistida na nuvem (e lá quem autoriza são
+ * as Security Rules, via request.auth.uid). Isso é intencional (evita gravar dado
+ * parcial/inconsistente em produção) e é suficiente pro caso de uso ("continuar
+ * depois no mesmo aparelho").
+ *
+ * NAMESPACE POR OWNERSHIP (isolamento LÓGICO local — o localStorage é por origem,
+ * não por usuário). Chave:
+ *
+ *     jg3_online_draft_${ownerUUID}:${encodeURIComponent(alunoId)}
+ *
+ * (dono + cliente) e o envelope grava `ownerUUID`, `alunoId` e `assessmentId`, todos
+ * conferidos na leitura (dono + cliente + avaliação). Há um rascunho por (dono,
+ * cliente): o `assessmentId` não entra na chave porque é gerado junto com o
+ * rascunho e só se conhece DEPOIS de carregá-lo; ele vai no envelope, valida-se o
+ * formato e é ele que liga o rascunho às fotos (também namespaceadas por dono+cliente).
+ * O ownerUUID vem da sessão (localOwner.ts), NUNCA de argumento: quem tem outro
+ * ownerUUID, ou pede outro `alunoId`, não monta a chave. O ownerUUID não é segredo nem
+ * autoriza nada; sem sessão/ownerUUID resolvido, não grava nem restaura.
  *
  * SEGURANÇA DO RASCUNHO (contém peso, medidas e triagem de saúde):
- * - DONO: grava `ownerUid` (ver localOwner.ts) e só restaura para o mesmo
- *   dono; rascunho de outra conta é descartado. Sem dono autenticado, não grava.
- * - CONTEXTO: grava `alunoId` e confere com a chave; `assessmentId` precisa ter
- *   formato seguro (ele vira id de documento e chave de foto).
- * - VERSÃO: `v: 2`. Rascunhos sem `v`/`ownerUid` (anteriores) são aceitos e
- *   regravados com dono no próximo avanço de etapa.
- * - TTL: 14 dias sem edição; vencido/inválido/de outro dono é apagado
+ * - Envelope `v: 3`. `assessmentId` precisa ter formato seguro (vira id de documento e
+ *   chave de foto). Rascunho copiado para a chave de outro cliente/dono é rejeitado.
+ * - LEGADO (`jg3_online_draft_${alunoId}`, v2): adotado (movido) só se o `ownerUid`
+ *   gravado for o da sessão e o `alunoId` conferir. Sem dono gravado (anterior ao
+ *   controle de dono) NÃO é adotado — não dá para provar de quem é; fica no aparelho
+ *   até vencer. Nada de outro dono é apagado ao abrir/ler.
+ * - TTL: 14 dias sem edição; vencido/inválido do dono atual é apagado
  *   (e as fotos do rascunho vencido, que só existem neste aparelho).
  * - LIMPEZA TOTAL: logout e troca de dono (localDataLifecycle).
  */
 
 
 import { deletePhotosByAssessment } from './assessmentPhotoStore';
-import { getLocalOwner } from './localOwner';
+import { getLocalAuthUid, getLocalOwnerUUID } from './localOwner';
 
 const PREFIX = 'jg3_online_draft_';
-const VERSAO = 2;
+const VERSAO = 3;
+const VERSAO_LEGADA = 2;
 
 /** Validade de um rascunho sem edição (contada a partir de `updatedAt`). */
 const RASCUNHO_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
 /** Mesmo formato seguro aceito pelo store de fotos (`af-online-<ts>-<rand>` cabe). */
 const ASSESSMENT_ID_SEGURO = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** Parte inicial (ownerUUID + ':') de uma chave nova — distingue da chave legada (`${alunoId}`). */
+const CHAVE_NOVA = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:/;
 
 export interface OnlineAssessmentDraft<T = unknown> {
   assessmentId: string;
@@ -45,17 +64,31 @@ export interface OnlineAssessmentDraft<T = unknown> {
 /** Formato gravado: o rascunho do chamador + dono/contexto/versão. */
 interface StoredDraft<T = unknown> extends OnlineAssessmentDraft<T> {
   v?: number;
+  /** v3: dono local (namespace). */
+  ownerUUID?: string;
+  /** v2 (legado): uid do Firebase do dono. */
   ownerUid?: string;
   alunoId?: string;
 }
 
-type Avaliacao<T> =
-  | { estado: 'ok'; draft: StoredDraft<T> }
-  | { estado: 'expirado'; draft: StoredDraft<T> }
-  | { estado: 'invalido' }
-  | { estado: 'outro-dono' };
+type Avaliacao<T> = { estado: 'ok' | 'expirado'; draft: StoredDraft<T> } | { estado: 'invalido' };
 
-function chave(alunoId: string): string {
+function alunoValido(alunoId: unknown): alunoId is string {
+  return typeof alunoId === 'string' && alunoId.length > 0 && alunoId.length <= 200;
+}
+
+/** ownerUUID da sessão — NUNCA de argumento. `null` = sem sessão/ownerUUID resolvido (nada grava nem restaura). */
+function dono(): string | null {
+  return getLocalOwnerUUID();
+}
+
+/** Chave atual: dono + cliente. */
+function chave(owner: string, alunoId: string): string {
+  return `${PREFIX}${owner}:${encodeURIComponent(alunoId)}`;
+}
+
+/** Chave legada (v2): só o cliente. */
+function chaveLegada(alunoId: string): string {
   return `${PREFIX}${alunoId}`;
 }
 
@@ -69,22 +102,37 @@ function expirado(updatedAt: unknown): boolean {
   return !Number.isFinite(t) || Date.now() - t > RASCUNHO_TTL_MS;
 }
 
-/** Confere envelope, contexto (aluno), dono e validade. `alunoId` = o da chave. */
-function avaliar<T>(raw: string | null, alunoId: string, dono: string | null): Avaliacao<T> {
-  let parsed: unknown;
+function lerJson(raw: string | null): StoredDraft | null {
   try {
-    parsed = JSON.parse(raw ?? 'null');
+    const parsed: unknown = JSON.parse(raw ?? 'null');
+    return ehObjeto(parsed) ? (parsed as unknown as StoredDraft) : null;
   } catch {
-    return { estado: 'invalido' };
+    return null;
   }
-  if (!ehObjeto(parsed)) return { estado: 'invalido' };
-  const d = parsed as unknown as StoredDraft<T>;
+}
 
-  if (d.v !== undefined && d.v !== VERSAO) return { estado: 'invalido' };
-  if (typeof d.assessmentId !== 'string' || !ASSESSMENT_ID_SEGURO.test(d.assessmentId)) return { estado: 'invalido' };
-  if (typeof d.step !== 'string' || typeof d.updatedAt !== 'string') return { estado: 'invalido' };
-  if (d.alunoId !== undefined && d.alunoId !== alunoId) return { estado: 'invalido' };
-  if (d.ownerUid !== undefined && d.ownerUid !== dono) return { estado: 'outro-dono' };
+/** Confere envelope comum (avaliação, etapa, data) e validade. */
+function envelopeOk<T>(d: StoredDraft<T> | null): d is StoredDraft<T> {
+  return (
+    !!d &&
+    typeof d.assessmentId === 'string' &&
+    ASSESSMENT_ID_SEGURO.test(d.assessmentId) &&
+    typeof d.step === 'string' &&
+    typeof d.updatedAt === 'string'
+  );
+}
+
+/** v3: dono + cliente + avaliação conferidos contra o que a SESSÃO pede (não contra a chave). */
+function avaliar<T>(raw: string | null, owner: string, alunoId: string): Avaliacao<T> {
+  const d = lerJson(raw) as StoredDraft<T> | null;
+  if (!envelopeOk(d) || d.v !== VERSAO || d.ownerUUID !== owner || d.alunoId !== alunoId) return { estado: 'invalido' };
+  return { estado: expirado(d.updatedAt) ? 'expirado' : 'ok', draft: d };
+}
+
+/** v2: só vale se o dono gravado for o uid da sessão e o cliente conferir (sem dono não dá para provar). */
+function avaliarLegado<T>(raw: string | null, uid: string | null, alunoId: string): Avaliacao<T> {
+  const d = lerJson(raw) as StoredDraft<T> | null;
+  if (!envelopeOk(d) || d.v !== VERSAO_LEGADA || !uid || d.ownerUid !== uid || d.alunoId !== alunoId) return { estado: 'invalido' };
   return { estado: expirado(d.updatedAt) ? 'expirado' : 'ok', draft: d };
 }
 
@@ -97,17 +145,26 @@ function descartarFotosDoRascunho(alunoId: string, draft: { assessmentId?: unkno
   );
 }
 
+/** Remove a cópia legada (v2) do cliente SOMENTE se for deste uid — nunca a de outra conta. */
+function removerLegadoProprio(alunoId: string): void {
+  const uid = getLocalAuthUid();
+  const k = chaveLegada(alunoId);
+  const d = lerJson(localStorage.getItem(k));
+  if (uid && d && d.v === VERSAO_LEGADA && d.ownerUid === uid && d.alunoId === alunoId) localStorage.removeItem(k);
+}
+
 /**
  * Grava o rascunho para o dono atual. Retorna `false` se NÃO gravou (sem conta
- * autenticada, `assessmentId` inválido, ou localStorage cheio/indisponível) —
- * quem chama deve avisar o usuário em vez de supor que salvou.
+ * autenticada/ownerUUID resolvido, `assessmentId`/`alunoId` inválido, ou localStorage
+ * cheio/indisponível) — quem chama deve avisar o usuário em vez de supor que salvou.
  */
 export function salvarRascunhoOnline<T>(alunoId: string, draft: OnlineAssessmentDraft<T>): boolean {
-  const dono = getLocalOwner();
-  if (!dono || !ASSESSMENT_ID_SEGURO.test(draft.assessmentId)) return false;
+  const owner = dono();
+  if (!owner || !alunoValido(alunoId) || !ASSESSMENT_ID_SEGURO.test(draft.assessmentId)) return false;
   try {
-    const gravar: StoredDraft<T> = { ...draft, v: VERSAO, ownerUid: dono, alunoId };
-    localStorage.setItem(chave(alunoId), JSON.stringify(gravar));
+    const gravar: StoredDraft<T> = { ...draft, v: VERSAO, ownerUUID: owner, alunoId };
+    localStorage.setItem(chave(owner, alunoId), JSON.stringify(gravar));
+    removerLegadoProprio(alunoId); // já existe a versão nova: o v2 do mesmo cliente não pode ressuscitar
     return true;
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao salvar rascunho', e);
@@ -116,31 +173,60 @@ export function salvarRascunhoOnline<T>(alunoId: string, draft: OnlineAssessment
 }
 
 /**
- * Restaura o rascunho SÓ se for do dono atual, do aluno da chave, dentro do
- * prazo e com envelope válido. Qualquer outro caso apaga e devolve `null`.
+ * Restaura o rascunho SÓ se for do (dono, cliente) atuais, dentro do prazo e com
+ * envelope válido. Inválido/vencido do próprio escopo é apagado; o de OUTRO dono ou
+ * cliente nem é visto (outra chave) e nunca é tocado. Adota o legado v2 do próprio uid.
  * O conteúdo de `data` NÃO é validado aqui (quem conhece o formato valida).
  */
 export function carregarRascunhoOnline<T = unknown>(alunoId: string): OnlineAssessmentDraft<T> | null {
+  const owner = dono();
+  if (!owner || !alunoValido(alunoId)) return null;
   try {
-    const raw = localStorage.getItem(chave(alunoId));
-    if (!raw) return null;
-    const r = avaliar<T>(raw, alunoId, getLocalOwner());
-    if (r.estado === 'ok') {
-      const { assessmentId, step, updatedAt, data } = r.draft;
-      return { assessmentId, step, updatedAt, data };
+    const k = chave(owner, alunoId);
+    const raw = localStorage.getItem(k);
+    if (raw) {
+      const r = avaliar<T>(raw, owner, alunoId);
+      if (r.estado === 'ok') return pronto(r.draft);
+      localStorage.removeItem(k);
+      if (r.estado === 'expirado') descartarFotosDoRascunho(alunoId, r.draft);
+      return null;
     }
-    localStorage.removeItem(chave(alunoId));
-    if (r.estado === 'expirado') descartarFotosDoRascunho(alunoId, r.draft);
-    return null;
+    return adotarLegado<T>(owner, alunoId);
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao carregar rascunho', e);
     return null;
   }
 }
 
+function pronto<T>(d: StoredDraft<T>): OnlineAssessmentDraft<T> {
+  const { assessmentId, step, updatedAt, data } = d;
+  return { assessmentId, step, updatedAt, data };
+}
+
+/** v2 → v3: move para a chave nova só se o uid gravado for o da sessão e o cliente conferir. */
+function adotarLegado<T>(owner: string, alunoId: string): OnlineAssessmentDraft<T> | null {
+  const kv = chaveLegada(alunoId);
+  const raw = localStorage.getItem(kv);
+  if (!raw) return null;
+  const r = avaliarLegado<T>(raw, getLocalAuthUid(), alunoId);
+  if (r.estado === 'invalido') return null; // de outra conta/sem dono: não é nosso — não toca
+  localStorage.removeItem(kv);
+  if (r.estado === 'expirado') {
+    descartarFotosDoRascunho(alunoId, r.draft);
+    return null;
+  }
+  const novo: StoredDraft<T> = { ...pronto(r.draft), v: VERSAO, ownerUUID: owner, alunoId };
+  localStorage.setItem(chave(owner, alunoId), JSON.stringify(novo));
+  return pronto(r.draft);
+}
+
+/** Descarta o rascunho do (dono, cliente) atuais (envio concluído, cliente removido). Nunca toca em outro escopo. */
 export function limparRascunhoOnline(alunoId: string): void {
+  const owner = dono();
+  if (!owner || !alunoValido(alunoId)) return;
   try {
-    localStorage.removeItem(chave(alunoId));
+    localStorage.removeItem(chave(owner, alunoId));
+    removerLegadoProprio(alunoId);
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao limpar rascunho', e);
   }
@@ -155,15 +241,44 @@ function chavesDeRascunho(): string[] {
   return chaves;
 }
 
-/** Varredura (no login): remove vencidos, inválidos e de outro dono — inclusive de clientes que ninguém mais abre. */
+/**
+ * Varredura (no login): remove vencidos/inválidos do dono ATUAL — inclusive de clientes que ninguém
+ * mais abre — e legado v2 do próprio uid. Rascunhos de outro dono ficam intactos (não são nossos
+ * para julgar); o legado sem dono só sai quando vence (ou está ilegível).
+ */
 export function limparRascunhosExpirados(): void {
+  const owner = dono();
+  if (!owner) return;
   try {
-    const dono = getLocalOwner();
+    const uid = getLocalAuthUid();
     for (const k of chavesDeRascunho()) {
-      const r = avaliar<unknown>(localStorage.getItem(k), k.slice(PREFIX.length), dono);
-      if (r.estado === 'ok') continue;
-      localStorage.removeItem(k);
-      if (r.estado === 'expirado') descartarFotosDoRascunho(k.slice(PREFIX.length), r.draft);
+      const resto = k.slice(PREFIX.length);
+      if (CHAVE_NOVA.test(resto)) {
+        if (!resto.startsWith(`${owner}:`)) continue; // outro dono
+        let alunoId: string;
+        try {
+          alunoId = decodeURIComponent(resto.slice(owner.length + 1));
+        } catch {
+          localStorage.removeItem(k);
+          continue;
+        }
+        const r = avaliar<unknown>(localStorage.getItem(k), owner, alunoId);
+        if (r.estado === 'ok') continue;
+        localStorage.removeItem(k);
+        if (r.estado === 'expirado') descartarFotosDoRascunho(alunoId, r.draft);
+        continue;
+      }
+      // legado: `${alunoId}`
+      const raw = localStorage.getItem(k);
+      const mine = avaliarLegado<unknown>(raw, uid, resto);
+      if (mine.estado === 'expirado') {
+        localStorage.removeItem(k);
+        descartarFotosDoRascunho(resto, mine.draft);
+      } else if (mine.estado === 'invalido') {
+        const d = lerJson(raw);
+        // Ilegível, ou sem dono e vencido: lixo seguro de apagar. Com dono (outra conta): não mexe.
+        if (!d || (d.ownerUid === undefined && (!envelopeOk(d) || expirado(d.updatedAt)))) localStorage.removeItem(k);
+      }
     }
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao limpar rascunhos expirados', e);
