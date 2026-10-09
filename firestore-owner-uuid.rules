@@ -1,6 +1,9 @@
 // ============================================================================
-// Etapa 1 — ownerUUID. Cole DENTRO do `match /databases/{database}/documents { ... }`
+// Etapas 1+2 — ownerUUID. Cole DENTRO do `match /databases/{database}/documents { ... }`
 // das suas rules atuais. NÃO substitui nem altera nenhuma regra existente.
+// Etapa 1: coleções userOwners/ownerUUIDs (vínculo). Etapa 2: helpers isMyOwnerUUID()/owned*()
+// — a identidade confiável é request.auth.uid; o ownerUUID vindo do cliente (payload ou path)
+// só é aceito se for IGUAL ao registrado em userOwners/{request.auth.uid}.
 // ============================================================================
 
 // ---- helpers (se já tiver um isPT()/alunoCadastrado() equivalente, reaproveite) ----
@@ -16,6 +19,35 @@ function ownerUuidOk(id) {
   return id is string
     && id.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
 }
+
+// ---- ETAPA 2: camada de verificação (só funções; nenhuma coleção existente usa ainda) ----
+// O servidor lê o vínculo do PRÓPRIO usuário autenticado e compara. Nunca confia em
+// ownerUUID/ownerId/email/role enviados pelo React. Falha FECHADO: sem vínculo, sem
+// campo ou campo de outro tipo => nega (get()/campo ausente gera erro => regra falha).
+function hasOwnerLink() {
+  return request.auth != null
+    && exists(/databases/$(database)/documents/userOwners/$(request.auth.uid));
+}
+function myOwnerUUID() {
+  return get(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID;
+}
+// "este ownerUUID (vindo de path ou payload) é MEU?"
+function isMyOwnerUUID(id) {
+  return hasOwnerLink() && id is string && id == myOwnerUUID();
+}
+// Para docs que carregam o campo `ownerUUID` no payload:
+function ownedCreate() { return isMyOwnerUUID(request.resource.data.ownerUUID); }
+function ownedRead()   { return isMyOwnerUUID(resource.data.ownerUUID); }
+function ownedUpdate() {
+  return isMyOwnerUUID(resource.data.ownerUUID)                           // já é meu
+    && request.resource.data.ownerUUID == resource.data.ownerUUID;        // e não pode trocar
+}
+// TEMPLATES (etapa 3 — NÃO ativados). Path-based é o mais forte (o dono vai no caminho):
+//   match /ownerData/{ownerUUID}/{document=**} { allow read, write: if isMyOwnerUUID(ownerUUID); }
+// Payload-based, numa coleção existente:
+//   allow create: if ownedCreate() && <regras atuais>;
+//   allow read, delete: if ownedRead();
+//   allow update: if ownedUpdate() && <regras atuais>;
 
 // Vínculo Auth UID -> ownerUUID. Leitura só do próprio uid; create-only (imutável).
 match /userOwners/{uid} {
