@@ -14,6 +14,8 @@ import {
   startAfter,
   getDocs,
   writeBatch,
+  runTransaction,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
@@ -62,5 +64,7 @@ export {
   startAfter,
   getDocs,
   writeBatch,
+  runTransaction,
+  serverTimestamp,
 };
 export { ref, uploadBytes, getDownloadURL, deleteObject };

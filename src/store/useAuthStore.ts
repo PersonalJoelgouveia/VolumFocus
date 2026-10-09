@@ -6,6 +6,7 @@ import { useNotificationStore } from './useNotificationStore';
 import { useSyncStore } from './useSyncStore';
 import { useConfirmStore } from './useConfirmStore';
 import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
+import { ensureOwnerUUID } from '../lib/ownerRepository';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -35,6 +36,11 @@ interface AuthState {
   status: GateStatus;
   role: UserRole;
   user: AuthUser | null;
+  /** ownerUUID estável da conta (vínculo Auth UID → ownerUUID no Firestore).
+   *  Só para organizar dados no frontend — NÃO é confiável para autorização
+   *  (quem autoriza são as Security Rules via request.auth.uid). */
+  ownerUUID: string | null;
+  ownerUUIDStatus: 'idle' | 'loading' | 'ready' | 'error';
   /** true enquanto um popup de login/logout está em andamento (evita duplo clique). */
   busy: boolean;
   /** Mensagem de erro pontual da última tentativa de login/verificação, para exibir no gate. */
@@ -59,6 +65,29 @@ let listenerAttached = false;
  *  explícito (nunca numa reconexão silenciosa de sessão já existente). */
 let pendingSyncOnGrant = false;
 
+/** Uma resolução por vez por uid (onAuthStateChanged pode disparar em sequência). */
+const ownerInFlight = new Map<string, Promise<void>>();
+
+/**
+ * Lê (ou cria, só na 1ª vez) o ownerUUID do uid logado. Não bloqueia o gate:
+ * se falhar (rede/regras ainda não publicadas), o app segue e a próxima
+ * sessão tenta de novo. Descarta o resultado se a conta mudou no meio.
+ */
+function resolveOwnerUUID(uid: string, set: (p: Partial<AuthState>) => void): void {
+  if (ownerInFlight.has(uid)) return;
+  set({ ownerUUID: null, ownerUUIDStatus: 'loading' });
+  const p = ensureOwnerUUID(uid)
+    .then((ownerUUID) => {
+      if (auth.currentUser?.uid === uid) set({ ownerUUID, ownerUUIDStatus: 'ready' });
+    })
+    .catch((e) => {
+      console.error('useAuthStore: falha ao obter ownerUUID', e);
+      if (auth.currentUser?.uid === uid) set({ ownerUUID: null, ownerUUIDStatus: 'error' });
+    })
+    .finally(() => ownerInFlight.delete(uid));
+  ownerInFlight.set(uid, p);
+}
+
 function toAuthUser(fbUser: FirebaseUser): AuthUser {
   return {
     email: fbUser.email ?? '',
@@ -82,6 +111,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   status: 'loading',
   role: 'nao-logado',
   user: null,
+  ownerUUID: null,
+  ownerUUIDStatus: 'idle',
   busy: false,
   errorMessage: null,
 
@@ -94,7 +125,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         pendingSyncOnGrant = false;
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
-        set({ status: 'login', role: 'nao-logado', user: null, errorMessage: null });
+        set({ status: 'login', role: 'nao-logado', user: null, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
         return;
       }
 
@@ -127,6 +158,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         useUIStore.getState().setPersonalMode(isPT);
         useUIStore.getState().setAlunoMode(!isPT);
         set({ status: 'granted', role: isPT ? 'personal' : 'aluno', user, errorMessage: null });
+        // Só contas autorizadas (PT ou aluno cadastrado) ganham ownerUUID.
+        resolveOwnerUUID(fbUser.uid, set);
         // Carrega as notificações de "treino concluído" só pro Personal —
         // sucessor de ntfInit() (index.html ~10502), que também roda uma
         // vez ao carregar a página.
@@ -141,7 +174,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         pendingSyncOnGrant = false;
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
-        set({ status: 'denied', role: 'nao-logado', user, errorMessage: null });
+        set({ status: 'denied', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
       }
     });
   },

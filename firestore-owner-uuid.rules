@@ -1,0 +1,47 @@
+// ============================================================================
+// Etapa 1 — ownerUUID. Cole DENTRO do `match /databases/{database}/documents { ... }`
+// das suas rules atuais. NÃO substitui nem altera nenhuma regra existente.
+// ============================================================================
+
+// ---- helpers (se já tiver um isPT()/alunoCadastrado() equivalente, reaproveite) ----
+function ownerIsPT() {
+  return request.auth.token.email_verified == true
+    && request.auth.token.email.lower() in ['joelgouveia16@gmail.com', 'personaljoelgouveia@gmail.com'];
+}
+function ownerIsAlunoCadastrado() {
+  return request.auth.token.email_verified == true
+    && exists(/databases/$(database)/documents/alunos/$(request.auth.token.email.lower()));
+}
+function ownerUuidOk(id) {
+  return id is string
+    && id.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+}
+
+// Vínculo Auth UID -> ownerUUID. Leitura só do próprio uid; create-only (imutável).
+match /userOwners/{uid} {
+  allow get: if request.auth != null && request.auth.uid == uid;
+  allow list: if false;
+  allow create: if request.auth != null
+    && request.auth.uid == uid
+    && (ownerIsPT() || ownerIsAlunoCadastrado())
+    && request.resource.data.keys().hasOnly(['ownerUUID', 'createdAt'])
+    && ownerUuidOk(request.resource.data.ownerUUID)
+    && request.resource.data.createdAt == request.time
+    // o índice reverso precisa nascer na MESMA transação/batch, apontando pra este uid
+    && existsAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID))
+    && getAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID)).data.uid == uid;
+  allow update, delete: if false;
+}
+
+// Índice reverso: o ID do documento é o próprio UUID => dois uids nunca partilham um UUID.
+match /ownerUUIDs/{ownerUUID} {
+  allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+  allow list: if false;
+  allow create: if request.auth != null
+    && ownerUuidOk(ownerUUID)
+    && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+    && request.resource.data.uid == request.auth.uid
+    && request.resource.data.createdAt == request.time
+    && getAfter(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID == ownerUUID;
+  allow update, delete: if false;
+}
