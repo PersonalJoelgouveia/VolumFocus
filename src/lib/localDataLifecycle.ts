@@ -1,6 +1,6 @@
 import { LOCAL_STORAGE_KEYS } from './backupRepository';
 import { limparTodosRascunhosOnline } from './onlineAssessmentDraftStore';
-import { OWNER_KEY, clearLocalOwnerMemory, setLocalOwner } from './localOwner';
+import { OWNER_KEY, OWNER_UUID_CACHE_KEY, clearLocalOwnerMemory, setLocalOwner } from './localOwner';
 
 /**
  * Ciclo de vida dos dados locais (P1 da auditoria de segurança).
@@ -58,6 +58,46 @@ export function enforceLocalOwner(uid: string): OwnerCheck {
     setLocalOwner(uid); // localStorage indisponível: o dono vale só em memória
     return 'same';
   }
+}
+
+/** Marca (na aba) que uma limpeza por troca de dono já foi tentada — impede laço de recarregamento. */
+const WIPE_FLAG = 'jg3_owner_wipe_pending';
+
+/**
+ * Garante que os dados locais (localStorage + rascunhos + wearables) pertencem à conta que acabou de
+ * entrar. Chamar no login autorizado, ANTES de liberar o app e de qualquer sincronização:
+ * - mesmo dono ou primeiro uso → `'ok'` (nada é apagado);
+ * - OUTRO dono (a sessão anterior acabou sem passar pelo logout do app) → apaga os dados da conta
+ *   anterior (mídia local fica: é namespaceada por ownerUUID) e devolve `'recarregar'`. O chamador
+ *   PRECISA recarregar a página: os stores já foram hidratados em memória com os dados antigos e,
+ *   sem recarga, eles seriam regravados e enviados ao backup da conta nova.
+ * Depois do recarregamento não há dono registrado, então a conta nova é adotada sem apagar nada.
+ */
+export async function garantirDonoLocal(uid: string): Promise<'ok' | 'recarregar'> {
+  const check = enforceLocalOwner(uid);
+  if (check !== 'mismatch') {
+    try {
+      sessionStorage.removeItem(WIPE_FLAG);
+    } catch {
+      /* sem sessionStorage */
+    }
+    return 'ok';
+  }
+  let jaTentou = false;
+  try {
+    jaTentou = sessionStorage.getItem(WIPE_FLAG) === '1';
+    sessionStorage.setItem(WIPE_FLAG, '1');
+  } catch {
+    /* sem sessionStorage: segue e tenta uma vez */
+  }
+  if (jaTentou) {
+    // A limpeza já rodou nesta aba e o dono antigo continua gravado: não entra em laço.
+    console.error('localDataLifecycle: dono local não pôde ser trocado após a limpeza');
+    setLocalOwner(uid);
+    return 'ok';
+  }
+  await wipeLocalData({ includeMedia: false });
+  return 'recarregar';
 }
 
 interface OpenResult {
@@ -162,7 +202,7 @@ export async function wipeLocalData({ includeMedia }: { includeMedia: boolean })
   let ok = true;
   try {
     clearLocalOwnerMemory();
-    [...LOCAL_STORAGE_KEYS, ...EXTRA_USER_KEYS, OWNER_KEY].forEach((k) => localStorage.removeItem(k));
+    [...LOCAL_STORAGE_KEYS, ...EXTRA_USER_KEYS, OWNER_KEY, OWNER_UUID_CACHE_KEY].forEach((k) => localStorage.removeItem(k));
     limparTodosRascunhosOnline();
   } catch (e) {
     console.error('localDataLifecycle: falha ao limpar localStorage', e);

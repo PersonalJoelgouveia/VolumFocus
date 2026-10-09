@@ -62,10 +62,10 @@ service cloud.firestore {
     }
 
     // ---- ownership dos CLIENTES: alunos/{email}.ownerUUID ------------------------
-    // TRANSITÓRIO: docs criados antes desta etapa não têm ownerUUID. Enquanto isto
-    // retornar true, um Personal pode ler/reivindicar (1x) um doc SEM dono. Depois de
-    // migrar todos (o app reivindica no login do Personal), troque para `false`.
-    function aceitarLegadoSemDono() { return true; }
+    // Legado SEM dono: DESLIGADO. Clientes/notificações anteriores ao ownership precisam
+    // ter sido migrados ANTES de publicar estas regras (scripts/migrar-legados-ownership.mjs).
+    // Doc sem ownerUUID fica inacessível a qualquer Personal (o aluno segue lendo o próprio).
+    function aceitarLegadoSemDono() { return false; }
 
     function semDono(d) { return !('ownerUUID' in d); }
     function meuAluno(d) { return 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID); }
@@ -219,11 +219,23 @@ service cloud.firestore {
     }
 
     // ---- notificação "treino concluído" ---------------------------------------
+    // O dono da notificação é o Personal DONO DO CLIENTE: para o aluno, o ownerUUID do próprio
+    // alunos/{seu e-mail} (lido AQUI no servidor); para o Personal, o dele. O valor enviado pelo
+    // React só vale se bater — nunca por si só.
+    function notificacaoDonoOk(d) {
+      return d.ownerUUID is string
+        && (
+          (ehPT() && isMyOwnerUUID(d.ownerUUID))
+          || (alunoLogadoCadastrado()
+              && d.ownerUUID == get(/databases/$(database)/documents/alunos/$(emailToken())).data.get('ownerUUID', null))
+        );
+    }
     function notificacaoValida(id) {
       let d = request.resource.data;
       return (ehPT() || alunoLogadoCadastrado())
-        && d.keys().hasOnly(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm'])
-        && d.keys().hasAll(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm'])
+        && d.keys().hasOnly(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm', 'ownerUUID'])
+        && d.keys().hasAll(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm', 'ownerUUID'])
+        && notificacaoDonoOk(d)
         && id.size() <= 200
         && d.id == id
         && d.alunoEmail == emailToken()
@@ -245,8 +257,10 @@ service cloud.firestore {
       allow list: if false;
       allow create: if alunoCriacaoValida();
       allow update: if alunoAtualizacaoValida();
-      allow delete: if ehPT()
-        && (meuAluno(resource.data) || (aceitarLegadoSemDono() && semDono(resource.data)));
+      // Ninguém apaga o doc do cliente pelo app: o Firestore NÃO apaga as subcoleções junto, e um
+      // outro Personal poderia recriar /alunos/{email} com o PRÓPRIO ownerUUID e passar a ler as
+      // avaliações/anotações/rotinas órfãs desse caminho. Remoção só pelo Admin SDK (que apaga a árvore toda).
+      allow delete: if false;
 
       match /avaliacoesFisicas/{id} {
         allow get, list: if ehDono(email) || ptDoAluno(email);
@@ -274,7 +288,12 @@ service cloud.firestore {
     // ---- /notificacoesTreinos/{id} --------------------------------------------
     match /notificacoesTreinos/{id} {
       allow create: if notificacaoValida(id);
-      allow read, update, delete: if ehPT();
+      // Só o Personal DONO lê/marca lida/apaga. A consulta do app filtra por ownerUUID == o dele.
+      // Notificações antigas (sem ownerUUID) ficam ilegíveis de propósito: não há como provar de quem são.
+      allow get, list: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID);
+      allow update: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida']);
+      allow delete: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID);
     }
 
     // ---- /backups/{email}: cada usuário só no próprio -------------------------

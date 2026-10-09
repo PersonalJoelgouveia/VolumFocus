@@ -5,7 +5,7 @@ import { useUIStore } from './useUIStore';
 import { useNotificationStore } from './useNotificationStore';
 import { useSyncStore } from './useSyncStore';
 import { useConfirmStore } from './useConfirmStore';
-import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
+import { garantirDonoLocal, wipeLocalData } from '../lib/localDataLifecycle';
 import { ensureOwnerUUID } from '../lib/ownerRepository';
 import { reivindicarAlunosLegados } from '../lib/alunosOwnership';
 import { useAlunoStore } from './useAlunoStore';
@@ -165,6 +165,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const user = toAuthUser(fbUser);
 
       if (authorized) {
+        // Dados locais de OUTRA conta (sessão anterior encerrada sem o logout do app) não podem ser
+        // herdados nem enviados ao backup desta: limpa e recarrega ANTES de liberar o app e sincronizar.
+        if ((await garantirDonoLocal(fbUser.uid)) === 'recarregar') {
+          pendingSyncOnGrant = false;
+          window.location.reload();
+          return;
+        }
         setLocalAuthUid(fbUser.uid, emailLc); // só contas autorizadas acessam dados locais
         useUIStore.getState().setPersonalMode(isPT);
         useUIStore.getState().setAlunoMode(!isPT);
@@ -253,7 +260,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       console.error('useAuthStore: erro ao sair', e);
     }
 
-    LOCAL_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+    // Apaga TODOS os dados locais da conta (localStorage, rascunhos, wearables, dono). Fotos e vídeos
+    // ficam no aparelho, namespaceados por ownerUUID (ver wipeLocalData({ includeMedia: true })).
+    await wipeLocalData({ includeMedia: false }).catch((e) => console.error('useAuthStore: falha ao limpar dados locais', e));
     useUIStore.getState().showToast('👋 Sessão encerrada. Limpando dados deste dispositivo…');
     setTimeout(() => window.location.reload(), 600);
   },

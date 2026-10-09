@@ -11,6 +11,7 @@ vi.mock('../firebase', () => ({
   query: vi.fn(() => ({})),
   orderBy: vi.fn(),
   limit: vi.fn(),
+  where: vi.fn(),
   getDocs: (...a: unknown[]) => getDocs(...a),
   getDoc: (...a: unknown[]) => getDoc(...a),
   setDoc: (...a: unknown[]) => setDoc(...a),
@@ -19,7 +20,8 @@ vi.mock('../firebase', () => ({
 }));
 
 import { createAssessment, getAssessment, listAssessments, updateAssessment } from '../physicalAssessmentRepository';
-import { registrarTreinoConcluido } from '../notificacaoRepository';
+vi.mock('../ownerRepository', () => ({ getMyOwnerUUID: vi.fn().mockResolvedValue('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') }));
+import { fetchTreinoNotificacoes, registrarTreinoConcluido } from '../notificacaoRepository';
 
 const valido = (id: string) => ({
   id,
@@ -94,17 +96,32 @@ describe('physicalAssessmentRepository — payload gravado', () => {
   });
 });
 
-describe('notificacaoRepository — aluno só cria (sem leitura)', () => {
-  beforeEach(() => vi.clearAllMocks());
+describe('notificacaoRepository — aluno só cria; dono vem do próprio doc do aluno', () => {
+  const UA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ ownerUUID: UA }) });
+  });
 
-  it('cria sem ler antes (o aluno não tem permissão de leitura)', async () => {
+  it('carimba o ownerUUID do cliente (lido do próprio doc) e não lê a notificação', async () => {
     setDoc.mockResolvedValue(undefined);
     await registrarTreinoConcluido('Aluno@X.com', 'Aluno', 2);
-    expect(getDoc).not.toHaveBeenCalled();
+    expect(getDoc).toHaveBeenCalledTimes(1); // só o doc do aluno
     expect(setDoc).toHaveBeenCalledTimes(1);
     const payload = setDoc.mock.calls[0][1] as Record<string, unknown>;
-    expect(payload).toMatchObject({ alunoEmail: 'aluno@x.com', lida: false, dia: 2 });
-    expect(Object.keys(payload).sort()).toEqual(['alunoEmail', 'alunoNome', 'criadaEm', 'dataTreino', 'dia', 'id', 'lida']);
+    expect(payload).toMatchObject({ alunoEmail: 'aluno@x.com', lida: false, dia: 2, ownerUUID: UA });
+    expect(Object.keys(payload).sort()).toEqual(['alunoEmail', 'alunoNome', 'criadaEm', 'dataTreino', 'dia', 'id', 'lida', 'ownerUUID']);
+  });
+
+  it('cliente sem ownerUUID (não migrado): não grava nada e não lança', async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({}) });
+    await expect(registrarTreinoConcluido('a@x.com', 'A', 1)).resolves.toBeUndefined();
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  it('lado do Personal: consulta filtrada pelo ownerUUID dele', async () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    await expect(fetchTreinoNotificacoes()).resolves.toEqual([]);
   });
 
   it('permission-denied (já registrada hoje) não é erro; outros erros sobem', async () => {

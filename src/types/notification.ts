@@ -20,4 +20,6 @@ export interface TreinoNotificacao {
   dataTreino: string;
   lida: boolean;
   criadaEm: string;
+  /** ownerUUID do Personal dono do cliente (conferido pelas Security Rules; só organiza/filtra). */
+  ownerUUID: string;
 }

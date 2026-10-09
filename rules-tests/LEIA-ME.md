@@ -31,3 +31,9 @@ Não precisa de login nem de projeto real. Os testes ficam fora do `npm test` no
 ## Manutenção
 - A lista de Personals existe em 3 lugares: `PT_EMAILS` (`src/store/useAuthStore.ts`), `firestore.rules` e `storage.rules`. Mude os três juntos.
 - Mudou o formato da avaliação online (`montarAvaliacaoOnline`)? Atualize `avaliacaoOnlineValida` e os testes.
+
+## Antes de publicar as Rules desta etapa (F1/F2/F3)
+
+1. `firebase deploy --only firestore:indexes` (índice `notificacoesTreinos`: ownerUUID ASC, criadaEm DESC — `firestore.indexes.json`).
+2. Rodar a migração: `node scripts/migrar-legados-ownership.mjs` (dry-run) e depois `--apply` (ver cabeçalho do script).
+3. Só então `firebase deploy --only firestore:rules`. Com `aceitarLegadoSemDono() = false`, clientes/notificações sem `ownerUUID` ficam inacessíveis ao Personal.

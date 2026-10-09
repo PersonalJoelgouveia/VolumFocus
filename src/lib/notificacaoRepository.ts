@@ -1,4 +1,5 @@
-import { collection, db, deleteDoc, doc, getDocs, limit, orderBy, query, setDoc, updateDoc } from './firebase';
+import { collection, db, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc, where } from './firebase';
+import { getMyOwnerUUID } from './ownerRepository';
 import type { TreinoNotificacao } from '../types/notification';
 
 /**
@@ -12,9 +13,10 @@ import type { TreinoNotificacao } from '../types/notification';
  * naturalmente idempotente (mesmo papel do `dedupeKey` original).
  *
  * SEGURANÇA — regras em `firestore.rules`: o aluno só CRIA (aluno cadastrado, campos
- * fixos, `id == id do documento`, `alunoEmail` == e-mail do token, `lida == false`);
- * ler, marcar lida e apagar é só do Personal. Como o aluno não lê, a idempotência
- * não usa `getDoc`: reenviar o mesmo id vira um `update`, que a regra nega
+ * fixos, `id == id do documento`, `alunoEmail` == e-mail do token, `lida == false`,
+ * `ownerUUID` == o do alunos/{seu e-mail}, conferido no servidor); ler, marcar lida e
+ * apagar é só do Personal DONO (`ownerUUID` da notificação == o dele). A idempotência
+ * não lê a notificação: reenviar o mesmo id vira um `update`, que a regra nega
  * (`permission-denied` = a notificação do dia já existe).
  */
 
@@ -42,6 +44,15 @@ export async function registrarTreinoConcluido(
   const dataTreino = new Date().toISOString().slice(0, 10);
   const id = `${slug(emailLc)}_${dataTreino}_${dia}`;
 
+  // Dono = o Personal do cliente: vem do PRÓPRIO doc do aluno (o aluno pode ler o seu). Sem ele a regra
+  // negaria; não grava nada em vez de mandar um valor inventado (cliente ainda não migrado).
+  const alunoSnap = await getDoc(doc(db, 'alunos', emailLc));
+  const ownerUUID = alunoSnap.exists() ? (alunoSnap.data() as { ownerUUID?: unknown }).ownerUUID : undefined;
+  if (typeof ownerUUID !== 'string') {
+    console.warn('notificacaoRepository: cliente sem ownerUUID — notificação não registrada');
+    return;
+  }
+
   const notificacao: TreinoNotificacao = {
     id,
     alunoEmail: emailLc,
@@ -50,6 +61,7 @@ export async function registrarTreinoConcluido(
     dataTreino,
     lida: false,
     criadaEm: new Date().toISOString(),
+    ownerUUID,
   };
   try {
     await setDoc(notifDocRef(id), notificacao);
@@ -60,9 +72,19 @@ export async function registrarTreinoConcluido(
   }
 }
 
-/** Lista as notificações mais recentes (lado do Personal). Equivale a ntf_loadTreinos() + ntf_render(). */
+/**
+ * Lista as notificações mais recentes DO PERSONAL LOGADO. O filtro por ownerUUID é exigido pelas
+ * regras (que só liberam a consulta se ela provar que só traz documentos dele). Precisa do índice
+ * composto de `firestore.indexes.json` (ownerUUID + criadaEm desc).
+ */
 export async function fetchTreinoNotificacoes(max = 50): Promise<TreinoNotificacao[]> {
-  const q = query(collection(db, 'notificacoesTreinos'), orderBy('criadaEm', 'desc'), limit(max));
+  const ownerUUID = await getMyOwnerUUID();
+  const q = query(
+    collection(db, 'notificacoesTreinos'),
+    where('ownerUUID', '==', ownerUUID),
+    orderBy('criadaEm', 'desc'),
+    limit(max)
+  );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as TreinoNotificacao);
 }

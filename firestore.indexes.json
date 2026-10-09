@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "notificacoesTreinos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUUID", "order": "ASCENDING" },
+        { "fieldPath": "criadaEm", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
