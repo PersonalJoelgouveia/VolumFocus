@@ -158,7 +158,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
       try {
         await deleteAssessment(email, assessmentId);
         // As fotos só existem neste aparelho: sem a avaliação ficariam órfãs para sempre.
-        void deletePhotosByAssessment(assessmentId).catch((e) =>
+        void deletePhotosByAssessment(alunoId, assessmentId).catch((e) =>
           console.error('usePhysicalAssessments: falha ao apagar fotos locais da avaliação', e)
         );
         showToast('Avaliação removida.', 'success');

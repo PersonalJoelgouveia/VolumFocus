@@ -89,11 +89,11 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
     let cancelado = false;
     (async () => {
       try {
-        const referencias = await getPhotosByAssessment(assessmentId);
+        const referencias = await getPhotosByAssessment(alunoId, assessmentId);
         const novasUrls: Partial<Record<PhotoPose, string>> = {};
         for (const pose of PHOTO_POSES) {
           if (referencias[pose]) {
-            const url = await getPhotoObjectUrl(assessmentId, pose);
+            const url = await getPhotoObjectUrl(alunoId, assessmentId, pose);
             if (url) novasUrls[pose] = url;
           }
         }
@@ -110,7 +110,7 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
       cancelado = true;
       Object.values(urlsRef.current).forEach((u) => u && URL.revokeObjectURL(u));
     };
-  }, [assessmentId]);
+  }, [alunoId, assessmentId]);
 
   function pararCamera() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -233,7 +233,7 @@ export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: 
 
   async function handleExcluir(pose: PhotoPose) {
     try {
-      await deletePhoto(assessmentId, pose);
+      await deletePhoto(alunoId, assessmentId, pose);
       setUrls((prev) => {
         if (prev[pose]) URL.revokeObjectURL(prev[pose] as string);
         const resto = { ...prev };

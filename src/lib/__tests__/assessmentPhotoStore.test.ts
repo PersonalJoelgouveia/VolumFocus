@@ -1,11 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { clearLocalOwnerMemory, setLocalOwner } from '../localOwner';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { clearLocalOwnerMemory, getLocalOwnerUUID, setLocalAuthUid, setLocalOwner, setLocalOwnerUUID } from '../localOwner';
 import {
   deletePhoto,
   deletePhotosByAluno,
   deletePhotosByAssessment,
   getPhoto,
+  deletePhotosByOwner,
   getPhotosByAssessment,
+  listarFotosOrfas,
   savePhoto,
 } from '../assessmentPhotoStore';
 
@@ -31,7 +33,7 @@ async function lerTexto(b: Blob): Promise<string> {
 }
 
 /** Insere um registro no formato ANTERIOR ao namespace (id sem dono). */
-function semearLegado(assessmentId: string, alunoId: string, pose: string, txt: string): Promise<void> {
+function semearLegado(assessmentId: string, alunoId: string, pose: string, txt: string, idRegistro?: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB, 1);
     req.onupgradeneeded = () => {
@@ -42,7 +44,7 @@ function semearLegado(assessmentId: string, alunoId: string, pose: string, txt: 
     req.onsuccess = () => {
       const tx = req.result.transaction('assessment-photos', 'readwrite');
       tx.objectStore('assessment-photos').put({
-        id: `${assessmentId}_${pose}`, assessmentId, alunoId, pose, blob: blob(txt),
+        id: idRegistro ?? `${assessmentId}_${pose}`, assessmentId, alunoId, pose, blob: blob(txt),
         createdAt: new Date().toISOString(), mimeType: 'image/jpeg', ...dim,
       });
       tx.oncomplete = () => { req.result.close(); resolve(); };
@@ -61,131 +63,205 @@ function chavesDoBanco(): Promise<string[]> {
   });
 }
 
-describe.skipIf(!disponivel)('assessmentPhotoStore — isolamento por dono', () => {
+const UA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const UB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+/** Simula o login autorizado: uid do Firebase + ownerUUID resolvido (+ uid legado L1). */
+function entrar(uid: string, ownerUUID: string): void {
+  setLocalAuthUid(uid);
+  setLocalOwnerUUID(uid, ownerUUID);
+  setLocalOwner(uid);
+}
+function sair(): void {
+  setLocalAuthUid(null);
+  clearLocalOwnerMemory();
+}
+
+describe.skipIf(!disponivel)('assessmentPhotoStore — isolamento por ownerUUID + alunoId', () => {
   beforeEach(async () => {
-    clearLocalOwnerMemory();
+    sair();
     await new Promise<void>((resolve) => {
       const r = indexedDB.deleteDatabase(DB);
       r.onsuccess = () => resolve();
       r.onerror = () => resolve();
     });
   });
-  afterEach(() => clearLocalOwnerMemory());
+  afterEach(() => sair());
 
-  it('sem conta autenticada, nada é lido nem gravado', async () => {
-    await expect(getPhotosByAssessment('af-1')).rejects.toThrow();
+  it('sem sessão autorizada / sem ownerUUID, nada é lido nem gravado', async () => {
+    await expect(getPhotosByAssessment('al-1', 'af-1')).rejects.toThrow();
     await expect(savePhoto('al-1', 'af-1', 'front', blob('x'), dim)).rejects.toThrow();
+    setLocalAuthUid('uidA'); // autenticado, mas ownerUUID ainda não resolvido
+    await expect(getPhoto('al-1', 'af-1', 'front')).rejects.toThrow();
   });
 
-  it('B não lê, não lista, não sobrescreve e não apaga a foto de A (mesmo conhecendo o assessmentId)', async () => {
-    setLocalOwner('uidA');
-    await savePhoto('al-1', 'af-1', 'front', blob('foto-de-A'), dim);
-
-    setLocalOwner('uidB');
-    expect(await getPhoto('af-1', 'front')).toBeNull();
-    expect(await getPhotosByAssessment('af-1')).toEqual({ assessmentId: 'af-1' });
-
-    await savePhoto('al-9', 'af-1', 'front', blob('foto-de-B'), dim); // mesmo id de avaliação
-    await deletePhoto('af-1', 'front');
-    await deletePhotosByAssessment('af-1');
-    await deletePhotosByAluno('al-1');
-
-    setLocalOwner('uidA');
-    const a = await getPhoto('af-1', 'front');
-    expect(a).not.toBeNull();
-    expect(await lerTexto(a!.blob)).toBe('foto-de-A');
+  it('chave = ownerUUID:alunoId:assessmentId:pose', async () => {
+    entrar('uidA', UA);
+    await savePhoto('al-1', 'af-1', 'front', blob('x'), dim);
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-1:af-1:front`]);
   });
 
-  it('A lê suas fotos entre clientes sem misturar avaliações', async () => {
-    setLocalOwner('uidA');
-    await savePhoto('al-1', 'af-1', 'front', blob('c1-frente'), dim);
-    await savePhoto('al-2', 'af-2', 'front', blob('c2-frente'), dim);
-    expect(await lerTexto((await getPhoto('af-1', 'front'))!.blob)).toBe('c1-frente');
-    expect(await lerTexto((await getPhoto('af-2', 'front'))!.blob)).toBe('c2-frente');
-    expect(Object.keys(await getPhotosByAssessment('af-1')).sort()).toEqual(['assessmentId', 'front']);
+  it('A/Cliente A → fotos A · A/Cliente B → fotos B (mesmo assessmentId não mistura clientes)', async () => {
+    entrar('uidA', UA);
+    await savePhoto('al-A', 'af-1', 'front', blob('foto-clienteA'), dim);
+    await savePhoto('al-B', 'af-1', 'front', blob('foto-clienteB'), dim);
+    expect(await lerTexto((await getPhoto('al-A', 'af-1', 'front'))!.blob)).toBe('foto-clienteA');
+    expect(await lerTexto((await getPhoto('al-B', 'af-1', 'front'))!.blob)).toBe('foto-clienteB');
+    expect(await getPhoto('al-C', 'af-1', 'front')).toBeNull(); // cliente sem foto
+    expect(Object.keys(await getPhotosByAssessment('al-A', 'af-1')).sort()).toEqual(['assessmentId', 'front']);
+  });
+
+  it('B/Cliente A → negado (não lê, não lista, não sobrescreve, não apaga) · B/Cliente B → fotos B', async () => {
+    entrar('uidA', UA);
+    await savePhoto('al-A', 'af-1', 'front', blob('foto-de-A'), dim);
+
+    entrar('uidB', UB);
+    expect(await getPhoto('al-A', 'af-1', 'front')).toBeNull();
+    expect(await getPhotosByAssessment('al-A', 'af-1')).toEqual({ assessmentId: 'af-1' });
+    await savePhoto('al-A', 'af-1', 'front', blob('B-tentando-sobrescrever'), dim); // vai para o namespace de B
+    await deletePhoto('al-A', 'af-1', 'front');
+    await deletePhotosByAssessment('al-A', 'af-1');
+    await deletePhotosByAluno('al-A');
+    await deletePhotosByOwner();
+
+    await savePhoto('al-B', 'af-2', 'front', blob('foto-de-B'), dim);
+    expect(await lerTexto((await getPhoto('al-B', 'af-2', 'front'))!.blob)).toBe('foto-de-B');
+
+    entrar('uidA', UA);
+    expect(await lerTexto((await getPhoto('al-A', 'af-1', 'front'))!.blob)).toBe('foto-de-A'); // intacta
+  });
+
+  it('troca de conta: ao sair, nada fica acessível; cache de OUTRA conta não é herdado', async () => {
+    entrar('uidA', UA);
+    await savePhoto('al-A', 'af-1', 'front', blob('a'), dim);
+    sair();
+    await expect(getPhoto('al-A', 'af-1', 'front')).rejects.toThrow();
+    setLocalAuthUid('uidB'); // B entra; o ownerUUID de A não pode vazar
+    expect(getLocalOwnerUUID()).toBeNull();
+    setLocalOwnerUUID('uidA', UA); // valor de outro uid é ignorado
+    expect(getLocalOwnerUUID()).toBeNull();
   });
 
   it('substituir a foto da mesma pose mantém um único registro', async () => {
-    setLocalOwner('uidA');
+    entrar('uidA', UA);
     await savePhoto('al-1', 'af-1', 'front', blob('v1'), dim);
     await savePhoto('al-1', 'af-1', 'front', blob('v2'), dim);
-    expect(await lerTexto((await getPhoto('af-1', 'front'))!.blob)).toBe('v2');
-    expect(await chavesDoBanco()).toEqual(['uidA:af-1_front']);
+    expect(await lerTexto((await getPhoto('al-1', 'af-1', 'front'))!.blob)).toBe('v2');
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-1:af-1:front`]);
   });
 
-  it('registro legado é adotado por quem o acessa pelo assessmentId e some do formato antigo', async () => {
+  it('LEGADO L0 (sem dono) é adotado só pelo cliente certo (alunoId confere) e some do formato antigo', async () => {
     await semearLegado('af-7', 'al-7', 'front', 'legado');
-    setLocalOwner('uidA');
-    expect((await getPhotosByAssessment('af-7')).front).toBe('uidA:af-7_front');
-    expect(await chavesDoBanco()).toEqual(['uidA:af-7_front']);
-
-    setLocalOwner('uidB'); // depois da adoção, B não alcança
-    expect(await getPhoto('af-7', 'front')).toBeNull();
+    entrar('uidA', UA);
+    expect(await getPhotosByAssessment('al-OUTRO', 'af-7')).toEqual({ assessmentId: 'af-7' }); // outro cliente: não adota
+    expect(await chavesDoBanco()).toEqual(['af-7_front']);
+    expect((await getPhotosByAssessment('al-7', 'af-7')).front).toBe(`${UA}:al-7:af-7:front`);
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-7:af-7:front`]);
+    entrar('uidB', UB); // depois da adoção, B não alcança
+    expect(await getPhoto('al-7', 'af-7', 'front')).toBeNull();
   });
 
-  it('getPhoto também adota legado (leitura direta)', async () => {
-    await semearLegado('af-8', 'al-8', 'back', 'legado-b');
-    setLocalOwner('uidA');
-    expect(await lerTexto((await getPhoto('af-8', 'back'))!.blob)).toBe('legado-b');
-    expect(await chavesDoBanco()).toEqual(['uidA:af-8_back']);
+  it('LEGADO L1 (uid:assessmentId_pose) é migrado para a chave nova, preservando o blob', async () => {
+    await semearLegado('af-9', 'al-9', 'back', 'foto-l1', 'uidA:af-9_back');
+    entrar('uidA', UA);
+    expect(await lerTexto((await getPhoto('al-9', 'af-9', 'back'))!.blob)).toBe('foto-l1');
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-9:af-9:back`]);
   });
 
-  it('excluir a foto (ou a avaliação) também remove a cópia legada; salvar por cima evita o reaparecimento', async () => {
+  it('L1 de OUTRO uid nunca é adotado', async () => {
+    await semearLegado('af-9', 'al-9', 'back', 'foto-de-uidB', 'uidB:af-9_back');
+    entrar('uidA', UA);
+    expect(await getPhoto('al-9', 'af-9', 'back')).toBeNull();
+    expect(await chavesDoBanco()).toEqual(['uidB:af-9_back']);
+  });
+
+  it('excluir (foto/avaliação) remove a cópia legada DO CLIENTE e preserva a de outro; salvar por cima evita reaparecer', async () => {
     await semearLegado('af-3', 'al-3', 'front', 'velho');
-    setLocalOwner('uidA');
-    await deletePhoto('af-3', 'front');
+    entrar('uidA', UA);
+    await deletePhoto('al-OUTRO', 'af-3', 'front');
+    expect(await chavesDoBanco()).toEqual(['af-3_front']); // não era dele
+    await deletePhoto('al-3', 'af-3', 'front');
     expect(await chavesDoBanco()).toEqual([]);
 
     await semearLegado('af-4', 'al-4', 'front', 'velho');
     await savePhoto('al-4', 'af-4', 'front', blob('novo'), dim);
-    expect(await chavesDoBanco()).toEqual(['uidA:af-4_front']);
-    expect(await lerTexto((await getPhoto('af-4', 'front'))!.blob)).toBe('novo');
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-4:af-4:front`]);
   });
 
-  it('deletePhotosByAssessment apaga as 4 poses do dono atual e só elas', async () => {
-    setLocalOwner('uidA');
+  it('deletePhotosByAssessment apaga as poses da avaliação daquele cliente e só elas', async () => {
+    entrar('uidA', UA);
     await savePhoto('al-1', 'af-1', 'front', blob('a'), dim);
     await savePhoto('al-1', 'af-1', 'back', blob('b'), dim);
     await savePhoto('al-1', 'af-2', 'front', blob('c'), dim);
-    await deletePhotosByAssessment('af-1');
-    expect(await chavesDoBanco()).toEqual(['uidA:af-2_front']);
+    await savePhoto('al-2', 'af-1', 'front', blob('d'), dim);
+    await deletePhotosByAssessment('al-1', 'af-1');
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-1:af-2:front`, `${UA}:al-2:af-1:front`]);
   });
 
-  it('deletePhotosByAluno apaga só fotos do aluno (dono atual + legado) e preserva as de outra conta', async () => {
+  it('deletePhotosByAluno: só o cliente (dono atual + legado dele); preserva outros clientes e outro dono com o mesmo alunoId', async () => {
     await semearLegado('af-5', 'al-5', 'front', 'legado');
-    setLocalOwner('uidA');
+    entrar('uidA', UA);
     await savePhoto('al-5', 'af-6', 'front', blob('a'), dim);
     await savePhoto('al-OUTRO', 'af-10', 'front', blob('outro'), dim);
-    setLocalOwner('uidB');
+    entrar('uidB', UB);
     await savePhoto('al-5', 'af-11', 'front', blob('de-B-mesmo-alunoId'), dim);
 
-    setLocalOwner('uidA');
+    entrar('uidA', UA);
     await deletePhotosByAluno('al-5');
-    expect(await chavesDoBanco()).toEqual(['uidA:af-10_front', 'uidB:af-11_front']);
+    expect(await chavesDoBanco()).toEqual([`${UA}:al-OUTRO:af-10:front`, `${UB}:al-5:af-11:front`]);
   });
 
-  it('assessmentId forjado com ":" não alcança nem "adota" a foto de outra conta (via caminho de legado)', async () => {
-    setLocalOwner('uidB');
+  it('ids forjados com ":" não colidem: alunoId é codificado; assessmentId com ":" é recusado', async () => {
+    entrar('uidB', UB);
     await savePhoto('al-9', 'af-1', 'front', blob('foto-de-B'), dim);
+    entrar('uidA', UA);
+    await savePhoto('al-1', 'af-1', 'front', blob('a1'), dim);
+    // alunoId que tenta "caber" dentro da chave de outro cliente/avaliação
+    await savePhoto('al-1:af-1', 'af-2', 'front', blob('forjado'), dim);
+    expect(await lerTexto((await getPhoto('al-1', 'af-1', 'front'))!.blob)).toBe('a1');
+    expect(await getPhoto('al-1:af-1', 'af-1', 'front')).toBeNull();
+    // assessmentId forjado
+    expect(await getPhoto('al-9', `${UB}:al-9:af-1`, 'front')).toBeNull();
+    await expect(savePhoto('al-1', 'af-1:x', 'front', blob('x'), dim)).rejects.toThrow();
+    await expect(savePhoto('', 'af-1', 'front', blob('x'), dim)).rejects.toThrow();
+    expect((await chavesDoBanco()).filter((k) => k.startsWith(UB))).toEqual([`${UB}:al-9:af-1:front`]);
+  });
 
-    setLocalOwner('uidA');
-    const forjado = 'uidB:af-1'; // chave legada `${id}_front` == chave namespaced de B
-    expect(await getPhoto(forjado, 'front')).toBeNull();
-    expect(await getPhotosByAssessment(forjado)).toEqual({ assessmentId: forjado });
-    await deletePhoto(forjado, 'front');
-    await deletePhotosByAssessment(forjado);
-    await expect(savePhoto('al-1', forjado, 'front', blob('x'), dim)).rejects.toThrow();
+  it('listarFotosOrfas só LISTA (não apaga) avaliações desconhecidas do cliente', async () => {
+    entrar('uidA', UA);
+    await savePhoto('al-1', 'af-ok', 'front', blob('a'), dim);
+    await savePhoto('al-1', 'af-sumiu', 'front', blob('b'), dim);
+    await savePhoto('al-2', 'af-outro-cliente', 'front', blob('c'), dim);
+    expect(await listarFotosOrfas('al-1', ['af-ok'])).toEqual(['af-sumiu']);
+    expect((await chavesDoBanco()).length).toBe(3);
+  });
 
-    expect(await chavesDoBanco()).toEqual(['uidB:af-1_front']); // intacta, no namespace de B
-    setLocalOwner('uidB');
-    expect(await lerTexto((await getPhoto('af-1', 'front'))!.blob)).toBe('foto-de-B');
+  it('cache de ownerUUID por uid (abre offline) e invalidado ao sair', async () => {
+    const mem = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: (k: string, v: string) => void mem.set(k, v),
+      removeItem: (k: string) => void mem.delete(k),
+    });
+    entrar('uidA', UA);
+    expect(mem.has('jg3_owner_uuid')).toBe(true);
+    // "reabre o app" offline: memória zerada, cache do MESMO uid vale
+    setLocalAuthUid('uidX');
+    setLocalAuthUid('uidA');
+    expect(getLocalOwnerUUID()).toBe(UA);
+    // outra conta com o cache de A no disco: não herda
+    setLocalAuthUid('uidB');
+    expect(getLocalOwnerUUID()).toBeNull();
+    sair();
+    expect(mem.has('jg3_owner_uuid')).toBe(false);
+    vi.unstubAllGlobals();
   });
 
   it('não deixa conexões abertas (deleteDatabase não fica bloqueado)', async () => {
-    setLocalOwner('uidA');
+    entrar('uidA', UA);
     await savePhoto('al-1', 'af-1', 'front', blob('a'), dim);
-    await getPhotosByAssessment('af-1');
-    await getPhoto('af-1', 'front');
+    await getPhotosByAssessment('al-1', 'af-1');
+    await getPhoto('al-1', 'af-1', 'front');
     const bloqueado = await new Promise<boolean>((resolve) => {
       const r = indexedDB.deleteDatabase(DB);
       r.onblocked = () => resolve(true);

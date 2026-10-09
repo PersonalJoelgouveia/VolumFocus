@@ -156,7 +156,7 @@ export function SkinfoldAssessmentForm({
    *  Nunca apaga durante o salvamento nem ao editar uma avaliação existente. */
   function cancelar() {
     if (!editando && !salvando) {
-      void deletePhotosByAssessment(assessmentId).catch((e) =>
+      void deletePhotosByAssessment(alunoId, assessmentId).catch((e) =>
         console.error('SkinfoldAssessmentForm: falha ao descartar fotos da avaliação cancelada', e)
       );
     }
@@ -169,7 +169,7 @@ export function SkinfoldAssessmentForm({
     if (!podeSalvar || !resultado || !sexo || idadeNum == null || pesoNum == null || alturaNum == null) return;
 
     if (fotosObrigatorias) {
-      const referencias = await getPhotosByAssessment(assessmentId);
+      const referencias = await getPhotosByAssessment(alunoId, assessmentId);
       const faltando = PHOTO_POSES.filter((p) => !referencias[p]);
       if (faltando.length > 0) {
         setErroFotos('Capture as 4 fotos comparativas antes de salvar.');

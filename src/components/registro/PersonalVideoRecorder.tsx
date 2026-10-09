@@ -66,7 +66,9 @@ interface PersonalVideoRecorderProps {
  * duplicar a lógica de câmera/IndexedDB em dois lugares.
  */
 export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) {
-  const userEmail = useAuthStore((s) => s.user?.email);
+  // ownerUUID da sessão: gatilho de recarga/limpeza (troca de conta). O namespace em si é
+  // resolvido DENTRO de lib/localVideoStore.ts — nada de identidade vem por argumento.
+  const ownerUUID = useAuthStore((s) => s.ownerUUID);
   // Aba de sessão de um aluno aberta (Personal)? Escopa o vídeo por cliente: o vídeo do
   // Cliente A não aparece na sessão do Cliente B. `null` = "Meu Treino"/modo aluno.
   const clienteId = useSessionStore((s) => s.sessions.find((x) => x.id === s.activeSessionId)?.alunoId ?? null);
@@ -89,13 +91,16 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
 
   // Carrega o vídeo pessoal salvo neste dispositivo (se existir) ao montar.
   useEffect(() => {
-    if (!userEmail) return;
+    if (!ownerUUID) {
+      setSavedBlob(null); // sem sessão/ownerUUID: nunca mostra vídeo de conta anterior
+      return;
+    }
     let cancelled = false;
     setSavedBlob('loading');
     (async () => {
       try {
         if (!isIndexedDbAvailable()) throw new Error('IndexedDB indisponível');
-        const rec = await getPersonalVideo(userEmail, exercise.id, clienteId);
+        const rec = await getPersonalVideo(exercise.id, clienteId);
         if (cancelled) return;
         setSavedBlob(rec ? rec.blob : null);
       } catch (e) {
@@ -106,7 +111,7 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
     return () => {
       cancelled = true;
     };
-  }, [userEmail, exercise.id, clienteId]);
+  }, [ownerUUID, exercise.id, clienteId]);
 
   // Mantém a Object URL do vídeo salvo sincronizada, revogando a anterior.
   useEffect(() => {
@@ -238,9 +243,9 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
   }
 
   async function handleSaveReview() {
-    if (!reviewBlob || !userEmail) return;
+    if (!reviewBlob || !ownerUUID) return;
     try {
-      await savePersonalVideo(userEmail, exercise.id, reviewBlob, clienteId);
+      await savePersonalVideo(exercise.id, reviewBlob, clienteId);
       setSavedBlob(reviewBlob);
       setReviewBlob(null);
       setPhase('idle');
@@ -252,14 +257,14 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
   }
 
   async function handleGallerySelect(file: File | undefined) {
-    if (!file || !userEmail) return;
+    if (!file || !ownerUUID) return;
     if (!file.type.startsWith('video/')) return showToast('⚠️ Selecione um arquivo de vídeo.', 'warning');
     if (file.size > MAX_GALLERY_BYTES) {
       if (galleryInputRef.current) galleryInputRef.current.value = '';
       return showToast(`⚠️ Vídeo grande demais (máximo ${MAX_GALLERY_BYTES / 1024 / 1024} MB). Escolha um arquivo menor.`, 'warning');
     }
     try {
-      await savePersonalVideo(userEmail, exercise.id, file, clienteId);
+      await savePersonalVideo(exercise.id, file, clienteId);
       setSavedBlob(file);
       showToast('✅ Vídeo salvo neste dispositivo!', 'success');
     } catch (e) {
@@ -271,14 +276,14 @@ export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) 
   }
 
   async function handleRemoveSaved() {
-    if (!userEmail) return;
+    if (!ownerUUID) return;
     const ok = await useConfirmStore.getState().ask('Remover o vídeo pessoal deste dispositivo?', {
       confirmLabel: 'Remover',
       danger: true,
     });
     if (!ok) return;
     try {
-      await deletePersonalVideo(userEmail, exercise.id, clienteId);
+      await deletePersonalVideo(exercise.id, clienteId);
       setSavedBlob(null);
       showToast('🗑️ Vídeo removido deste dispositivo', 'success');
     } catch (e) {

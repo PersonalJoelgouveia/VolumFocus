@@ -89,9 +89,10 @@ function avaliar<T>(raw: string | null, alunoId: string, dono: string | null): A
 }
 
 /** Fotos capturadas para o rascunho (só neste aparelho) ficariam órfãs. */
-function descartarFotosDoRascunho(draft: { assessmentId?: unknown } | null): void {
+function descartarFotosDoRascunho(alunoId: string, draft: { assessmentId?: unknown } | null): void {
   if (typeof draft?.assessmentId !== 'string' || !ASSESSMENT_ID_SEGURO.test(draft.assessmentId)) return;
-  void deletePhotosByAssessment(draft.assessmentId).catch((e) =>
+  // As fotos são do (dono, cliente) do rascunho: a chave inclui o alunoId.
+  void deletePhotosByAssessment(alunoId, draft.assessmentId).catch((e) =>
     console.error('onlineAssessmentDraftStore: falha ao descartar fotos do rascunho', e)
   );
 }
@@ -129,7 +130,7 @@ export function carregarRascunhoOnline<T = unknown>(alunoId: string): OnlineAsse
       return { assessmentId, step, updatedAt, data };
     }
     localStorage.removeItem(chave(alunoId));
-    if (r.estado === 'expirado') descartarFotosDoRascunho(r.draft);
+    if (r.estado === 'expirado') descartarFotosDoRascunho(alunoId, r.draft);
     return null;
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao carregar rascunho', e);
@@ -162,7 +163,7 @@ export function limparRascunhosExpirados(): void {
       const r = avaliar<unknown>(localStorage.getItem(k), k.slice(PREFIX.length), dono);
       if (r.estado === 'ok') continue;
       localStorage.removeItem(k);
-      if (r.estado === 'expirado') descartarFotosDoRascunho(r.draft);
+      if (r.estado === 'expirado') descartarFotosDoRascunho(k.slice(PREFIX.length), r.draft);
     }
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao limpar rascunhos expirados', e);

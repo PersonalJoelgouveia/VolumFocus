@@ -13,21 +13,35 @@
  * banco é frágil (upgrade de um quebra o open() hardcoded do outro).
  * Isolamento aqui é deliberado, não descuido.
  *
- * NAMESPACE POR DONO: o IndexedDB é isolado por ORIGEM, não por usuário —
- * duas contas no mesmo navegador compartilham o banco. Por isso o `id` de
- * cada registro é `${uid}:${assessmentId}_${pose}`, onde `uid` é o dono
- * local (ver localOwner.ts). Uma conta nunca lê, sobrescreve nem apaga a
- * foto de outra, mesmo que ambas conheçam o mesmo `assessmentId` (ex.: o
- * mesmo aluno visto por dois Personals, ou pelo próprio aluno).
+ * NAMESPACE POR OWNERSHIP (isolamento LÓGICO local): o IndexedDB é isolado por
+ * ORIGEM, não por usuário nem por cliente — duas contas no mesmo navegador
+ * compartilham o banco. Por isso a chave de cada foto é
  *
- * LEGADO: registros antigos têm `id = ${assessmentId}_${pose}` (sem
- * ':'). São "adotados" — movidos para o namespace de quem os acessa — no
- * primeiro acesso por assessmentId. Nunca são apagados por heurística:
- * as fotos só existem neste aparelho, então só se apaga o que se PROVA
- * órfão (exclusão explícita, avaliação nova cancelada, rascunho vencido).
+ *     ${ownerUUID}:${encodeURIComponent(alunoId)}:${assessmentId}:${pose}
+ *
+ * (dono + cliente + avaliação + foto). Quem tem outro ownerUUID, ou pede outro
+ * `alunoId`, simplesmente não encontra o registro: nunca lê, sobrescreve nem
+ * apaga a foto alheia, mesmo conhecendo o `assessmentId`. `:` nunca aparece
+ * dentro de um componente (ownerUUID é UUID, `alunoId` é codificado e
+ * `assessmentId` passa por ID_SEGURO), então as chaves não se confundem.
+ *
+ * O ownerUUID NÃO é segredo e NÃO autoriza nada: é só o separador de espaços de
+ * armazenamento local (vem de localOwner.ts, resolvido pelo vínculo Auth UID →
+ * ownerUUID). Os dados no Firestore continuam protegidos pelas Security Rules.
+ * Sem sessão autorizada / sem ownerUUID resolvido, nenhuma foto é acessível.
+ *
+ * LEGADO (cache existente preservado — nada é apagado por heurística):
+ *  - L0: `${assessmentId}_${pose}`      (anterior a qualquer namespace)
+ *  - L1: `${uid}:${assessmentId}_${pose}` (namespace por uid do Firebase)
+ * São "adotados" — movidos para a chave nova, na MESMA transação — no primeiro
+ * acesso, e SÓ se o `alunoId` gravado no registro for o do cliente que pede.
+ * Mesmo sem esse passo as fotos continuam no aparelho, só não aparecem para
+ * quem não é o cliente delas. Só se apaga o que se PROVA órfão (exclusão
+ * explícita, avaliação nova cancelada, rascunho vencido, aluno removido);
+ * `listarFotosOrfas` apenas LISTA — nunca apaga sozinha.
  */
 
-import { getLocalOwner } from './localOwner';
+import { getLocalOwner, getLocalOwnerUUID } from './localOwner';
 
 const DB_NAME = 'volumfocus-assessment-media';
 const DB_VERSION = 1;
@@ -56,7 +70,9 @@ export interface PhotoMetadata {
    *  sem precisar cruzar cada assessmentId de volta pro aluno dono. */
   alunoId: string;
   pose: PhotoPose;
-  /** uid do dono local. Ausente em registros anteriores ao namespace. */
+  /** ownerUUID do dono local (namespace atual). Ausente em registros legados até serem adotados. */
+  ownerUUID?: string;
+  /** uid do Firebase do namespace L1 (anterior ao ownerUUID) — só em registros legados. */
   ownerUid?: string;
   createdAt: string;
   mimeType: string;
@@ -108,21 +124,58 @@ function idValido(assessmentId: string): boolean {
   return typeof assessmentId === 'string' && ID_SEGURO.test(assessmentId);
 }
 
-/** Dono local atual. Sem conta autenticada não há foto acessível (falha segura). */
+/** `alunoId` também entra na chave: só texto não vazio e de tamanho razoável. */
+function alunoValido(alunoId: unknown): alunoId is string {
+  return typeof alunoId === 'string' && alunoId.length > 0 && alunoId.length <= 200;
+}
+
+/** ownerUUID atual. Sem sessão autorizada/ownerUUID resolvido não há foto acessível (falha segura). */
 function currentOwner(): string {
-  const uid = getLocalOwner();
-  if (!uid) throw new Error('Fotos indisponíveis: nenhuma conta autenticada neste dispositivo');
-  return uid;
+  const owner = getLocalOwnerUUID();
+  if (!owner) throw new Error('Fotos indisponíveis: nenhuma conta autenticada/ownerUUID neste dispositivo');
+  return owner;
 }
 
-/** Uma avaliação tem no máximo 1 foto por pose POR DONO — a chave já garante isso (put substitui). */
-function photoId(owner: string, assessmentId: string, pose: PhotoPose): string {
-  return `${owner}:${assessmentId}_${pose}`;
+/** Escopo de UMA chamada: dono + cliente. Tudo que lê/escreve parte daqui. */
+interface Escopo {
+  owner: string;
+  alunoId: string;
+  /** uid do Firebase (namespace L1 legado), se houver. */
+  uid: string | null;
 }
 
-/** Formato anterior ao namespace (sem dono). */
+function escopoDe(alunoId: string): Escopo {
+  if (!alunoValido(alunoId)) throw new Error('Identificador de cliente inválido para foto');
+  return { owner: currentOwner(), alunoId, uid: getLocalOwner() };
+}
+
+function prefixoCliente(e: Escopo): string {
+  return `${e.owner}:${encodeURIComponent(e.alunoId)}:`;
+}
+
+/** Chave atual: dono + cliente + avaliação + pose. Uma foto por pose POR (dono, cliente) — put substitui. */
+function photoId(e: Escopo, assessmentId: string, pose: PhotoPose): string {
+  return `${prefixoCliente(e)}${assessmentId}:${pose}`;
+}
+
+/** L1: `${uid}:${assessmentId}_${pose}` (namespace por uid, anterior ao ownerUUID). */
+function uidPhotoId(uid: string, assessmentId: string, pose: PhotoPose): string {
+  return `${uid}:${assessmentId}_${pose}`;
+}
+
+/** L0: formato anterior a qualquer namespace (sem dono). */
 function legacyPhotoId(assessmentId: string, pose: PhotoPose): string {
   return `${assessmentId}_${pose}`;
+}
+
+/** Chaves legadas (L1 do uid atual, depois L0) que PODEM conter a foto desta pose. */
+function candidatosLegados(e: Escopo, assessmentId: string, pose: PhotoPose): string[] {
+  return [...(e.uid ? [uidPhotoId(e.uid, assessmentId, pose)] : []), legacyPhotoId(assessmentId, pose)];
+}
+
+/** O registro legado é deste cliente/avaliação/pose? (impede adotar a foto de outro cliente) */
+function ehDesteCliente(r: PhotoRecord | undefined, e: Escopo, assessmentId: string, pose: PhotoPose): r is PhotoRecord {
+  return !!r && r.alunoId === e.alunoId && r.assessmentId === assessmentId && r.pose === pose;
 }
 
 /**
@@ -167,15 +220,48 @@ function withStore<T>(
   );
 }
 
-/** Move um registro legado para o namespace do dono (mesma transação: tudo ou nada). */
-function adoptLegacy(store: IDBObjectStore, owner: string, legado: PhotoRecord, pose: PhotoPose): PhotoRecord {
-  const adotado: PhotoRecord = { ...legado, id: photoId(owner, legado.assessmentId, pose), ownerUid: owner };
+/** Move um registro legado para a chave atual (mesma transação: tudo ou nada). */
+function adotar(store: IDBObjectStore, e: Escopo, legado: PhotoRecord, pose: PhotoPose): PhotoRecord {
+  const { ownerUid, ...resto } = legado;
+  void ownerUid;
+  const adotado: PhotoRecord = { ...resto, id: photoId(e, legado.assessmentId, pose), ownerUUID: e.owner, alunoId: e.alunoId };
   store.put(adotado);
   store.delete(legado.id);
   return adotado;
 }
 
-/** Salva (ou substitui) a foto daquela pose — só neste dispositivo, no namespace do dono atual. */
+/** Procura a foto da pose entre os candidatos legados e adota o primeiro que for DESTE cliente. */
+function adotarPrimeiroLegado(
+  store: IDBObjectStore,
+  e: Escopo,
+  assessmentId: string,
+  pose: PhotoPose,
+  cb: (adotado: PhotoRecord | null) => void
+): void {
+  const candidatos = candidatosLegados(e, assessmentId, pose);
+  let i = 0;
+  const proximo = () => {
+    if (i >= candidatos.length) return cb(null);
+    store.get(candidatos[i++]).onsuccess = (ev) => {
+      const legado = (ev.target as IDBRequest<PhotoRecord | undefined>).result;
+      if (ehDesteCliente(legado, e, assessmentId, pose)) return cb(adotar(store, e, legado, pose));
+      proximo();
+    };
+  };
+  proximo();
+}
+
+/** Apaga as cópias legadas da pose, mas só as que pertencem a ESTE cliente. */
+function apagarLegadosDoCliente(store: IDBObjectStore, e: Escopo, assessmentId: string, pose: PhotoPose): void {
+  for (const chave of candidatosLegados(e, assessmentId, pose)) {
+    store.get(chave).onsuccess = (ev) => {
+      const r = (ev.target as IDBRequest<PhotoRecord | undefined>).result;
+      if (ehDesteCliente(r, e, assessmentId, pose)) store.delete(chave);
+    };
+  }
+}
+
+/** Salva (ou substitui) a foto daquela pose — só neste dispositivo, no namespace (dono, cliente) atual. */
 export async function savePhoto(
   alunoId: string,
   assessmentId: string,
@@ -184,12 +270,12 @@ export async function savePhoto(
   dimensoes: { width: number; height: number }
 ): Promise<PhotoMetadata> {
   if (!idValido(assessmentId)) throw new Error('Identificador de avaliação inválido para foto');
-  const owner = currentOwner();
+  const e = escopoDe(alunoId);
   const metadata: PhotoMetadata = {
-    id: photoId(owner, assessmentId, pose),
+    id: photoId(e, assessmentId, pose),
     assessmentId,
     alunoId,
-    ownerUid: owner,
+    ownerUUID: e.owner,
     pose,
     createdAt: new Date().toISOString(),
     mimeType: blob.type || 'image/jpeg',
@@ -199,94 +285,131 @@ export async function savePhoto(
   return withStore<PhotoMetadata>('readwrite', (store, done) => {
     const record: PhotoRecord = { ...metadata, blob };
     store.put(record);
-    store.delete(legacyPhotoId(assessmentId, pose)); // evita reaparecer/adotar uma versão antiga
+    apagarLegadosDoCliente(store, e, assessmentId, pose); // evita reaparecer/adotar uma versão antiga
     done(metadata);
   });
 }
 
-/** Registro completo (metadados + blob) de uma pose específica, ou `null` se não capturada. */
-export async function getPhoto(assessmentId: string, pose: PhotoPose): Promise<PhotoRecord | null> {
+/** Registro completo (metadados + blob) de uma pose do cliente, ou `null` se não houver (ou for de outro dono/cliente). */
+export async function getPhoto(alunoId: string, assessmentId: string, pose: PhotoPose): Promise<PhotoRecord | null> {
   if (!idValido(assessmentId)) return null;
-  const owner = currentOwner();
+  const e = escopoDe(alunoId);
   return withStore<PhotoRecord | null>('readwrite', (store, done) => {
-    store.get(photoId(owner, assessmentId, pose)).onsuccess = (ev) => {
+    store.get(photoId(e, assessmentId, pose)).onsuccess = (ev) => {
       const proprio = (ev.target as IDBRequest<PhotoRecord | undefined>).result;
       if (proprio) return done(proprio);
-      store.get(legacyPhotoId(assessmentId, pose)).onsuccess = (ev2) => {
-        const legado = (ev2.target as IDBRequest<PhotoRecord | undefined>).result;
-        done(legado ? adoptLegacy(store, owner, legado, pose) : null);
-      };
+      adotarPrimeiroLegado(store, e, assessmentId, pose, (adotado) => done(adotado));
     };
   });
 }
 
-/** As referências das 4 poses de uma avaliação DO DONO ATUAL, via índice (sem varrer o store todo). */
-export async function getPhotosByAssessment(assessmentId: string): Promise<AssessmentPhotos> {
+/** As referências das 4 poses de uma avaliação DESTE (dono, cliente) — por chave, sem varrer nem ler blobs. */
+export async function getPhotosByAssessment(alunoId: string, assessmentId: string): Promise<AssessmentPhotos> {
   if (!idValido(assessmentId)) return { assessmentId };
-  const owner = currentOwner();
+  const e = escopoDe(alunoId);
   return withStore<AssessmentPhotos>('readwrite', (store, done) => {
-    store.index(INDEX_ASSESSMENT).getAllKeys(assessmentId).onsuccess = (ev) => {
-      const chaves = new Set((ev.target as IDBRequest<IDBValidKey[]>).result.map(String));
-      const resultado: AssessmentPhotos = { assessmentId };
-      for (const pose of PHOTO_POSES) {
-        const proprio = photoId(owner, assessmentId, pose);
-        if (chaves.has(proprio)) {
-          resultado[pose] = proprio;
-        } else if (chaves.has(legacyPhotoId(assessmentId, pose))) {
-          // Legado: adota no primeiro acesso (get + put/delete na mesma transação).
-          store.get(legacyPhotoId(assessmentId, pose)).onsuccess = (ev2) => {
-            const legado = (ev2.target as IDBRequest<PhotoRecord | undefined>).result;
-            if (legado) resultado[pose] = adoptLegacy(store, owner, legado, pose).id;
-          };
-        }
-      }
-      done(resultado);
+    const resultado: AssessmentPhotos = { assessmentId };
+    let pendentes = PHOTO_POSES.length;
+    const fim = () => {
+      if (--pendentes === 0) done(resultado);
     };
+    for (const pose of PHOTO_POSES) {
+      const id = photoId(e, assessmentId, pose);
+      store.getKey(id).onsuccess = (ev) => {
+        if ((ev.target as IDBRequest<IDBValidKey | undefined>).result !== undefined) {
+          resultado[pose] = id;
+          return fim();
+        }
+        // Legado: adota no primeiro acesso (get + put/delete na mesma transação).
+        adotarPrimeiroLegado(store, e, assessmentId, pose, (adotado) => {
+          if (adotado) resultado[pose] = adotado.id;
+          fim();
+        });
+      };
+    }
   });
 }
 
-/** Remove a foto daquela pose (do dono atual, e a cópia legada, se ainda existir). */
-export async function deletePhoto(assessmentId: string, pose: PhotoPose): Promise<void> {
+/** Remove a foto daquela pose do cliente (e as cópias legadas DELE, se ainda existirem). */
+export async function deletePhoto(alunoId: string, assessmentId: string, pose: PhotoPose): Promise<void> {
   if (!idValido(assessmentId)) return;
-  const owner = currentOwner();
+  const e = escopoDe(alunoId);
   return withStore<void>('readwrite', (store, done) => {
-    store.delete(photoId(owner, assessmentId, pose));
-    store.delete(legacyPhotoId(assessmentId, pose));
+    store.delete(photoId(e, assessmentId, pose));
+    apagarLegadosDoCliente(store, e, assessmentId, pose);
     done();
   });
 }
 
-/** Remove TODAS as fotos de uma avaliação (exclusão da avaliação / avaliação nova cancelada / rascunho vencido). */
-export async function deletePhotosByAssessment(assessmentId: string): Promise<void> {
+/** Remove TODAS as fotos de uma avaliação do cliente (exclusão da avaliação / avaliação nova cancelada / rascunho vencido). */
+export async function deletePhotosByAssessment(alunoId: string, assessmentId: string): Promise<void> {
   if (!idValido(assessmentId)) return;
-  const owner = currentOwner();
+  const e = escopoDe(alunoId);
   return withStore<void>('readwrite', (store, done) => {
     for (const pose of PHOTO_POSES) {
-      store.delete(photoId(owner, assessmentId, pose));
-      store.delete(legacyPhotoId(assessmentId, pose));
+      store.delete(photoId(e, assessmentId, pose));
+      apagarLegadosDoCliente(store, e, assessmentId, pose);
     }
     done();
   });
 }
 
-/** Remove todas as fotos de um aluno (dono atual + legado sem dono). `alunoId` é o id LOCAL do aluno. */
+/**
+ * Remove todas as fotos de um cliente: o namespace atual (dono + cliente) e o legado DELE
+ * (L1 do uid atual / L0). Nunca toca o namespace de outro dono. `alunoId` é o id LOCAL do aluno.
+ */
 export async function deletePhotosByAluno(alunoId: string): Promise<void> {
-  const owner = currentOwner();
-  const prefixo = `${owner}:`;
+  const e = escopoDe(alunoId);
+  const prefixo = prefixoCliente(e);
   return withStore<void>('readwrite', (store, done) => {
+    store.delete(IDBKeyRange.bound(prefixo, `${prefixo}\uffff`));
     store.index('alunoId').getAllKeys(alunoId).onsuccess = (ev) => {
       for (const chave of (ev.target as IDBRequest<IDBValidKey[]>).result) {
         const id = String(chave);
-        // Só do dono atual ou legado (sem ':'); nunca o namespace de outra conta.
-        if (id.startsWith(prefixo) || !id.includes(':')) store.delete(chave);
+        const partes = id.split(':').length;
+        const ehL0 = partes === 1;
+        const ehL1Proprio = partes === 2 && !!e.uid && id.startsWith(`${e.uid}:`);
+        if (ehL0 || ehL1Proprio) store.delete(chave);
       }
       done();
     };
   });
 }
 
+/** Remove TUDO do dono atual (todos os clientes). Para limpeza explícita — nunca chamada automaticamente. */
+export async function deletePhotosByOwner(): Promise<void> {
+  const owner = currentOwner();
+  const prefixo = `${owner}:`;
+  return withStore<void>('readwrite', (store, done) => {
+    store.delete(IDBKeyRange.bound(prefixo, `${prefixo}\uffff`));
+    done();
+  });
+}
+
+/**
+ * Fotos ÓRFÃS do cliente: guardadas no namespace atual, mas de avaliações que NÃO estão em
+ * `assessmentIdsConhecidos`. SÓ LISTA (as fotos existem apenas neste aparelho — apagar por
+ * heurística é perda irreversível; ex.: avaliação em rascunho ainda não salva, ou lista
+ * remota incompleta). Quem decide apagar usa `deletePhotosByAssessment`.
+ */
+export async function listarFotosOrfas(alunoId: string, assessmentIdsConhecidos: string[]): Promise<string[]> {
+  const e = escopoDe(alunoId);
+  const prefixo = prefixoCliente(e);
+  const conhecidos = new Set(assessmentIdsConhecidos);
+  return withStore<string[]>('readonly', (store, done) => {
+    store.getAllKeys(IDBKeyRange.bound(prefixo, `${prefixo}\uffff`)).onsuccess = (ev) => {
+      const orfas = new Set<string>();
+      for (const chave of (ev.target as IDBRequest<IDBValidKey[]>).result) {
+        const [assessmentId] = String(chave).slice(prefixo.length).split(':');
+        if (assessmentId && !conhecidos.has(assessmentId)) orfas.add(assessmentId);
+      }
+      done([...orfas]);
+    };
+  });
+}
+
 /** URL local (`createObjectURL`) pra exibir a foto — quem chama deve `revokeObjectURL` depois de usar. */
-export async function getPhotoObjectUrl(assessmentId: string, pose: PhotoPose): Promise<string | null> {
-  const registro = await getPhoto(assessmentId, pose);
+export async function getPhotoObjectUrl(alunoId: string, assessmentId: string, pose: PhotoPose): Promise<string | null> {
+  const registro = await getPhoto(alunoId, assessmentId, pose);
   return registro ? URL.createObjectURL(registro.blob) : null;
 }

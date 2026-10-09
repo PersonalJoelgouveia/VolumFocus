@@ -156,7 +156,7 @@ export function BioimpedanceAssessmentForm({
    *  Nunca apaga durante a confirmação nem ao editar uma avaliação existente. */
   function cancelar() {
     if (!editando && !confirmando) {
-      void deletePhotosByAssessment(assessmentId).catch((e) =>
+      void deletePhotosByAssessment(alunoId, assessmentId).catch((e) =>
         console.error('BioimpedanceAssessmentForm: falha ao descartar fotos da avaliação cancelada', e)
       );
     }
@@ -185,7 +185,7 @@ export function BioimpedanceAssessmentForm({
 
     setErroFotos(null);
     if (fotosObrigatorias) {
-      const referencias = await getPhotosByAssessment(assessmentId);
+      const referencias = await getPhotosByAssessment(alunoId, assessmentId);
       const faltando = PHOTO_POSES.filter((p) => !referencias[p]);
       if (faltando.length > 0) {
         setErroFotos('Capture as 4 fotos comparativas antes de confirmar.');

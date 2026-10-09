@@ -287,7 +287,7 @@ function EvolucaoAvaliacaoSection({ assessments }: { assessments: PhysicalAssess
   );
 }
 
-function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
+function MiniaturasFotos({ alunoId, assessment }: { alunoId: string; assessment: PhysicalAssessment }) {
   const [urls, setUrls] = useState<Partial<Record<PhotoPose, string>>>({});
   const [carregado, setCarregado] = useState(false);
 
@@ -297,11 +297,11 @@ function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
     const criadas: string[] = [];
     (async () => {
       try {
-        const referencias = await getPhotosByAssessment(assessment.id);
+        const referencias = await getPhotosByAssessment(alunoId, assessment.id);
         const novasUrls: Partial<Record<PhotoPose, string>> = {};
         for (const pose of PHOTO_POSES) {
           if (referencias[pose]) {
-            const url = await getPhotoObjectUrl(assessment.id, pose);
+            const url = await getPhotoObjectUrl(alunoId, assessment.id, pose);
             if (url) {
               criadas.push(url);
               if (cancelado) URL.revokeObjectURL(url);
@@ -320,7 +320,7 @@ function MiniaturasFotos({ assessment }: { assessment: PhysicalAssessment }) {
       cancelado = true;
       criadas.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [assessment.id]);
+  }, [alunoId, assessment.id]);
 
   const temFoto = Object.keys(urls).length > 0;
 
@@ -542,8 +542,8 @@ export function PhysicalAssessmentDashboard({ alunoId, onClose, onComparar }: Ph
               const anterior = porDataAsc[porDataAsc.length - 2] ?? ultima;
               return (
                 <>
-                  <MiniaturasFotos assessment={anterior} />
-                  <MiniaturasFotos assessment={ultima} />
+                  <MiniaturasFotos alunoId={alunoId} assessment={anterior} />
+                  <MiniaturasFotos alunoId={alunoId} assessment={ultima} />
                 </>
               );
             })()}

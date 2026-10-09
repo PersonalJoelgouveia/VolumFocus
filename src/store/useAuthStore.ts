@@ -9,6 +9,7 @@ import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
 import { ensureOwnerUUID } from '../lib/ownerRepository';
 import { reivindicarAlunosLegados } from '../lib/alunosOwnership';
 import { useAlunoStore } from './useAlunoStore';
+import { setLocalAuthUid, setLocalOwnerUUID } from '../lib/localOwner';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -82,6 +83,7 @@ function resolveOwnerUUID(uid: string, set: (p: Partial<AuthState>) => void): vo
     .then((ownerUUID) => {
       if (auth.currentUser?.uid !== uid) return;
       set({ ownerUUID, ownerUUIDStatus: 'ready' });
+      setLocalOwnerUUID(uid, ownerUUID); // namespace dos dados locais (fotos)
       // Personal: carimba com o próprio ownerUUID os clientes antigos (sem dono) — transitório.
       if (useAuthStore.getState().role === 'personal') {
         void reivindicarAlunosLegados(useAlunoStore.getState().alunos.map((a) => a.email));
@@ -130,6 +132,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) {
         pendingSyncOnGrant = false;
+        setLocalAuthUid(null);
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'login', role: 'nao-logado', user: null, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
@@ -162,6 +165,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const user = toAuthUser(fbUser);
 
       if (authorized) {
+        setLocalAuthUid(fbUser.uid, emailLc); // só contas autorizadas acessam dados locais
         useUIStore.getState().setPersonalMode(isPT);
         useUIStore.getState().setAlunoMode(!isPT);
         set({ status: 'granted', role: isPT ? 'personal' : 'aluno', user, errorMessage: null });
@@ -179,6 +183,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
       } else {
         pendingSyncOnGrant = false;
+        setLocalAuthUid(null);
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'denied', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });

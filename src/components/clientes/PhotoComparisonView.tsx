@@ -23,6 +23,8 @@ const ABAS: Array<{ key: Aba; label: string }> = [
 ];
 
 interface PhotoComparisonViewProps {
+  /** id LOCAL do cliente — parte da chave das fotos (isolamento por cliente). */
+  alunoId: string;
   anterior: PhysicalAssessment;
   atual: PhysicalAssessment;
 }
@@ -34,7 +36,7 @@ interface PhotoComparisonViewProps {
  * via CSS). "Zoom" é um lightbox simples (ver a foto ampliada) — sem
  * biblioteca de pinch-zoom, suficiente pro objetivo comparativo.
  */
-export function PhotoComparisonView({ anterior, atual }: PhotoComparisonViewProps) {
+export function PhotoComparisonView({ alunoId, anterior, atual }: PhotoComparisonViewProps) {
   const [aba, setAba] = useState<Aba>('todas');
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
@@ -48,8 +50,8 @@ export function PhotoComparisonView({ anterior, atual }: PhotoComparisonViewProp
       try {
         const pares = await Promise.all(
           PHOTO_POSES.flatMap((pose) => [
-            getPhotoObjectUrl(anterior.id, pose).then((u) => [chave(anterior.id, pose), u] as const),
-            getPhotoObjectUrl(atual.id, pose).then((u) => [chave(atual.id, pose), u] as const),
+            getPhotoObjectUrl(alunoId, anterior.id, pose).then((u) => [chave(anterior.id, pose), u] as const),
+            getPhotoObjectUrl(alunoId, atual.id, pose).then((u) => [chave(atual.id, pose), u] as const),
           ])
         );
         if (cancelado) {
@@ -69,7 +71,7 @@ export function PhotoComparisonView({ anterior, atual }: PhotoComparisonViewProp
       cancelado = true;
       Object.values(urlsRef.current).forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [anterior.id, atual.id]);
+  }, [alunoId, anterior.id, atual.id]);
 
   useEffect(() => {
     urlsRef.current = urls;

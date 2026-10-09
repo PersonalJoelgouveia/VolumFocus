@@ -171,7 +171,7 @@ export function CompareAssessmentsModal({ alunoId, onClose, defaultMode = 'prime
             {inicial && atual && (
               <div className="cmp-fotos">
                 <h3 className="cmp-section-title">Fotos comparativas</h3>
-                <PhotoComparisonView anterior={inicial} atual={atual} />
+                <PhotoComparisonView alunoId={alunoId} anterior={inicial} atual={atual} />
               </div>
             )}
           </>
