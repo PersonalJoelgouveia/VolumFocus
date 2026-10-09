@@ -1,4 +1,4 @@
-import { db, doc, getDoc, runTransaction, serverTimestamp } from './firebase';
+import { auth, db, doc, getDoc, runTransaction, serverTimestamp } from './firebase';
 
 /**
  * Vínculo Firebase Auth UID → `ownerUUID` (etapa 1 da arquitetura de
@@ -61,6 +61,25 @@ export async function getOwnerUUID(uid: string): Promise<string | null> {
 }
 
 const MAX_ATTEMPTS = 3;
+
+const emAndamento = new Map<string, Promise<string>>();
+
+/**
+ * ownerUUID do usuário LOGADO agora (memoizado por uid na sessão). Serve para o
+ * app carimbar o dono ao gravar dados — o servidor confere o valor contra
+ * `userOwners/{request.auth.uid}`, então um valor errado/forjado é negado.
+ */
+export function getMyOwnerUUID(): Promise<string> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return Promise.reject(new Error('ownerRepository: sem usuário autenticado'));
+  let p = emAndamento.get(uid);
+  if (!p) {
+    p = ensureOwnerUUID(uid);
+    emAndamento.set(uid, p);
+    p.catch(() => emAndamento.delete(uid)); // falhou: a próxima chamada tenta de novo
+  }
+  return p;
+}
 
 /**
  * Devolve o ownerUUID do uid, criando-o UMA única vez se não existir.

@@ -1,4 +1,5 @@
 import { db, doc, getDoc, setDoc } from './firebase';
+import { getMyOwnerUUID } from './ownerRepository';
 import type { Aluno, AlunoRotina } from '../types/aluno';
 
 /**
@@ -16,6 +17,21 @@ function alunoDocRef(email: string) {
   return doc(db, 'alunos', email.toLowerCase());
 }
 
+/**
+ * ownerUUID do Personal logado, para carimbar o cliente. É só uma DECLARAÇÃO: as
+ * Security Rules conferem contra `userOwners/{request.auth.uid}` e negam se não bater.
+ * Se não der pra resolver, segue sem o campo — o servidor decide (negar ou, antes
+ * das regras novas, aceitar) em vez de o app inventar um valor.
+ */
+async function ownerUUIDAtual(): Promise<{ ownerUUID: string } | Record<string, never>> {
+  try {
+    return { ownerUUID: await getMyOwnerUUID() };
+  } catch (e) {
+    console.error('alunoRepository: não foi possível obter o ownerUUID', e);
+    return {};
+  }
+}
+
 /** Grava o perfil do aluno (dados cadastrais) na nuvem. Equivale a syncClientToCloud(). */
 export async function syncAlunoPerfilToCloud(aluno: Aluno): Promise<boolean> {
   if (!aluno.email || !aluno.email.includes('@')) {
@@ -29,6 +45,7 @@ export async function syncAlunoPerfilToCloud(aluno: Aluno): Promise<boolean> {
         email: aluno.email.toLowerCase(),
         perfilAluno: aluno,
         perfilAtualizadoEm: new Date().toISOString(),
+        ...(await ownerUUIDAtual()),
       },
       { merge: true }
     );
@@ -52,6 +69,7 @@ export async function syncRotinaToCloud(email: string, rotina: AlunoRotina): Pro
         email: email.toLowerCase(),
         atualizadoEm: new Date().toISOString(),
         rotina,
+        ...(await ownerUUIDAtual()),
       },
       { merge: true }
     );

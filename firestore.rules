@@ -5,8 +5,10 @@ rules_version = '2';
 //
 // Modelo: o frontend NÃO é fronteira de confiança. Quem é quem vem SEMPRE de
 // request.auth.token (e-mail verificado pelo Google), nunca de campos enviados.
-//   - Personal (PT_EMAILS): lê/escreve tudo.   <-- manter igual a PT_EMAILS em
-//     src/store/useAuthStore.ts E em storage.rules.
+//   - Personal (PT_EMAILS): lê/escreve SÓ os clientes do seu contexto de ownership:
+//     alunos/{email}.ownerUUID == userOwners/{request.auth.uid}.ownerUUID (conferido
+//     AQUI no servidor; o ownerUUID enviado pelo React nunca vale por si só).
+//     <-- PT_EMAILS: manter igual a src/store/useAuthStore.ts E em storage.rules.
 //   - Aluno: só o próprio caminho /alunos/{seu e-mail}/..., e só CRIA a própria
 //     avaliação online (campos fixos) e a notificação de treino concluído.
 //   - Todo o resto: negado (default deny).
@@ -38,6 +40,114 @@ service cloud.firestore {
     function alunoLogadoCadastrado() {
       let e = emailToken();
       return logado() && exists(/databases/$(database)/documents/alunos/$(e));
+    }
+
+    // ---- ownership: Firebase Auth UID -> ownerUUID (etapas 1-3) ----------------
+    // Fonte de verdade: userOwners/{uid} (create-only, par com o índice ownerUUIDs).
+    // Tudo falha FECHADO: sem vínculo / sem campo / tipo errado => nega.
+    function ownerUuidOk(id) {
+      return id is string
+        && id.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+    }
+    function hasOwnerLink() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/userOwners/$(request.auth.uid));
+    }
+    function myOwnerUUID() {
+      return get(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID;
+    }
+    // "este ownerUUID (de path ou de payload) é MEU?"
+    function isMyOwnerUUID(id) {
+      return hasOwnerLink() && id is string && id == myOwnerUUID();
+    }
+
+    // ---- ownership dos CLIENTES: alunos/{email}.ownerUUID ------------------------
+    // TRANSITÓRIO: docs criados antes desta etapa não têm ownerUUID. Enquanto isto
+    // retornar true, um Personal pode ler/reivindicar (1x) um doc SEM dono. Depois de
+    // migrar todos (o app reivindica no login do Personal), troque para `false`.
+    function aceitarLegadoSemDono() { return true; }
+
+    function semDono(d) { return !('ownerUUID' in d); }
+    function meuAluno(d) { return 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID); }
+    function paiAluno(email) {
+      return get(/databases/$(database)/documents/alunos/$(email)).data;
+    }
+    // Personal autenticado E dono do cliente (via doc-pai). Usado nas subcoleções.
+    function ptDoAluno(email) {
+      return ehPT()
+        && cadastrado(email)
+        && (meuAluno(paiAluno(email)) || (aceitarLegadoSemDono() && semDono(paiAluno(email))));
+    }
+    // Criar cliente: o dono gravado TEM que ser o meu; `ownerId` é reservado (nunca aceito).
+    function alunoCriacaoValida() {
+      let d = request.resource.data;
+      return ehPT() && !('ownerId' in d) && 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID);
+    }
+    // Atualizar cliente: dono imutável. Única exceção (transitória): reivindicar doc sem dono.
+    function alunoAtualizacaoValida() {
+      let d = request.resource.data;
+      return ehPT() && !('ownerId' in d)
+        && (
+          (meuAluno(resource.data) && 'ownerUUID' in d && d.ownerUUID == resource.data.ownerUUID)
+          || (aceitarLegadoSemDono() && semDono(resource.data) && 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID))
+        );
+    }
+
+    // ---- recursos SENSÍVEIS do cliente (etapa 4) -----------------------------------
+    // Dono do recurso = dono do CLIENTE (ptDoAluno, via doc-pai alunos/{email}): fonte única,
+    // sem cópia de ownerUUID no recurso que possa divergir. Por isso `ownerUUID`/`ownerId` são
+    // RESERVADOS: nenhum recurso pode carregá-los (create nem update) — nada a "alterar".
+    // `alunoId` NÃO identifica o cliente (o aluno grava um id local do aparelho dele); quem
+    // identifica é o caminho /alunos/{email}. Ele só é imutável, para ninguém "migrar" o recurso.
+    function semCamposDeDono(d) { return !('ownerUUID' in d) && !('ownerId' in d); }
+    function submitterOk(d) { return !('submittedBy' in d) || d.submittedBy in ['aluno', 'personal']; }
+    // Personal cria avaliação (qualquer protocolo; o aluno usa avaliacaoOnlineValida abaixo).
+    function avaliacaoPTCriacaoValida(id) {
+      let d = request.resource.data;
+      return semCamposDeDono(d)
+        && d.id == id
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && submitterOk(d);
+    }
+    // Atualizar avaliação: id/alunoId/submittedBy imutáveis (ausente == ausente).
+    function avaliacaoAtualizacaoValida(id) {
+      let d = request.resource.data;
+      let o = resource.data;
+      return semCamposDeDono(d)
+        && d.get('id', id) == id
+        && d.get('alunoId', null) == o.get('alunoId', null)
+        && d.get('submittedBy', null) == o.get('submittedBy', null)
+        && submitterOk(d);
+    }
+    // Anotação (prontuário): campos fixos; autoria = e-mail do token (não forjável).
+    function anotacaoCamposOk(d) {
+      return d.keys().hasOnly(['id', 'alunoId', 'alunoNome', 'treinoId', 'treinoNome', 'sessionId',
+                               'conteudo', 'createdAt', 'updatedAt', 'authorId', 'authorName'])
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && d.conteudo is string && d.conteudo.size() <= 200000
+        && (!('alunoNome' in d) || (d.alunoNome is string && d.alunoNome.size() <= 200))
+        && (!('treinoId' in d) || (d.treinoId is string && d.treinoId.size() <= 128))
+        && (!('treinoNome' in d) || (d.treinoNome is string && d.treinoNome.size() <= 200))
+        && (!('sessionId' in d) || (d.sessionId is string && d.sessionId.size() <= 128))
+        && (!('authorName' in d) || (d.authorName is string && d.authorName.size() <= 200))
+        && (!('createdAt' in d) || (d.createdAt is string && d.createdAt.size() <= 40))
+        && (!('updatedAt' in d) || (d.updatedAt is string && d.updatedAt.size() <= 40));
+    }
+    function anotacaoCriacaoValida(id) {
+      let d = request.resource.data;
+      return anotacaoCamposOk(d)
+        && d.keys().hasAll(['id', 'alunoId', 'alunoNome', 'conteudo', 'createdAt', 'updatedAt', 'authorId'])
+        && d.id == id
+        && d.authorId is string && d.authorId.lower() == emailToken();
+    }
+    function anotacaoAtualizacaoValida() {
+      let d = request.resource.data;
+      let o = resource.data;
+      return anotacaoCamposOk(d)
+        && d.get('alunoId', null) == o.get('alunoId', null)
+        && d.get('authorId', null) == o.get('authorId', null)
+        && d.get('createdAt', null) == o.get('createdAt', null)
+        && d.get('id', null) == o.get('id', null);
     }
 
     // ---- avaliação online criada pelo ALUNO -----------------------------------
@@ -95,14 +205,13 @@ service cloud.firestore {
     // Criar: PT, para um aluno JÁ cadastrado (não cria lixo em caminho de quem não existe),
     // e `personalEmail` é o do próprio token — não dá para forjar autoria.
     function rotinaCriacaoValida(email, id) {
-      return ehPT()
-        && cadastrado(email)
+      return ptDoAluno(email)
         && rotinaFormatoValido(id)
         && request.resource.data.personalEmail == emailToken();
     }
     // Atualizar (editar conteúdo, ativar/desativar): PT; id, criadaEm e autoria são imutáveis.
-    function rotinaAtualizacaoValida(id) {
-      return ehPT()
+    function rotinaAtualizacaoValida(email, id) {
+      return ptDoAluno(email)
         && rotinaFormatoValido(id)
         && request.resource.data.id == resource.data.id
         && request.resource.data.criadaEm == resource.data.criadaEm
@@ -128,45 +237,37 @@ service cloud.firestore {
     // ---- /alunos/{email} -------------------------------------------------------
     match /alunos/{email} {
       // `get` do próprio e-mail também vale para doc inexistente (é o gate do app).
-      allow get: if ehPT() || ehDono(email);
-      allow list: if ehPT();
-      allow create, update, delete: if ehPT();
+      // Aluno: só o próprio caminho. Personal: só se for o DONO do cliente
+      // (conhecer o ID/e-mail do cliente de outro Personal não dá acesso).
+      allow get: if ehDono(email)
+        || (ehPT() && (meuAluno(resource.data) || (aceitarLegadoSemDono() && semDono(resource.data))));
+      // Sem list: enumerar clientes é negado (o app não lista a coleção; usa o e-mail).
+      allow list: if false;
+      allow create: if alunoCriacaoValida();
+      allow update: if alunoAtualizacaoValida();
+      allow delete: if ehPT()
+        && (meuAluno(resource.data) || (aceitarLegadoSemDono() && semDono(resource.data)));
 
       match /avaliacoesFisicas/{id} {
-        allow get, list: if ehPT() || ehDono(email);
-        allow update, delete: if ehPT();
-        allow create: if ehPT() || avaliacaoOnlineValida(email, id);
+        allow get, list: if ehDono(email) || ptDoAluno(email);
+        allow update: if ptDoAluno(email) && avaliacaoAtualizacaoValida(id);
+        allow delete: if ptDoAluno(email);
+        allow create: if (ptDoAluno(email) && avaliacaoPTCriacaoValida(id))
+          || avaliacaoOnlineValida(email, id);
       }
 
       match /rotinas/{id} {
-        allow get, list: if ehPT() || ehDono(email);
+        allow get, list: if ehDono(email) || ptDoAluno(email);
         allow create: if rotinaCriacaoValida(email, id);
-        allow update: if rotinaAtualizacaoValida(id);
+        allow update: if rotinaAtualizacaoValida(email, id);
         allow delete: if false;
       }
 
-      // Cargas "vivas" (peso atual por exercício): aluno e Personal gravam, ambos leem.
-      // Documento único `atuais`; nunca apaga. Forma validada; conteúdo do mapa limitado em tamanho.
-      match /cargas/{id} {
-        allow get: if ehPT() || ehDono(email);
-        allow list: if false;
-        allow create, update: if id == 'atuais'
-          && (ehPT() || (ehDono(email) && cadastrado(email)))
-          && request.resource.data.keys().hasOnly(['cargas', 'atualizadoEm'])
-          && request.resource.data.cargas is map
-          && request.resource.data.cargas.size() <= 300
-          && request.resource.data.atualizadoEm is string
-          && request.resource.data.atualizadoEm.size() <= 40;
-        allow delete: if false;
-      }
-
-      // Prontuário: só o Personal (o aluno NUNCA lê).
+      // Prontuário: só o Personal DONO do cliente (o aluno NUNCA lê).
       match /anotacoes/{id} {
-        allow read, delete: if ehPT();
-        allow create, update: if ehPT()
-          && request.resource.data.alunoId is string
-          && request.resource.data.conteudo is string
-          && request.resource.data.conteudo.size() <= 200000;
+        allow read, delete: if ptDoAluno(email);
+        allow create: if ptDoAluno(email) && anotacaoCriacaoValida(id);
+        allow update: if ptDoAluno(email) && anotacaoAtualizacaoValida();
       }
     }
 
@@ -179,6 +280,35 @@ service cloud.firestore {
     // ---- /backups/{email}: cada usuário só no próprio -------------------------
     match /backups/{email} {
       allow read, write: if ehDono(email);
+    }
+
+    // ---- /userOwners/{uid}: vínculo Auth UID -> ownerUUID (create-only) -------------
+    match /userOwners/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && (ehPT() || alunoLogadoCadastrado())
+        && request.resource.data.keys().hasOnly(['ownerUUID', 'createdAt'])
+        && ownerUuidOk(request.resource.data.ownerUUID)
+        && request.resource.data.createdAt == request.time
+        // o índice reverso nasce na MESMA transação/batch, apontando pra este uid
+        && existsAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID))
+        && getAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID)).data.uid == uid;
+      allow update, delete: if false;
+    }
+
+    // ---- /ownerUUIDs/{ownerUUID}: índice reverso (id = UUID => nunca repete) ---------
+    match /ownerUUIDs/{ownerUUID} {
+      allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && ownerUuidOk(ownerUUID)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID == ownerUUID;
+      allow update, delete: if false;
     }
 
     // Qualquer outro caminho: negado.

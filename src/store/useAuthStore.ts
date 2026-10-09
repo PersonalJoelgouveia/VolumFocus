@@ -7,6 +7,8 @@ import { useSyncStore } from './useSyncStore';
 import { useConfirmStore } from './useConfirmStore';
 import { LOCAL_STORAGE_KEYS } from '../lib/backupRepository';
 import { ensureOwnerUUID } from '../lib/ownerRepository';
+import { reivindicarAlunosLegados } from '../lib/alunosOwnership';
+import { useAlunoStore } from './useAlunoStore';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -78,7 +80,12 @@ function resolveOwnerUUID(uid: string, set: (p: Partial<AuthState>) => void): vo
   set({ ownerUUID: null, ownerUUIDStatus: 'loading' });
   const p = ensureOwnerUUID(uid)
     .then((ownerUUID) => {
-      if (auth.currentUser?.uid === uid) set({ ownerUUID, ownerUUIDStatus: 'ready' });
+      if (auth.currentUser?.uid !== uid) return;
+      set({ ownerUUID, ownerUUIDStatus: 'ready' });
+      // Personal: carimba com o próprio ownerUUID os clientes antigos (sem dono) — transitório.
+      if (useAuthStore.getState().role === 'personal') {
+        void reivindicarAlunosLegados(useAlunoStore.getState().alunos.map((a) => a.email));
+      }
     })
     .catch((e) => {
       console.error('useAuthStore: falha ao obter ownerUUID', e);

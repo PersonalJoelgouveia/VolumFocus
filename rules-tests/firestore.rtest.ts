@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 
 /**
@@ -9,12 +9,21 @@ import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
  */
 let env: RulesTestEnvironment;
 
-const PT = 'joelgouveia16@gmail.com';
+const PT = 'joelgouveia16@gmail.com'; // Personal A  (uid-pt,  ownerUUID = UUID_A)
+const PT2 = 'personaljoelgouveia@gmail.com'; // Personal B (uid-pt2, ownerUUID = UUID_B)
+const UUID_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const UUID_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const UUID_N = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const ALUNO_A = 'a@x.com';
 const ALUNO_B = 'b@x.com';
 const ESTRANHO = 's@x.com'; // conta Google qualquer, NÃO cadastrada
+const ALUNO_C = 'c@x.com'; // cliente do Personal B
+const ALUNO_L = 'legado@x.com'; // cliente antigo, SEM ownerUUID (pré-ownership)
 
 const ctxPT = () => env.authenticatedContext('uid-pt', { email: PT, email_verified: true }).firestore();
+const ctxPT2 = () => env.authenticatedContext('uid-pt2', { email: PT2, email_verified: true }).firestore();
+/** Personal autêntico, mas cuja conta ainda não tem vínculo userOwners. */
+const ctxPTSemVinculo = () => env.authenticatedContext('uid-pt-solto', { email: PT, email_verified: true }).firestore();
 const ctxA = () => env.authenticatedContext('uid-a', { email: ALUNO_A, email_verified: true }).firestore();
 const ctxB = () => env.authenticatedContext('uid-b', { email: ALUNO_B, email_verified: true }).firestore();
 const ctxEstranho = () => env.authenticatedContext('uid-s', { email: ESTRANHO, email_verified: true }).firestore();
@@ -63,8 +72,16 @@ beforeEach(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
-    await setDoc(doc(db, 'alunos', ALUNO_A), { perfilAluno: { nome: 'A' }, rotina: {} });
-    await setDoc(doc(db, 'alunos', ALUNO_B), { perfilAluno: { nome: 'B' }, rotina: {} });
+    // ownership: Personal A (UUID_A) e Personal B (UUID_B) com vínculo + índice reverso.
+    await setDoc(doc(db, 'userOwners', 'uid-pt'), { ownerUUID: UUID_A, createdAt: new Date() });
+    await setDoc(doc(db, 'ownerUUIDs', UUID_A), { uid: 'uid-pt', createdAt: new Date() });
+    await setDoc(doc(db, 'userOwners', 'uid-pt2'), { ownerUUID: UUID_B, createdAt: new Date() });
+    await setDoc(doc(db, 'ownerUUIDs', UUID_B), { uid: 'uid-pt2', createdAt: new Date() });
+    // A e B são clientes do Personal A; C é cliente do Personal B; L é legado (sem dono).
+    await setDoc(doc(db, 'alunos', ALUNO_A), { perfilAluno: { nome: 'A' }, rotina: {}, ownerUUID: UUID_A });
+    await setDoc(doc(db, 'alunos', ALUNO_B), { perfilAluno: { nome: 'B' }, rotina: {}, ownerUUID: UUID_A });
+    await setDoc(doc(db, 'alunos', ALUNO_C), { perfilAluno: { nome: 'C' }, rotina: {}, ownerUUID: UUID_B });
+    await setDoc(doc(db, 'alunos', ALUNO_L), { perfilAluno: { nome: 'L' }, rotina: {} });
     await setDoc(doc(db, 'alunos', ALUNO_A, 'avaliacoesFisicas', 'af-existente'), avaliacaoOnline('af-existente'));
     await setDoc(doc(db, 'alunos', ALUNO_B, 'avaliacoesFisicas', 'af-b'), avaliacaoOnline('af-b'));
     await setDoc(doc(db, 'alunos', ALUNO_A, 'anotacoes', 'n1'), { alunoId: 'x', conteudo: 'privado do Personal' });
@@ -75,9 +92,10 @@ beforeEach(async () => {
 });
 
 describe('/alunos/{email} — leitura cruzada, spoofing e enumeração', () => {
-  it('Personal lê qualquer aluno e lista a coleção', async () => {
+  it('Personal lê os PRÓPRIOS clientes; ninguém lista a coleção (nem o Personal)', async () => {
     await assertSucceeds(getDoc(doc(ctxPT(), 'alunos', ALUNO_A)));
-    await assertSucceeds(getDocs(collection(ctxPT(), 'alunos')));
+    await assertFails(getDocs(collection(ctxPT(), 'alunos')));
+    await assertFails(getDocs(query(collection(ctxPT(), 'alunos'), where('ownerUUID', '==', UUID_A))));
   });
   it('T1: aluno lê o próprio doc, mas NÃO o de outro aluno', async () => {
     await assertSucceeds(getDoc(doc(ctxA(), 'alunos', ALUNO_A)));
@@ -104,8 +122,8 @@ describe('/alunos/{email} — leitura cruzada, spoofing e enumeração', () => {
     await assertFails(setDoc(doc(ctxA(), 'alunos', ALUNO_B), { rotina: {} }, { merge: true }));
     await assertFails(setDoc(doc(ctxEstranho(), 'alunos', ESTRANHO), { rotina: {} }));
   });
-  it('Personal escreve e apaga', async () => {
-    await assertSucceeds(setDoc(doc(ctxPT(), 'alunos', 'novo@x.com'), { perfilAluno: {} }));
+  it('Personal escreve e apaga (cliente novo carimbado com o próprio ownerUUID)', async () => {
+    await assertSucceeds(setDoc(doc(ctxPT(), 'alunos', 'novo@x.com'), { perfilAluno: {}, ownerUUID: UUID_A }));
     await assertSucceeds(deleteDoc(doc(ctxPT(), 'alunos', 'novo@x.com')));
   });
 });
@@ -180,6 +198,17 @@ describe('/alunos/{email}/avaliacoesFisicas — o aluno só CRIA a própria aval
   });
 });
 
+const nota = (id: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  alunoId: 'x',
+  alunoNome: 'Aluno A',
+  conteudo: 'ok',
+  createdAt: '2026-10-01T10:00:00.000Z',
+  updatedAt: '2026-10-01T10:00:00.000Z',
+  authorId: PT,
+  ...extra,
+});
+
 describe('/alunos/{email}/anotacoes — prontuário só do Personal', () => {
   const ref = (db: ReturnType<typeof ctxA>, id: string) => doc(db, 'alunos', ALUNO_A, 'anotacoes', id);
   it('aluno NÃO lê (mesmo as do próprio caminho), nem escreve, nem lista', async () => {
@@ -189,10 +218,10 @@ describe('/alunos/{email}/anotacoes — prontuário só do Personal', () => {
   });
   it('Personal lê, cria, atualiza, apaga; limite de tamanho vale', async () => {
     await assertSucceeds(getDoc(ref(ctxPT(), 'n1')));
-    await assertSucceeds(setDoc(ref(ctxPT(), 'n3'), { alunoId: 'x', conteudo: 'ok' }));
+    await assertSucceeds(setDoc(ref(ctxPT(), 'n3'), nota('n3')));
     await assertSucceeds(updateDoc(ref(ctxPT(), 'n3'), { conteudo: 'novo' }));
-    await assertFails(setDoc(ref(ctxPT(), 'n4'), { alunoId: 'x', conteudo: 'x'.repeat(200001) }));
-    await assertFails(setDoc(ref(ctxPT(), 'n5'), { alunoId: 5, conteudo: 'ok' }));
+    await assertFails(setDoc(ref(ctxPT(), 'n4'), nota('n4', { conteudo: 'x'.repeat(200001) })));
+    await assertFails(setDoc(ref(ctxPT(), 'n5'), nota('n5', { alunoId: 5 })));
     await assertSucceeds(deleteDoc(ref(ctxPT(), 'n3')));
   });
 });
@@ -321,43 +350,242 @@ describe('/backups/{email} — cada usuário só no próprio', () => {
   });
 });
 
+describe('ownership — Personal só acessa clientes do próprio contexto (alunos/{email})', () => {
+  const av = (db: ReturnType<typeof ctxA>, email: string, id: string) => doc(db, 'alunos', email, 'avaliacoesFisicas', id);
+  const ro = (db: ReturnType<typeof ctxA>, email: string, id: string) => doc(db, 'alunos', email, 'rotinas', id);
+  const an = (db: ReturnType<typeof ctxA>, email: string, id: string) => doc(db, 'alunos', email, 'anotacoes', id);
+
+  it('Usuário A → Cliente A permitido; Usuário A → Cliente do B negado (e vice-versa)', async () => {
+    await assertSucceeds(getDoc(doc(ctxPT(), 'alunos', ALUNO_A)));
+    await assertFails(getDoc(doc(ctxPT(), 'alunos', ALUNO_C)));
+    await assertSucceeds(getDoc(doc(ctxPT2(), 'alunos', ALUNO_C)));
+    await assertFails(getDoc(doc(ctxPT2(), 'alunos', ALUNO_A)));
+  });
+  it('acesso direto por conhecer o document ID: leitura, escrita e delete do cliente alheio negados', async () => {
+    await assertFails(getDoc(doc(ctxPT2(), 'alunos', ALUNO_A)));
+    await assertFails(setDoc(doc(ctxPT2(), 'alunos', ALUNO_A), { rotina: { x: 1 } }, { merge: true }));
+    await assertFails(setDoc(doc(ctxPT2(), 'alunos', ALUNO_A), { rotina: { x: 1 }, ownerUUID: UUID_B }, { merge: true }));
+    await assertFails(updateDoc(doc(ctxPT2(), 'alunos', ALUNO_A), { rotina: { x: 1 } }));
+    await assertFails(deleteDoc(doc(ctxPT2(), 'alunos', ALUNO_A)));
+  });
+  it('subcoleções do cliente alheio (avaliações, rotinas, anotações) negadas: ler, criar, editar, apagar', async () => {
+    await assertFails(getDoc(av(ctxPT2(), ALUNO_A, 'af-existente')));
+    await assertFails(getDocs(collection(ctxPT2(), 'alunos', ALUNO_A, 'avaliacoesFisicas')));
+    await assertFails(setDoc(av(ctxPT2(), ALUNO_A, 'af-x'), avaliacaoOnline('af-x')));
+    await assertFails(updateDoc(av(ctxPT2(), ALUNO_A, 'af-existente'), { status: 'revisada' }));
+    await assertFails(deleteDoc(av(ctxPT2(), ALUNO_A, 'af-existente')));
+    await assertFails(getDoc(an(ctxPT2(), ALUNO_A, 'n1')));
+    await assertFails(setDoc(an(ctxPT2(), ALUNO_A, 'n9'), nota('n9', { authorId: PT2 })));
+    await assertFails(setDoc(ro(ctxPT2(), ALUNO_A, 'r1'), rotina('r1', { personalEmail: PT2 })));
+    await assertFails(getDocs(collection(ctxPT2(), 'alunos', ALUNO_A, 'rotinas')));
+    // e o próprio dono segue normal nas mesmas subcoleções
+    await assertSucceeds(getDoc(av(ctxPT(), ALUNO_A, 'af-existente')));
+    await assertSucceeds(getDoc(an(ctxPT(), ALUNO_A, 'n1')));
+    await assertSucceeds(setDoc(ro(ctxPT(), ALUNO_A, 'r1'), rotina('r1')));
+  });
+  it('criar cliente atribuído a OUTRO dono é negado; sem ownerUUID, com ownerId, ou UUID inválido também', async () => {
+    await assertFails(setDoc(doc(ctxPT(), 'alunos', 'x1@x.com'), { perfilAluno: {}, ownerUUID: UUID_B }));
+    await assertFails(setDoc(doc(ctxPT(), 'alunos', 'x2@x.com'), { perfilAluno: {} }));
+    await assertFails(setDoc(doc(ctxPT(), 'alunos', 'x3@x.com'), { perfilAluno: {}, ownerUUID: UUID_A, ownerId: 'uid-pt' }));
+    await assertFails(setDoc(doc(ctxPT(), 'alunos', 'x4@x.com'), { perfilAluno: {}, ownerUUID: 'joel@x.com' }));
+    await assertFails(setDoc(doc(ctxPT(), 'alunos', 'x5@x.com'), { perfilAluno: {}, ownerUUID: UUID_N })); // UUID que não é meu
+    await assertSucceeds(setDoc(doc(ctxPT(), 'alunos', 'x6@x.com'), { perfilAluno: {}, ownerUUID: UUID_A }));
+  });
+  it('Personal sem vínculo userOwners não cria cliente nem com um UUID plausível', async () => {
+    await assertFails(setDoc(doc(ctxPTSemVinculo(), 'alunos', 'y1@x.com'), { perfilAluno: {}, ownerUUID: UUID_A }));
+    await assertFails(setDoc(doc(ctxPTSemVinculo(), 'alunos', 'y2@x.com'), { perfilAluno: {}, ownerUUID: UUID_N }));
+  });
+  it('alterar ownerUUID / ownerId do próprio cliente (DevTools) é negado; publicar normal passa', async () => {
+    const ref = () => doc(ctxPT(), 'alunos', ALUNO_A);
+    await assertFails(updateDoc(ref(), { ownerUUID: UUID_B })); // entregar a outro dono
+    await assertFails(setDoc(ref(), { ownerUUID: UUID_B }, { merge: true }));
+    await assertFails(updateDoc(ref(), { ownerUUID: deleteField() })); // virar "sem dono"
+    await assertFails(updateDoc(ref(), { ownerId: 'uid-pt2' }));
+    await assertFails(setDoc(ref(), { perfilAluno: { nome: 'A' }, ownerUUID: UUID_N })); // sobrescrita total
+    await assertSucceeds(setDoc(ref(), { rotina: { ok: 1 }, ownerUUID: UUID_A }, { merge: true })); // fluxo do app
+    await assertSucceeds(updateDoc(ref(), { rotina: { ok: 2 } }));
+  });
+  it('Personal B não "assume" cliente do A (nem trocando ownerUUID p/ o dele, nem p/ o de A)', async () => {
+    await assertFails(updateDoc(doc(ctxPT2(), 'alunos', ALUNO_A), { ownerUUID: UUID_B }));
+    await assertFails(updateDoc(doc(ctxPT2(), 'alunos', ALUNO_A), { ownerUUID: UUID_A }));
+    await assertFails(setDoc(doc(ctxPT2(), 'alunos', ALUNO_A), { ownerUUID: UUID_B, perfilAluno: {} }));
+  });
+  it('aluno: lê só o próprio doc (que carrega o ownerUUID); não lê cliente alheio nem escreve dono', async () => {
+    await assertSucceeds(getDoc(doc(ctxA(), 'alunos', ALUNO_A)));
+    await assertFails(getDoc(doc(ctxA(), 'alunos', ALUNO_C)));
+    await assertFails(updateDoc(doc(ctxA(), 'alunos', ALUNO_A), { ownerUUID: UUID_N }));
+    await assertFails(setDoc(doc(ctxA(), 'alunos', ALUNO_A), { ownerUUID: UUID_N }, { merge: true }));
+  });
+  it('aluno segue lendo rotinas/avaliações próprias e enviando a avaliação online (sem regressão)', async () => {
+    await assertSucceeds(getDocs(collection(ctxA(), 'alunos', ALUNO_A, 'rotinas')));
+    await assertSucceeds(getDocs(collection(ctxA(), 'alunos', ALUNO_A, 'avaliacoesFisicas')));
+    await assertSucceeds(setDoc(av(ctxA(), ALUNO_A, 'af-novo2'), avaliacaoOnline('af-novo2')));
+  });
+
+  describe('TRANSITÓRIO — clientes legados (sem ownerUUID)', () => {
+    it('Personal reivindica um legado 1x com o PRÓPRIO UUID; depois o outro Personal perde o acesso', async () => {
+      await assertSucceeds(getDoc(doc(ctxPT(), 'alunos', ALUNO_L)));
+      await assertFails(updateDoc(doc(ctxPT(), 'alunos', ALUNO_L), { ownerUUID: UUID_B })); // UUID alheio
+      await assertFails(updateDoc(doc(ctxPT(), 'alunos', ALUNO_L), { rotina: { x: 1 } })); // sem reivindicar
+      await assertSucceeds(updateDoc(doc(ctxPT(), 'alunos', ALUNO_L), { ownerUUID: UUID_A }));
+      await assertFails(getDoc(doc(ctxPT2(), 'alunos', ALUNO_L)));
+      await assertFails(updateDoc(doc(ctxPT2(), 'alunos', ALUNO_L), { ownerUUID: UUID_B }));
+    });
+    it('subcoleções do legado seguem acessíveis ao Personal até a reivindicação', async () => {
+      await assertSucceeds(setDoc(an(ctxPT(), ALUNO_L, 'n1'), nota('n1')));
+    });
+  });
+});
+
+describe('/userOwners e /ownerUUIDs — vínculo Auth UID → ownerUUID', () => {
+  const link = (db: ReturnType<typeof ctxA>, uid: string, uuid: string) => {
+    const b = writeBatch(db);
+    b.set(doc(db, 'userOwners', uid), { ownerUUID: uuid, createdAt: serverTimestamp() });
+    b.set(doc(db, 'ownerUUIDs', uuid), { uid, createdAt: serverTimestamp() });
+    return b.commit();
+  };
+  it('aluno cadastrado cria o próprio vínculo (vínculo + índice juntos); lê o seu, não o dos outros', async () => {
+    await assertSucceeds(link(ctxA(), 'uid-a', UUID_N));
+    await assertSucceeds(getDoc(doc(ctxA(), 'userOwners', 'uid-a')));
+    await assertFails(getDoc(doc(ctxA(), 'userOwners', 'uid-pt')));
+    await assertFails(getDoc(doc(ctxA(), 'ownerUUIDs', UUID_A)));
+    await assertFails(getDocs(collection(ctxA(), 'userOwners')));
+  });
+  it('vínculo é imutável: não troca para o UUID de outro, não apaga, não recria', async () => {
+    await assertFails(updateDoc(doc(ctxPT(), 'userOwners', 'uid-pt'), { ownerUUID: UUID_B }));
+    await assertFails(setDoc(doc(ctxPT(), 'userOwners', 'uid-pt'), { ownerUUID: UUID_B, createdAt: serverTimestamp() }));
+    await assertFails(deleteDoc(doc(ctxPT(), 'userOwners', 'uid-pt')));
+  });
+  it('não reivindica UUID já usado; não grava vínculo sem índice (nem o inverso); UUID inválido negado', async () => {
+    await assertFails(link(ctxA(), 'uid-a', UUID_B)); // índice de UUID_B já existe
+    await assertFails(setDoc(doc(ctxA(), 'userOwners', 'uid-a'), { ownerUUID: UUID_N, createdAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(ctxA(), 'ownerUUIDs', UUID_N), { uid: 'uid-a', createdAt: serverTimestamp() }));
+    await assertFails(link(ctxA(), 'uid-b', UUID_N)); // vínculo de outro uid
+    await assertFails(link(ctxA(), 'uid-a', 'nao-e-uuid'));
+  });
+  it('estranho (nem Personal nem cadastrado) e anônimo não ganham ownerUUID', async () => {
+    await assertFails(link(ctxEstranho(), 'uid-s', UUID_N));
+    await assertFails(link(ctxAnon(), 'uid-s', UUID_N));
+  });
+});
+
+describe('etapa 4 — recursos sensíveis: Avaliação Física/Online e Anotações', () => {
+  const av = (db: ReturnType<typeof ctxA>, email: string, id: string) => doc(db, 'alunos', email, 'avaliacoesFisicas', id);
+  const an = (db: ReturnType<typeof ctxA>, email: string, id: string) => doc(db, 'alunos', email, 'anotacoes', id);
+  const presencial = (id: string, extra: Record<string, unknown> = {}) => {
+    const { submittedBy, status, questionnaire, ...base } = avaliacaoOnline(id);
+    void submittedBy; void status; void questionnaire;
+    return { ...base, protocol: 'skinfold', ...extra };
+  };
+
+  describe('Avaliação Física / Online', () => {
+    it('Personal dono: cria, lê, atualiza (sem mexer nos imutáveis) e apaga', async () => {
+      await assertSucceeds(setDoc(av(ctxPT(), ALUNO_A, 'p1'), presencial('p1')));
+      await assertSucceeds(getDoc(av(ctxPT(), ALUNO_A, 'p1')));
+      await assertSucceeds(updateDoc(av(ctxPT(), ALUNO_A, 'p1'), { notes: 'editado', alunoId: 'aluno-123' }));
+      await assertSucceeds(deleteDoc(av(ctxPT(), ALUNO_A, 'p1')));
+    });
+    it('Personal NÃO-dono: nenhuma operação em avaliação alheia (nem conhecendo o ID do documento)', async () => {
+      await assertFails(getDoc(av(ctxPT2(), ALUNO_A, 'af-existente')));
+      await assertFails(getDocs(collection(ctxPT2(), 'alunos', ALUNO_A, 'avaliacoesFisicas')));
+      await assertFails(setDoc(av(ctxPT2(), ALUNO_A, 'p2'), presencial('p2')));
+      await assertFails(updateDoc(av(ctxPT2(), ALUNO_A, 'af-existente'), { notes: 'x' }));
+      await assertFails(deleteDoc(av(ctxPT2(), ALUNO_A, 'af-existente')));
+    });
+    it('alunoId é imutável (não dá para "migrar" o registro para outro cliente)', async () => {
+      await assertFails(updateDoc(av(ctxPT(), ALUNO_A, 'af-existente'), { alunoId: 'aluno-do-outro' }));
+      await assertFails(setDoc(av(ctxPT(), ALUNO_A, 'af-existente'), { ...avaliacaoOnline('af-existente'), alunoId: 'outro' }));
+    });
+    it('submittedBy: imutável no update; valores fora de aluno|personal recusados no create', async () => {
+      await assertFails(updateDoc(av(ctxPT(), ALUNO_A, 'af-existente'), { submittedBy: 'personal' }));
+      await assertFails(updateDoc(av(ctxPT(), ALUNO_A, 'af-existente'), { submittedBy: deleteField() }));
+      await assertSucceeds(setDoc(av(ctxPT(), ALUNO_A, 'p3'), presencial('p3')));
+      await assertFails(updateDoc(av(ctxPT(), ALUNO_A, 'p3'), { submittedBy: 'aluno' })); // forjar autoria do aluno depois
+      await assertFails(setDoc(av(ctxPT(), ALUNO_A, 'p4'), presencial('p4', { submittedBy: 'admin' })));
+    });
+    it('revisão do Personal (status/review) continua funcionando', async () => {
+      await assertSucceeds(
+        updateDoc(av(ctxPT(), ALUNO_A, 'af-existente'), {
+          status: 'revisada',
+          review: { reviewedBy: PT, reviewedAt: '2026-10-02T00:00:00Z' },
+          alunoId: 'aluno-123',
+          submittedBy: 'aluno',
+        })
+      );
+    });
+    it('ownerUUID/ownerId são reservados: nenhum recurso os carrega (create e update)', async () => {
+      await assertFails(setDoc(av(ctxPT(), ALUNO_A, 'p5'), presencial('p5', { ownerUUID: UUID_B })));
+      await assertFails(setDoc(av(ctxPT(), ALUNO_A, 'p6'), presencial('p6', { ownerId: 'uid-pt2' })));
+      await assertFails(updateDoc(av(ctxPT(), ALUNO_A, 'af-existente'), { ownerUUID: UUID_B }));
+      await assertFails(updateDoc(av(ctxPT(), ALUNO_A, 'af-existente'), { ownerId: 'uid-pt2' }));
+      await assertFails(setDoc(av(ctxA(), ALUNO_A, 'o1'), avaliacaoOnline('o1', { ownerUUID: UUID_A })));
+    });
+    it('id do conteúdo diferente do id do documento é recusado no create do Personal', async () => {
+      await assertFails(setDoc(av(ctxPT(), ALUNO_A, 'p7'), presencial('outro-id')));
+    });
+    it('Avaliação Online do aluno: submittedBy forjado negado; alunoId local do aparelho aceito; não edita depois', async () => {
+      await assertFails(setDoc(av(ctxA(), ALUNO_A, 'o2'), avaliacaoOnline('o2', { submittedBy: 'personal' })));
+      await assertSucceeds(setDoc(av(ctxA(), ALUNO_A, 'o3'), avaliacaoOnline('o3', { alunoId: 'id-local-do-aparelho' })));
+      await assertFails(updateDoc(av(ctxA(), ALUNO_A, 'o3'), { alunoId: 'aluno-do-outro' }));
+      await assertFails(updateDoc(av(ctxA(), ALUNO_A, 'o3'), { submittedBy: 'personal' }));
+      await assertFails(deleteDoc(av(ctxA(), ALUNO_A, 'o3')));
+    });
+    it('aluno não lê/cria avaliação de outro cliente, mesmo sabendo o ID do documento', async () => {
+      await assertFails(getDoc(av(ctxA(), ALUNO_B, 'af-b')));
+      await assertFails(setDoc(av(ctxA(), ALUNO_B, 'o4'), avaliacaoOnline('o4')));
+      await assertFails(getDoc(av(ctxB(), ALUNO_A, 'af-existente')));
+    });
+    it('cliente SEM doc-pai/dono: o Personal não cria avaliação em caminho órfão', async () => {
+      await assertFails(setDoc(av(ctxPT(), 'fantasma@x.com', 'p8'), presencial('p8')));
+    });
+  });
+
+  describe('Anotações / prontuário', () => {
+    it('Personal dono: cria (autoria = e-mail do token), lê, edita conteúdo e apaga', async () => {
+      await assertSucceeds(setDoc(an(ctxPT(), ALUNO_A, 'nn1'), nota('nn1')));
+      await assertSucceeds(getDoc(an(ctxPT(), ALUNO_A, 'nn1')));
+      await assertSucceeds(updateDoc(an(ctxPT(), ALUNO_A, 'nn1'), { conteudo: 'novo', updatedAt: '2026-10-02T00:00:00.000Z' }));
+      await assertSucceeds(deleteDoc(an(ctxPT(), ALUNO_A, 'nn1')));
+    });
+    it('nota legada (formato antigo mínimo) continua editável pelo dono', async () => {
+      await assertSucceeds(updateDoc(an(ctxPT(), ALUNO_A, 'n1'), { conteudo: 'revisado' }));
+    });
+    it('Personal NÃO-dono: nada (ler, listar, criar, editar, apagar)', async () => {
+      await assertFails(getDoc(an(ctxPT2(), ALUNO_A, 'n1')));
+      await assertFails(getDocs(collection(ctxPT2(), 'alunos', ALUNO_A, 'anotacoes')));
+      await assertFails(setDoc(an(ctxPT2(), ALUNO_A, 'nn2'), nota('nn2', { authorId: PT2 })));
+      await assertFails(updateDoc(an(ctxPT2(), ALUNO_A, 'n1'), { conteudo: 'x' }));
+      await assertFails(deleteDoc(an(ctxPT2(), ALUNO_A, 'n1')));
+    });
+    it('aluno e anônimo NUNCA acessam o prontuário (nem o do próprio caminho, nem sabendo o ID)', async () => {
+      await assertFails(getDoc(an(ctxA(), ALUNO_A, 'n1')));
+      await assertFails(setDoc(an(ctxA(), ALUNO_A, 'nn3'), nota('nn3', { authorId: ALUNO_A })));
+      await assertFails(updateDoc(an(ctxA(), ALUNO_A, 'n1'), { conteudo: 'x' }));
+      await assertFails(deleteDoc(an(ctxA(), ALUNO_A, 'n1')));
+      await assertFails(getDoc(an(ctxAnon(), ALUNO_A, 'n1')));
+    });
+    it('autoria não forjável: authorId diferente do token é recusado; alunoId/authorId/createdAt/id imutáveis', async () => {
+      await assertFails(setDoc(an(ctxPT(), ALUNO_A, 'nn4'), nota('nn4', { authorId: PT2 })));
+      await assertSucceeds(setDoc(an(ctxPT(), ALUNO_A, 'nn5'), nota('nn5')));
+      await assertFails(updateDoc(an(ctxPT(), ALUNO_A, 'nn5'), { alunoId: 'outro-cliente' }));
+      await assertFails(updateDoc(an(ctxPT(), ALUNO_A, 'nn5'), { authorId: PT2 }));
+      await assertFails(updateDoc(an(ctxPT(), ALUNO_A, 'nn5'), { createdAt: '2020-01-01T00:00:00.000Z' }));
+      await assertFails(updateDoc(an(ctxPT(), ALUNO_A, 'nn5'), { id: 'nn-outro' }));
+    });
+    it('ownerUUID/ownerId e campos desconhecidos são recusados; id do conteúdo = id do documento', async () => {
+      await assertFails(setDoc(an(ctxPT(), ALUNO_A, 'nn6'), nota('nn6', { ownerUUID: UUID_B })));
+      await assertFails(setDoc(an(ctxPT(), ALUNO_A, 'nn7'), nota('nn7', { ownerId: 'uid-pt2' })));
+      await assertFails(setDoc(an(ctxPT(), ALUNO_A, 'nn8'), nota('nn8', { extra: 1 })));
+      await assertFails(updateDoc(an(ctxPT(), ALUNO_A, 'n1'), { ownerUUID: UUID_B }));
+      await assertFails(setDoc(an(ctxPT(), ALUNO_A, 'nn9'), nota('outro-id')));
+    });
+  });
+});
+
 describe('default deny', () => {
   it('coleções não previstas são negadas, inclusive para o Personal', async () => {
     await assertFails(setDoc(doc(ctxPT(), 'qualquer', 'coisa'), { x: 1 }));
     await assertFails(getDoc(doc(ctxA(), 'users', 'a')));
     await assertFails(getDoc(doc(ctxA(), 'alunos', ALUNO_A, 'outra', 'x')));
-  });
-});
-
-describe('/alunos/{email}/cargas/atuais — aluno (o próprio) e Personal gravam; ambos leem', () => {
-  const ref = (c: ReturnType<typeof ctxPT>, email: string, id = 'atuais') => doc(c, 'alunos', email, 'cargas', id);
-  const dados = (extra: Record<string, unknown> = {}) => ({
-    cargas: { supino_reto: { carga: 42.5, em: '2026-10-07T12:00:00.000Z', por: 'aluno' } },
-    atualizadoEm: '2026-10-07T12:00:00.000Z',
-    ...extra,
-  });
-
-  it('aluno grava e lê as próprias cargas; Personal também', async () => {
-    await assertSucceeds(setDoc(ref(ctxA(), ALUNO_A), dados(), { merge: true }));
-    await assertSucceeds(getDoc(ref(ctxA(), ALUNO_A)));
-    await assertSucceeds(setDoc(ref(ctxPT(), ALUNO_A), dados(), { merge: true }));
-    await assertSucceeds(getDoc(ref(ctxPT(), ALUNO_A)));
-  });
-  it('aluno NÃO acessa as cargas de outro aluno; estranho/anônimo/e-mail não verificado não acessam', async () => {
-    await assertFails(setDoc(ref(ctxA(), ALUNO_B), dados()));
-    await assertFails(getDoc(ref(ctxA(), ALUNO_B)));
-    await assertFails(getDoc(ref(ctxB(), ALUNO_A)));
-    await assertFails(setDoc(ref(ctxEstranho(), ALUNO_A), dados()));
-    await assertFails(getDoc(ref(ctxAnon(), ALUNO_A)));
-    await assertFails(setDoc(ref(ctxFalsoA(), ALUNO_A), dados()));
-  });
-  it('só o documento `atuais`, só os campos esperados, sem delete e sem list', async () => {
-    await assertFails(setDoc(ref(ctxA(), ALUNO_A, 'outro'), dados()));
-    await assertFails(setDoc(ref(ctxA(), ALUNO_A), dados({ extra: 1 })));
-    await assertFails(setDoc(ref(ctxA(), ALUNO_A), dados({ cargas: 'x' })));
-    await assertSucceeds(setDoc(ref(ctxA(), ALUNO_A), dados()));
-    await assertFails(deleteDoc(ref(ctxA(), ALUNO_A)));
-    await assertFails(deleteDoc(ref(ctxPT(), ALUNO_A)));
-    await assertFails(getDocs(collection(ctxPT(), 'alunos', ALUNO_A, 'cargas')));
   });
 });

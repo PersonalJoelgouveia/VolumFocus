@@ -90,7 +90,11 @@ export async function updateAssessment(
   assessmentId: string,
   data: Partial<PhysicalAssessment>
 ): Promise<void> {
-  await updateDoc(assessmentDocRef(studentEmail, assessmentId), semUndefined(data));
+  // `alunoId` é imutável no servidor (a identidade do cliente é o caminho do documento, e o
+  // `alunoId` gravado pelo aluno é um id local do aparelho dele): a edição nunca o reenvia.
+  const { alunoId, ...resto } = data;
+  void alunoId;
+  await updateDoc(assessmentDocRef(studentEmail, assessmentId), semUndefined(resto));
 }
 
 /** Remove uma avaliação do histórico. */
