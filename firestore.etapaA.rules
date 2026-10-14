@@ -1,0 +1,160 @@
+rules_version = '2';
+
+// =============================================================================
+// VolumFocus — Firestore Rules, ETAPA A (compatível com as regras atuais).
+// Mantém o modelo atual (Personal = lista fixa de e-mails; aluno = só o próprio
+// caminho) e ACRESCENTA o que o app já usa: ownerUUID, avaliação Online do aluno,
+// cargas compartilhadas, notificações validadas e backups só de contas cadastradas.
+// NÃO ativa ainda: isolamento de Personal por ownerUUID, bloqueio de delete em
+// alunos, nem "legado sem dono" negado (isso é a Etapa B, depois da migração).
+// PT_EMAILS: manter igual a src/store/useAuthStore.ts e a storage.rules.
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- identidade (sempre derivada do token) --------------------------------
+    function logado() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function emailToken() {
+      return request.auth.token.email.lower();
+    }
+    function isPersonalTrainer() {
+      return logado() && emailToken() in [
+        'personaljoelgouveia@gmail.com',
+        'joelgouveia16@gmail.com'
+      ];
+    }
+    function ehDono(email) {
+      return logado() && emailToken() == email;
+    }
+    function cadastrado(email) {
+      return exists(/databases/$(database)/documents/alunos/$(email));
+    }
+    function alunoCadastrado() {
+      return logado() && cadastrado(emailToken());
+    }
+    function ownerUuidOk(id) {
+      return id is string
+        && id.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+    }
+
+    // ---- avaliação online criada pelo ALUNO -----------------------------------
+    // Só campos esperados; sem `review`/`evaluator`; status fixo; id == id do
+    // documento; faixas numéricas plausíveis. (O Personal não passa por aqui.)
+    function avaliacaoOnlineValida(email, id) {
+      let d = request.resource.data;
+      return ehDono(email)
+        && cadastrado(email)
+        && d.keys().hasOnly(['id', 'alunoId', 'date', 'protocol', 'notes', 'anthropometry',
+                             'circumferences', 'skinfolds', 'results', 'createdAt', 'updatedAt',
+                             'status', 'submittedBy', 'questionnaire'])
+        && d.keys().hasAll(['id', 'alunoId', 'date', 'protocol', 'anthropometry',
+                            'circumferences', 'skinfolds', 'results', 'createdAt', 'updatedAt',
+                            'status', 'submittedBy'])
+        && d.id == id
+        && d.protocol == 'online'
+        && d.submittedBy == 'aluno'
+        && d.status == 'enviada'
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && d.date is string && d.date.size() <= 40
+        && d.createdAt is string && d.createdAt.size() <= 40
+        && d.updatedAt is string && d.updatedAt.size() <= 40
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 5000))
+        && d.anthropometry is map
+        && d.anthropometry.keys().hasOnly(['peso', 'altura', 'imc'])
+        && d.anthropometry.peso is number && d.anthropometry.peso >= 20 && d.anthropometry.peso <= 500
+        && d.anthropometry.altura is number && d.anthropometry.altura >= 50 && d.anthropometry.altura <= 260
+        && d.anthropometry.imc is number && d.anthropometry.imc >= 5 && d.anthropometry.imc <= 100
+        && d.circumferences is list && d.circumferences.size() <= 60
+        && d.skinfolds is map
+        && d.results is map
+        && d.results.keys().hasOnly(['relacaoCinturaQuadril', 'relacaoCinturaEstatura'])
+        && (!('questionnaire' in d) || d.questionnaire is map);
+    }
+
+    // ---- /alunos/{email} -------------------------------------------------------
+    // Aluno lê só o próprio doc; Personal lê e escreve.
+    match /alunos/{email} {
+      allow read: if ehDono(email) || isPersonalTrainer();
+      allow write: if isPersonalTrainer();
+    }
+
+    // ---- rotinas: aluno só LÊ as próprias; Personal cria/edita/apaga ------------
+    match /alunos/{email}/rotinas/{routineId} {
+      allow read: if ehDono(email) || isPersonalTrainer();
+      allow create, update, delete: if isPersonalTrainer();
+    }
+
+    // ---- avaliações físicas: Personal escreve; aluno lê as próprias e CRIA
+    //      só a avaliação Online (campos fixos, validados acima) ------------------
+    match /alunos/{email}/avaliacoesFisicas/{assessmentId} {
+      allow read: if ehDono(email) || isPersonalTrainer();
+      allow create: if isPersonalTrainer() || avaliacaoOnlineValida(email, assessmentId);
+      allow update, delete: if isPersonalTrainer();
+    }
+
+    // ---- anotações (prontuário): só o Personal; o aluno NUNCA acessa -------------
+    match /alunos/{email}/anotacoes/{noteId} {
+      allow read, create, update, delete: if isPersonalTrainer();
+    }
+
+    // ---- cargas compartilhadas: aluno (no próprio caminho) e Personal ----------
+    match /alunos/{email}/cargas/atuais {
+      allow read, write: if isPersonalTrainer() || (ehDono(email) && cadastrado(email));
+    }
+
+    // ---- backups: só o próprio dono, e só conta cadastrada ou Personal -----------
+    match /backups/{email} {
+      allow read, write: if ehDono(email) && (isPersonalTrainer() || cadastrado(email));
+    }
+
+    // ---- notificação "treino concluído" -----------------------------------------
+    match /notificacoesTreinos/{id} {
+      allow create: if (isPersonalTrainer() || alunoCadastrado())
+        && request.resource.data.keys().hasOnly(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm', 'ownerUUID'])
+        && request.resource.data.keys().hasAll(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm', 'ownerUUID'])
+        && request.resource.data.id == id
+        && request.resource.data.alunoEmail == emailToken()
+        && request.resource.data.lida == false
+        && request.resource.data.ownerUUID is string
+        && request.resource.data.alunoNome is string && request.resource.data.alunoNome.size() <= 120
+        && request.resource.data.dia is number
+        && request.resource.data.dataTreino is string && request.resource.data.dataTreino.size() <= 20
+        && request.resource.data.criadaEm is string && request.resource.data.criadaEm.size() <= 40;
+      allow read, update, delete: if isPersonalTrainer();
+    }
+
+    // ---- ownerUUID: vínculo Auth UID -> ownerUUID (create-only) -----------------
+    match /userOwners/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && (isPersonalTrainer() || alunoCadastrado())
+        && request.resource.data.keys().hasOnly(['ownerUUID', 'createdAt'])
+        && ownerUuidOk(request.resource.data.ownerUUID)
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID))
+        && getAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID)).data.uid == uid;
+      allow update, delete: if false;
+    }
+
+    match /ownerUUIDs/{ownerUUID} {
+      allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && ownerUuidOk(ownerUUID)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID == ownerUUID;
+      allow update, delete: if false;
+    }
+
+    // Qualquer outro caminho: negado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
