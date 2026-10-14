@@ -42,6 +42,8 @@ export const storage = getStorage(firebaseApp);
 
 const googleProvider = new GoogleAuthProvider();
 
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
 /** Equivale ao fluxo de login por Google usado em vfAuth (index.html ~2364). */
 export function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);
