@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useUIStore } from '../store/useUIStore';
 import { createAssessment, deleteAssessment, listAssessments, updateAssessment } from '../lib/physicalAssessmentRepository';
+import { exigirOnline } from '../lib/connectivity';
 import { criarAvaliacaoOnlineComAceite } from '../lib/consentimentoRepository';
 import { deletePhotosByAssessment } from '../lib/assessmentPhotoStore';
 import type { PhysicalAssessment } from '../types/assessment';
@@ -102,6 +103,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
         showToast('Aluno sem e-mail cadastrado — não é possível salvar na nuvem.', 'error');
         return false;
       }
+      if (!exigirOnline('salvar a avaliação')) return false; // exige validação online (Rules); nada fica em fila local
 
       addAvaliacao(alunoId, assessment); // otimista
 
@@ -124,6 +126,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
   const editar = useCallback(
     async (assessmentId: string, patch: Partial<PhysicalAssessment>): Promise<boolean> => {
       if (!canWrite || !email) return false;
+      if (!exigirOnline('editar a avaliação')) return false;
 
       const anterior = assessments.find((a) => a.id === assessmentId);
       updateAvaliacao(alunoId, assessmentId, patch); // otimista
@@ -149,6 +152,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
         return;
       }
 
+      if (!exigirOnline('remover a avaliação')) return;
       const confirmado = await ask('Remover esta avaliação? Essa ação não pode ser desfeita.', {
         confirmLabel: 'Remover',
         danger: true,

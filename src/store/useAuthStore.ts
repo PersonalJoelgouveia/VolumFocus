@@ -5,7 +5,10 @@ import { useUIStore } from './useUIStore';
 import { useNotificationStore } from './useNotificationStore';
 import { useSyncStore } from './useSyncStore';
 import { useConfirmStore } from './useConfirmStore';
-import { garantirDonoLocal, wipeLocalData } from '../lib/localDataLifecycle';
+import { garantirDonoLocal, limparMemoriaSensivel, wipeLocalData } from '../lib/localDataLifecycle';
+import { flushSensivel } from '../lib/guardedStorage';
+import { isOnline } from '../lib/connectivity';
+import { reconciliarLegadoSensivel } from '../lib/migracaoSensivel';
 import { ensureOwnerUUID } from '../lib/ownerRepository';
 import { reivindicarAlunosLegados } from '../lib/alunosOwnership';
 import { useAlunoStore } from './useAlunoStore';
@@ -147,6 +150,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (!fbUser) {
         pendingSyncOnGrant = false;
         setLocalAuthUid(null);
+        limparMemoriaSensivel();
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'login', role: 'nao-logado', user: null, ownerUUID: null, ownerUUIDStatus: 'idle' });
@@ -214,6 +218,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (access.guardianPending) {
         pendingSyncOnGrant = false;
         setLocalAuthUid(null);
+        limparMemoriaSensivel();
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'guardian-pending', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
@@ -223,6 +228,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       if (access.role === 'responsavel') {
         pendingSyncOnGrant = false;
         setLocalAuthUid(null);
+        limparMemoriaSensivel();
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'responsavel', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
@@ -238,11 +244,22 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           return;
         }
         setLocalAuthUid(fbUser.uid, emailLc); // só contas autorizadas acessam dados locais
+        flushSensivel(); // contexto autorizado de volta: grava o que ficou só em memória (mesmo dono)
         useUIStore.getState().setPersonalMode(isPT);
         useUIStore.getState().setAlunoMode(!isPT);
         set({ status: 'granted', role: isPT ? 'personal' : 'aluno', user, errorMessage: null, usoImagemOk, menorDeIdade: menor });
         // Só contas autorizadas (PT ou aluno cadastrado) ganham ownerUUID.
         resolveOwnerUUID(fbUser.uid, set);
+        // Migração sem perda do cache sensível antigo (avaliações/anotações em disco): só online.
+        if (isOnline()) {
+          void reconciliarLegadoSensivel()
+            .then((r) => {
+              if (r.status === 'pendencias') {
+                useUIStore.getState().showToast(`${r.pendentes} item(ns) antigo(s) não puderam ser confirmados na nuvem e foram mantidos neste aparelho.`, 'error');
+              }
+            })
+            .catch((e) => console.error('useAuthStore: falha na reconciliação do legado sensível', e));
+        }
         // Carrega as notificações de "treino concluído" só pro Personal —
         // sucessor de ntfInit() (index.html ~10502), que também roda uma
         // vez ao carregar a página.
@@ -257,6 +274,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       } else {
         pendingSyncOnGrant = false;
         setLocalAuthUid(null);
+        limparMemoriaSensivel();
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'denied', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });

@@ -1,6 +1,9 @@
 import { LOCAL_STORAGE_KEYS } from './backupRepository';
 import { limparTodosRascunhosOnline } from './onlineAssessmentDraftStore';
 import { OWNER_KEY, OWNER_UUID_CACHE_KEY, clearLocalOwnerMemory, setLocalOwner } from './localOwner';
+import { descartarMemoriaSensivel } from './guardedStorage';
+import { QUARENTENA_KEY } from './migracaoSensivel';
+import { useAlunoStore } from '../store/useAlunoStore';
 
 /**
  * Ciclo de vida dos dados locais (P1 da auditoria de segurança).
@@ -29,6 +32,16 @@ const WEARABLE_DBS = ['volumfocus-wearables', 'jg3_wearable_keys'];
 
 /** Só existem neste aparelho — perda irreversível se apagados. */
 const MEDIA_DBS = ['volumfocus-assessment-media', 'volumfocus-media'];
+
+/**
+ * Elimina a cópia SENSÍVEL que vive só em memória (avaliações, anotações, valores pendentes do
+ * armazenamento guardado). Chamar ao sair, trocar de conta ou perder o contexto autorizado: limpar
+ * localStorage NÃO limpa a memória do React/Zustand.
+ */
+export function limparMemoriaSensivel(): void {
+  descartarMemoriaSensivel();
+  useAlunoStore.setState({ avaliacoes: {}, notas: {} });
+}
 
 /** Nunca deixa o logout travar por causa de um IndexedDB que não responde. */
 const IDB_TIMEOUT_MS = 3000;
@@ -202,7 +215,8 @@ export async function wipeLocalData({ includeMedia }: { includeMedia: boolean })
   let ok = true;
   try {
     clearLocalOwnerMemory();
-    [...LOCAL_STORAGE_KEYS, ...EXTRA_USER_KEYS, OWNER_KEY, OWNER_UUID_CACHE_KEY].forEach((k) => localStorage.removeItem(k));
+    limparMemoriaSensivel();
+    [...LOCAL_STORAGE_KEYS, ...EXTRA_USER_KEYS, OWNER_KEY, OWNER_UUID_CACHE_KEY, QUARENTENA_KEY].forEach((k) => localStorage.removeItem(k));
     limparTodosRascunhosOnline();
   } catch (e) {
     console.error('localDataLifecycle: falha ao limpar localStorage', e);

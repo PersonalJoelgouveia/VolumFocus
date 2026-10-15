@@ -1,3 +1,4 @@
+import { exigirOnline } from '../lib/connectivity';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAlunoStore } from '../store/useAlunoStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -154,6 +155,7 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
         return false;
       }
 
+      if (!exigirOnline('criar a anotação')) return false;
       addNota(alunoId, nota); // otimista
 
       try {
@@ -198,6 +200,7 @@ export function useTrainingNotes(alunoId: string): UseTrainingNotes {
         return false;
       }
 
+      if (!exigirOnline('remover a anotação')) return false;
       const confirmado = await ask('Remover esta anotação? Essa ação não pode ser desfeita.', {
         confirmLabel: 'Remover',
         danger: true,

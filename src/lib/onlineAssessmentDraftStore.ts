@@ -35,11 +35,14 @@
  * - TTL: 14 dias sem edição; vencido/inválido do dono atual é apagado
  *   (e as fotos do rascunho vencido, que só existem neste aparelho).
  * - LIMPEZA TOTAL: logout e troca de dono (localDataLifecycle).
+ * - MODO OFFLINE (guardedStorage): sem rede ou sem contexto autorizado o rascunho NÃO é gravado em disco;
+ *   fica só em memória (recarregar a página offline o perde) e é gravado ao reconectar, se a conta for a mesma.
  */
 
 
 import { deletePhotosByAssessment } from './assessmentPhotoStore';
 import { getLocalAuthUid, getLocalOwnerUUID } from './localOwner';
+import { sGet, sRemove, sSet } from './guardedStorage';
 
 const PREFIX = 'jg3_online_draft_';
 const VERSAO = 3;
@@ -149,8 +152,8 @@ function descartarFotosDoRascunho(alunoId: string, draft: { assessmentId?: unkno
 function removerLegadoProprio(alunoId: string): void {
   const uid = getLocalAuthUid();
   const k = chaveLegada(alunoId);
-  const d = lerJson(localStorage.getItem(k));
-  if (uid && d && d.v === VERSAO_LEGADA && d.ownerUid === uid && d.alunoId === alunoId) localStorage.removeItem(k);
+  const d = lerJson(sGet(k));
+  if (uid && d && d.v === VERSAO_LEGADA && d.ownerUid === uid && d.alunoId === alunoId) sRemove(k);
 }
 
 /**
@@ -163,7 +166,7 @@ export function salvarRascunhoOnline<T>(alunoId: string, draft: OnlineAssessment
   if (!owner || !alunoValido(alunoId) || !ASSESSMENT_ID_SEGURO.test(draft.assessmentId)) return false;
   try {
     const gravar: StoredDraft<T> = { ...draft, v: VERSAO, ownerUUID: owner, alunoId };
-    localStorage.setItem(chave(owner, alunoId), JSON.stringify(gravar));
+    sSet(chave(owner, alunoId), JSON.stringify(gravar));
     removerLegadoProprio(alunoId); // já existe a versão nova: o v2 do mesmo cliente não pode ressuscitar
     return true;
   } catch (e) {
@@ -183,11 +186,11 @@ export function carregarRascunhoOnline<T = unknown>(alunoId: string): OnlineAsse
   if (!owner || !alunoValido(alunoId)) return null;
   try {
     const k = chave(owner, alunoId);
-    const raw = localStorage.getItem(k);
+    const raw = sGet(k);
     if (raw) {
       const r = avaliar<T>(raw, owner, alunoId);
       if (r.estado === 'ok') return pronto(r.draft);
-      localStorage.removeItem(k);
+      sRemove(k);
       if (r.estado === 'expirado') descartarFotosDoRascunho(alunoId, r.draft);
       return null;
     }
@@ -206,17 +209,17 @@ function pronto<T>(d: StoredDraft<T>): OnlineAssessmentDraft<T> {
 /** v2 → v3: move para a chave nova só se o uid gravado for o da sessão e o cliente conferir. */
 function adotarLegado<T>(owner: string, alunoId: string): OnlineAssessmentDraft<T> | null {
   const kv = chaveLegada(alunoId);
-  const raw = localStorage.getItem(kv);
+  const raw = sGet(kv);
   if (!raw) return null;
   const r = avaliarLegado<T>(raw, getLocalAuthUid(), alunoId);
   if (r.estado === 'invalido') return null; // de outra conta/sem dono: não é nosso — não toca
-  localStorage.removeItem(kv);
+  sRemove(kv);
   if (r.estado === 'expirado') {
     descartarFotosDoRascunho(alunoId, r.draft);
     return null;
   }
   const novo: StoredDraft<T> = { ...pronto(r.draft), v: VERSAO, ownerUUID: owner, alunoId };
-  localStorage.setItem(chave(owner, alunoId), JSON.stringify(novo));
+  sSet(chave(owner, alunoId), JSON.stringify(novo));
   return pronto(r.draft);
 }
 
@@ -225,7 +228,7 @@ export function limparRascunhoOnline(alunoId: string): void {
   const owner = dono();
   if (!owner || !alunoValido(alunoId)) return;
   try {
-    localStorage.removeItem(chave(owner, alunoId));
+    sRemove(chave(owner, alunoId));
     removerLegadoProprio(alunoId);
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao limpar rascunho', e);
@@ -259,25 +262,25 @@ export function limparRascunhosExpirados(): void {
         try {
           alunoId = decodeURIComponent(resto.slice(owner.length + 1));
         } catch {
-          localStorage.removeItem(k);
+          sRemove(k);
           continue;
         }
-        const r = avaliar<unknown>(localStorage.getItem(k), owner, alunoId);
+        const r = avaliar<unknown>(sGet(k), owner, alunoId);
         if (r.estado === 'ok') continue;
-        localStorage.removeItem(k);
+        sRemove(k);
         if (r.estado === 'expirado') descartarFotosDoRascunho(alunoId, r.draft);
         continue;
       }
       // legado: `${alunoId}`
-      const raw = localStorage.getItem(k);
+      const raw = sGet(k);
       const mine = avaliarLegado<unknown>(raw, uid, resto);
       if (mine.estado === 'expirado') {
-        localStorage.removeItem(k);
+        sRemove(k);
         descartarFotosDoRascunho(resto, mine.draft);
       } else if (mine.estado === 'invalido') {
         const d = lerJson(raw);
         // Ilegível, ou sem dono e vencido: lixo seguro de apagar. Com dono (outra conta): não mexe.
-        if (!d || (d.ownerUid === undefined && (!envelopeOk(d) || expirado(d.updatedAt)))) localStorage.removeItem(k);
+        if (!d || (d.ownerUid === undefined && (!envelopeOk(d) || expirado(d.updatedAt)))) sRemove(k);
       }
     }
   } catch (e) {
@@ -288,7 +291,7 @@ export function limparRascunhosExpirados(): void {
 /** Remove TODOS os rascunhos (logout / troca de dono dos dados locais). */
 export function limparTodosRascunhosOnline(): void {
   try {
-    chavesDeRascunho().forEach((k) => localStorage.removeItem(k));
+    chavesDeRascunho().forEach((k) => sRemove(k));
   } catch (e) {
     console.error('onlineAssessmentDraftStore: falha ao limpar rascunhos', e);
   }

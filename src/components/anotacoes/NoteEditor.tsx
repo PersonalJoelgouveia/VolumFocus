@@ -233,9 +233,14 @@ function NoteEditorImpl({
   // (localStorage) antes da página descarregar de verdade. Ver doc do
   // componente ("ATUALIZAR A PÁGINA").
   useEffect(() => {
-    function handleBeforeUnload() {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       void onSalvar(noteId, conteudoRef.current);
+      // Anotações não são mais gravadas em disco (só em memória): se ainda não chegaram à nuvem, avisa antes de perder.
+      if (statusRef.current === 'nao_sincronizado' || statusRef.current === 'salvando') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     }
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);

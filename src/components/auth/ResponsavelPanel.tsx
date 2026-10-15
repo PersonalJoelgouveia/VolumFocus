@@ -7,6 +7,7 @@ import {
   type EstadosPorFinalidade,
   type VinculoResponsavel,
 } from '../../lib/consentimentoRepository';
+import { exigirOnline } from '../../lib/connectivity';
 import { FINALIDADES, TEXTOS_CONSENTIMENTO, estadoVigente, type Decisao, type Finalidade } from '../../lib/consentimento';
 
 interface Props {
@@ -83,6 +84,7 @@ export function ResponsavelPanel({ email, busy, onSwitchAccount }: Props) {
 
   async function confirmar() {
     if (!pendente || salvando) return;
+    if (!exigirOnline('registrar a autorização')) return;
     setSalvando(true);
     setErro(null);
     try {

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { guardedStateStorage } from '../lib/guardedStorage';
 import type { DayIndex, ExDoneMap, WeekLog } from '../types/workout';
 import { exDoneKey } from '../types/workout';
 import type { SessaoStatus, SessaoTreino } from '../types/session';
@@ -121,6 +122,8 @@ export const useSessionStore = create<SessionStoreState>()(
       // (useSyncStore) — sessão em aba é dado presencial/transitório
       // deste dispositivo, não o treino pessoal do Personal.
       name: 'jg3_sessoes_treino',
+      // Nomes de clientes + treino: offline/sem contexto autorizado fica só em memória.
+      storage: createJSONStorage(() => guardedStateStorage),
     }
   )
 );

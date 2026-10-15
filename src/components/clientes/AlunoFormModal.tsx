@@ -3,6 +3,7 @@ import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { syncAlunoPerfilToCloud } from '../../lib/alunoRepository';
 import { isMenor, faixaEtaria } from '../../lib/consentimento';
+import { exigirOnline } from '../../lib/connectivity';
 import { PT_EMAILS } from '../../store/useAuthStore';
 import type { Aluno } from '../../types/aluno';
 import './ClientesView.css';
@@ -51,6 +52,7 @@ export function AlunoFormModal({ aluno, onClose }: AlunoFormModalProps) {
 
   async function handleSave() {
     if (!valid || saving) return;
+    if (!exigirOnline('salvar o aluno')) return;
     setSaving(true);
     const patch = {
       nome: nome.trim(),

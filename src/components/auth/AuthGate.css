@@ -154,3 +154,30 @@
 .vf-resp-actions .btn {
   min-height: 44px;
 }
+
+/* Aviso de modo offline */
+.vf-offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  background: var(--bg-2);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.vf-offline-banner ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.vf-offline-more {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+  color: inherit;
+  cursor: pointer;
+  min-height: 24px;
+}

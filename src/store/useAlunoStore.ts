@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { guardedStateStorage } from '../lib/guardedStorage';
+import { guardarLegadoSensivel } from '../lib/migracaoSensivel';
 import type { Aluno, AlunoExercicio, AlunoRotinaDia } from '../types/aluno';
 import { criarRotinaVazia } from '../types/aluno';
 import type { PhysicalAssessment } from '../types/assessment';
@@ -270,6 +272,17 @@ export const useAlunoStore = create<AlunoState>()(
     {
       // Sucessor direto de jg3_alunos.
       name: 'jg3_alunos',
+      // v2: avaliações e anotações (prontuário) eram só um CACHE do Firestore e ficavam em disco em texto
+      // puro. Agora vivem só em memória (recarregadas online); só o cadastro (`alunos`) é persistido.
+      // A migração NÃO apaga nada às cegas: copia o legado para quarentena e só o remove depois de
+      // conferir/enviar à nuvem (ver migracaoSensivel.ts).
+      version: 2,
+      storage: createJSONStorage(() => guardedStateStorage),
+      partialize: (state) => ({ alunos: state.alunos }),
+      migrate: (persisted, versaoAnterior) => {
+        if (versaoAnterior < 2) guardarLegadoSensivel(persisted);
+        return persisted as AlunoState;
+      },
     }
   )
 );
