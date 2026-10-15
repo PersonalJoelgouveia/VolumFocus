@@ -56,3 +56,39 @@
     transform: rotate(360deg);
   }
 }
+
+.vf-gate-info {
+  color: var(--text-2) !important;
+}
+
+.vf-gate-box .btn + .btn {
+  margin-top: 8px;
+}
+
+.vf-gate-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 16px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.vf-gate-tab {
+  flex: 1;
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.vf-gate-tab.active {
+  background: var(--bg-2);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--border);
+}

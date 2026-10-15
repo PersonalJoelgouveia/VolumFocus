@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import './AuthGate.css';
@@ -12,19 +12,39 @@ interface AuthGateProps {
  * ~7760-7845): três telas — verificando / login / acesso negado — e só
  * renderiza `children` (o app) quando o status vira 'granted'. Chama
  * useAuthStore.init() uma única vez ao montar.
+ *
+ * Login e cadastro são o MESMO fluxo (Google): o papel nunca é escolhido aqui. Personal = e-mail da
+ * lista fixa; aluno = e-mail cadastrado pelo Personal (alunos/{email}, criado só pelas Rules). A
+ * escolha "Sou Personal / Sou aluno" apenas muda o texto de orientação. Nada é gravado no cadastro.
  */
+type Intent = 'aluno' | 'personal';
+
 export function AuthGate({ children }: AuthGateProps) {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const busy = useAuthStore((s) => s.busy);
   const errorMessage = useAuthStore((s) => s.errorMessage);
+  const errorKind = useAuthStore((s) => s.errorKind);
   const init = useAuthStore((s) => s.init);
   const login = useAuthStore((s) => s.login);
   const tryAnotherAccount = useAuthStore((s) => s.tryAnotherAccount);
 
+  const [intent, setIntent] = useState<Intent>('aluno');
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     init();
   }, [init]);
+
+  async function copyEmail() {
+    try {
+      await navigator.clipboard.writeText(user?.email ?? '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* sem permissão de área de transferência: o e-mail continua visível na tela */
+    }
+  }
 
   if (status === 'granted') return <>{children}</>;
 
@@ -41,8 +61,36 @@ export function AuthGate({ children }: AuthGateProps) {
         {status === 'login' && (
           <div className="vf-gate-state">
             <h2>VolumFocus</h2>
-            <p>Entre com sua conta Google para acessar seus treinos.</p>
-            {errorMessage && <p className="vf-gate-error">{errorMessage}</p>}
+            <div className="vf-gate-tabs" role="tablist" aria-label="Tipo de acesso">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={intent === 'aluno'}
+                className={`vf-gate-tab${intent === 'aluno' ? ' active' : ''}`}
+                onClick={() => setIntent('aluno')}
+              >
+                Sou aluno
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={intent === 'personal'}
+                className={`vf-gate-tab${intent === 'personal' ? ' active' : ''}`}
+                onClick={() => setIntent('personal')}
+              >
+                Sou Personal
+              </button>
+            </div>
+            <p>
+              {intent === 'aluno'
+                ? 'Entre com a conta Google do e-mail que seu Personal cadastrou. No primeiro acesso, seus treinos são vinculados à sua conta automaticamente.'
+                : 'Entre com a conta Google autorizada do Personal Trainer.'}
+            </p>
+            {errorMessage && (
+              <p className={errorKind === 'info' ? 'vf-gate-info' : 'vf-gate-error'} role="alert">
+                {errorMessage}
+              </p>
+            )}
             <button className="btn btn-primary" disabled={busy} onClick={login}>
               {busy ? 'Conectando…' : 'Entrar com Google'}
             </button>
@@ -53,7 +101,26 @@ export function AuthGate({ children }: AuthGateProps) {
           <div className="vf-gate-state">
             <h2>Acesso não autorizado</h2>
             <p>Conectado como {user?.email}</p>
-            <p>Esse e-mail ainda não está cadastrado como aluno. Solicite o link de cadastro ao seu Personal Trainer.</p>
+            <p>
+              {intent === 'personal'
+                ? 'Esta conta Google não tem permissão de Personal Trainer. Use a conta autorizada.'
+                : 'Esse e-mail ainda não está cadastrado como aluno. Envie-o ao seu Personal Trainer para que ele faça o seu cadastro, ou entre com outra conta.'}
+            </p>
+            {errorMessage && <p className="vf-gate-error" role="alert">{errorMessage}</p>}
+            <button className="btn btn-primary" disabled={busy} onClick={copyEmail}>
+              {copied ? 'E-mail copiado ✓' : 'Copiar meu e-mail'}
+            </button>
+            <button className="btn btn-ghost" disabled={busy} onClick={tryAnotherAccount}>
+              {busy ? 'Saindo…' : 'Tentar com outra conta'}
+            </button>
+          </div>
+        )}
+
+        {status === 'guardian-pending' && (
+          <div className="vf-gate-state">
+            <h2>Aguardando responsável</h2>
+            <p>Conectado como {user?.email}</p>
+            <p>O acesso desta conta depende da confirmação de um responsável legal. Assim que ela for concluída, você poderá entrar.</p>
             <button className="btn btn-ghost" disabled={busy} onClick={tryAnotherAccount}>
               Tentar com outra conta
             </button>

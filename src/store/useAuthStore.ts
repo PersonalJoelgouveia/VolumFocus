@@ -10,6 +10,8 @@ import { ensureOwnerUUID } from '../lib/ownerRepository';
 import { reivindicarAlunosLegados } from '../lib/alunosOwnership';
 import { useAlunoStore } from './useAlunoStore';
 import { setLocalAuthUid, setLocalOwnerUUID } from '../lib/localOwner';
+import { mapAuthError, type AuthNoticeKind } from '../lib/authErrors';
+import { decideAccess } from '../lib/accessPolicy';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -22,7 +24,8 @@ export interface AuthUser {
   picture: string | null;
 }
 
-export type GateStatus = 'loading' | 'login' | 'denied' | 'granted';
+/** 'guardian-pending': reservado ao consentimento de responsável legal (próxima etapa; ainda não é atingido). */
+export type GateStatus = 'loading' | 'login' | 'denied' | 'guardian-pending' | 'granted';
 
 /**
  * Sucessor direto da distinção "Não logado / Personal / Aluno" usada em
@@ -48,6 +51,8 @@ interface AuthState {
   busy: boolean;
   /** Mensagem de erro pontual da última tentativa de login/verificação, para exibir no gate. */
   errorMessage: string | null;
+  /** 'info' (ex.: login cancelado) ou 'error' — define a cor do aviso no gate. */
+  errorKind: AuthNoticeKind;
 
   /** Registra o listener onAuthStateChanged uma única vez — sucessor de vfGate.start()
    *  + vfAuth.init(). Chamado uma vez no topo do App. */
@@ -124,6 +129,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   ownerUUIDStatus: 'idle',
   busy: false,
   errorMessage: null,
+  errorKind: 'error',
 
   init: () => {
     if (listenerAttached) return;
@@ -135,18 +141,26 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         setLocalAuthUid(null);
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
-        set({ status: 'login', role: 'nao-logado', user: null, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
+        set({ status: 'login', role: 'nao-logado', user: null, ownerUUID: null, ownerUUIDStatus: 'idle' });
+        return;
+      }
+
+      // Só login Google é suportado (as Rules também exigem e-mail verificado).
+      if (!fbUser.providerData.some((p) => p.providerId === 'google.com')) {
+        pendingSyncOnGrant = false;
+        void signOutUser().catch(() => undefined);
+        set({ status: 'login', role: 'nao-logado', user: null, errorKind: 'error', errorMessage: 'Use uma conta Google para entrar.' });
         return;
       }
 
       const emailLc = (fbUser.email ?? '').toLowerCase();
       const isPT = PT_EMAILS.includes(emailLc);
-      let authorized = isPT;
+      let alunoDocExists = false;
 
-      if (!authorized) {
+      if (!isPT) {
         try {
           const snap = await getDoc(doc(db, 'alunos', emailLc));
-          authorized = snap.exists();
+          alunoDocExists = snap.exists();
         } catch (e) {
           // Falha ao consultar o Firestore (rede/permissão) — mantém o e-mail
           // já identificado pelo Firebase Auth, mas não libera o acesso;
@@ -156,13 +170,27 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           set({
             status: 'login',
             role: 'nao-logado',
+            errorKind: 'error',
             errorMessage: 'Não foi possível verificar seu acesso. Tente novamente.',
           });
           return;
         }
+        // A conta mudou/saiu enquanto a consulta rodava: descarta o resultado antigo.
+        if (auth.currentUser?.uid !== fbUser.uid) return;
       }
 
+      const access = decideAccess({ isPT, alunoDocExists });
+      const authorized = access.role !== null && !access.guardianPending;
       const user = toAuthUser(fbUser);
+
+      if (access.guardianPending) {
+        pendingSyncOnGrant = false;
+        setLocalAuthUid(null);
+        useUIStore.getState().setPersonalMode(false);
+        useUIStore.getState().setAlunoMode(false);
+        set({ status: 'guardian-pending', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
+        return;
+      }
 
       if (authorized) {
         // Dados locais de OUTRA conta (sessão anterior encerrada sem o logout do app) não podem ser
@@ -186,6 +214,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         // logo após um login explícito (ver pendingSyncOnGrant acima).
         if (pendingSyncOnGrant) {
           pendingSyncOnGrant = false;
+          useUIStore.getState().showToast(`✅ Conectado como ${user.name.split(' ')[0]}`, 'success');
           useSyncStore.getState().syncAfterLogin();
         }
       } else {
@@ -208,13 +237,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     } catch (e: unknown) {
       pendingSyncOnGrant = false;
       const code = (e as { code?: string })?.code;
-      console.error('useAuthStore: erro ao fazer login', e);
-      set({
-        errorMessage:
-          code === 'auth/popup-closed-by-user'
-            ? 'O login foi cancelado ou o popup foi bloqueado.'
-            : 'Não foi possível conectar ao Google.',
-      });
+      const notice = mapAuthError(code);
+      if (notice.kind === 'error') console.error('useAuthStore: erro ao fazer login', e);
+      set({ errorKind: notice.kind, errorMessage: notice.message });
     } finally {
       set({ busy: false });
     }
@@ -257,7 +282,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       await signOutUser();
     } catch (e) {
+      // Ainda logado: NÃO apaga os dados locais (ficaria uma sessão ativa sem dados) e avisa.
       console.error('useAuthStore: erro ao sair', e);
+      useUIStore.getState().showToast('Não foi possível sair agora. Verifique a conexão e tente de novo.', 'error');
+      set({ busy: false });
+      return;
     }
 
     // Apaga TODOS os dados locais da conta (localStorage, rascunhos, wearables, dono). Fotos e vídeos
@@ -268,7 +297,18 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   tryAnotherAccount: async () => {
-    await get().logout();
-    set({ status: 'login', role: 'nao-logado', user: null, errorMessage: null });
+    // Tela de acesso negado: a conta não tem dados neste app, então não pede confirmação de apagar.
+    // Encerra a sessão, limpa o que existir localmente e recarrega para um login limpo.
+    if (get().busy) return;
+    set({ busy: true });
+    try {
+      await signOutUser();
+    } catch (e) {
+      console.error('useAuthStore: erro ao trocar de conta', e);
+      set({ busy: false, errorKind: 'error', errorMessage: 'Não foi possível sair agora. Tente de novo.' });
+      return;
+    }
+    await wipeLocalData({ includeMedia: false }).catch((e) => console.error('useAuthStore: falha ao limpar dados locais', e));
+    window.location.reload();
   },
 }));
