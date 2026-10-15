@@ -1,5 +1,7 @@
-import { db, doc, getDoc, setDoc } from './firebase';
+import { auth, db, doc, getDoc, setDoc } from './firebase';
 import { getMyOwnerUUID } from './ownerRepository';
+import { isMenor, maioridadeIso } from './consentimento';
+import { syncResponsavelToCloud } from './consentimentoRepository';
 import type { Aluno, AlunoRotina } from '../types/aluno';
 
 /**
@@ -39,16 +41,27 @@ export async function syncAlunoPerfilToCloud(aluno: Aluno): Promise<boolean> {
     return false;
   }
   try {
+    // O responsável legal NÃO entra em perfilAluno (legível pelo aluno e pelo outro Personal).
+    const { responsavel, ...perfilPublico } = aluno;
+    // Menor de 18: carimba a data da maioridade. As Rules tornam o campo imutável e é ele que ativa
+    // o bloqueio de funcionalidades até a autorização do responsável. Adulto: campo não é gravado.
+    const menor = isMenor(aluno.dataNascimento);
+    const maioridadeEm = menor ? maioridadeIso(aluno.dataNascimento) : null;
     await setDoc(
       alunoDocRef(aluno.email),
       {
         email: aluno.email.toLowerCase(),
-        perfilAluno: aluno,
+        perfilAluno: perfilPublico,
         perfilAtualizadoEm: new Date().toISOString(),
+        ...(maioridadeEm ? { maioridadeEm } : {}),
         ...(await ownerUUIDAtual()),
       },
       { merge: true }
     );
+    if (menor && responsavel) {
+      const personal = auth.currentUser?.email ?? '';
+      if (!(await syncResponsavelToCloud(aluno, personal))) return false;
+    }
     return true;
   } catch (e) {
     console.error('syncAlunoPerfilToCloud: falha ao gravar no Firestore', e);

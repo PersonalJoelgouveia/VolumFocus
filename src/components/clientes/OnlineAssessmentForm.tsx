@@ -79,7 +79,8 @@ function gerarAssessmentId(): string {
 interface OnlineAssessmentFormProps {
   alunoId: string;
   onCancel: () => void;
-  onSave: (assessment: PhysicalAssessment) => Promise<boolean> | boolean;
+  /** `aceiteOnline`: o aluno marcou o aceite eletrônico (vira evento imutável junto com a avaliação). */
+  onSave: (assessment: PhysicalAssessment, opts?: { aceiteOnline?: boolean }) => Promise<boolean> | boolean;
   /** Presente = modo edição (só o Personal chega aqui, via "Editar" na
    *  timeline). Status/quem enviou/revisão originais são preservados —
    *  editar só corrige o conteúdo, nunca o histórico de quem fez o quê. */
@@ -95,7 +96,12 @@ interface OnlineAssessmentFormProps {
  * persistido — o rascunho nunca vai pro Firestore.
  */
 export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExistente }: OnlineAssessmentFormProps) {
+  // Aluno ADULTO enviando a própria avaliação: exige aceite eletrônico (menor: vale a autorização do responsável).
+  const roleAtual = useAuthStore((st) => st.role);
+  const menorDeIdade = useAuthStore((st) => st.menorDeIdade);
+  const [aceitou, setAceitou] = useState(false);
   const editando = !!assessmentExistente;
+  const exigirAceite = roleAtual === 'aluno' && !menorDeIdade && !editando;
   const aluno = useAlunoStore((s) => s.getAluno(alunoId));
   const idadeCadastro = calcularIdade(aluno?.dataNascimento);
   const sexoCadastro = inferirSexoDoGenero(aluno?.genero);
@@ -209,7 +215,7 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExis
     setEnviando(true);
     try {
       const assessment = montar(editando ? assessmentExistente!.status : 'enviada');
-      const ok = await onSave(assessment);
+      const ok = await onSave(assessment, exigirAceite ? { aceiteOnline: true } : undefined);
       if (ok !== false && !editando) {
         limparRascunhoOnline(alunoId);
       }
@@ -355,6 +361,7 @@ export function OnlineAssessmentForm({ alunoId, onCancel, onSave, assessmentExis
               onEnviar={handleEnviar}
               enviando={enviando}
               labelEnviar={editando ? 'Salvar alterações' : 'Enviar avaliação'}
+              aceite={exigirAceite ? { checked: aceitou, onChange: setAceitou } : undefined}
             />
           ) : (
             <p className="oa-note">Volte e preencha peso e altura antes de enviar.</p>

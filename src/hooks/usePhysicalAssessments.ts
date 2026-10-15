@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useConfirmStore } from '../store/useConfirmStore';
 import { useUIStore } from '../store/useUIStore';
 import { createAssessment, deleteAssessment, listAssessments, updateAssessment } from '../lib/physicalAssessmentRepository';
+import { criarAvaliacaoOnlineComAceite } from '../lib/consentimentoRepository';
 import { deletePhotosByAssessment } from '../lib/assessmentPhotoStore';
 import type { PhysicalAssessment } from '../types/assessment';
 
@@ -21,7 +22,7 @@ export interface UsePhysicalAssessments {
    *  protocol=='online' liberado pro próprio e-mail) — documentado no
    *  physicalAssessmentRepository.ts. */
   podeEnviarOnline: boolean;
-  salvar: (assessment: PhysicalAssessment) => Promise<boolean>;
+  salvar: (assessment: PhysicalAssessment, opts?: { aceiteOnline?: boolean }) => Promise<boolean>;
   editar: (assessmentId: string, patch: Partial<PhysicalAssessment>) => Promise<boolean>;
   /** Pede confirmação (useConfirmStore) antes de remover. */
   remover: (assessmentId: string) => Promise<void>;
@@ -91,7 +92,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
   const retry = useCallback(() => setTentativa((n) => n + 1), []);
 
   const salvar = useCallback(
-    async (assessment: PhysicalAssessment): Promise<boolean> => {
+    async (assessment: PhysicalAssessment, opts?: { aceiteOnline?: boolean }): Promise<boolean> => {
       const permitido = assessment.protocol === 'online' ? podeEnviarOnline : canWrite;
       if (!permitido) {
         showToast('Só o Personal Trainer pode registrar avaliações.', 'error');
@@ -105,7 +106,9 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
       addAvaliacao(alunoId, assessment); // otimista
 
       try {
-        await createAssessment(email, assessment);
+        // Aluno adulto: a avaliação nasce junto do evento de aceite (mesmo batch; as Rules exigem os dois).
+        if (opts?.aceiteOnline && isSelfAluno && assessment.protocol === 'online') await criarAvaliacaoOnlineComAceite(email, assessment);
+        else await createAssessment(email, assessment);
         showToast('Avaliação salva!', 'success');
         return true;
       } catch (e) {
@@ -115,7 +118,7 @@ export function usePhysicalAssessments(alunoId: string): UsePhysicalAssessments 
         return false;
       }
     },
-    [podeEnviarOnline, canWrite, email, alunoId, addAvaliacao, removeAvaliacao, showToast]
+    [podeEnviarOnline, canWrite, isSelfAluno, email, alunoId, addAvaliacao, removeAvaliacao, showToast]
   );
 
   const editar = useCallback(

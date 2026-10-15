@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { syncAlunoPerfilToCloud } from '../../lib/alunoRepository';
+import { isMenor, faixaEtaria } from '../../lib/consentimento';
+import { PT_EMAILS } from '../../store/useAuthStore';
 import type { Aluno } from '../../types/aluno';
 import './ClientesView.css';
 
@@ -30,10 +32,22 @@ export function AlunoFormModal({ aluno, onClose }: AlunoFormModalProps) {
   const [genero, setGenero] = useState(aluno?.genero ?? '');
   const [objetivo, setObjetivo] = useState(aluno?.objetivo ?? '');
   const [restricoes, setRestricoes] = useState(aluno?.restricoes ?? '');
+  const [respNome, setRespNome] = useState(aluno?.responsavel?.nome ?? '');
+  const [respEmail, setRespEmail] = useState(aluno?.responsavel?.email ?? '');
+  const [respParentesco, setRespParentesco] = useState(aluno?.responsavel?.parentesco ?? '');
   const [saving, setSaving] = useState(false);
 
   const isEdit = !!aluno;
-  const valid = nome.trim().length > 0 && email.trim().includes('@');
+  // Menor de 18: exige responsável legal (e-mail Google dele). Só o responsável autoriza, depois, no app.
+  const menor = isMenor(dataNascimento);
+  const respEmailLc = respEmail.trim().toLowerCase();
+  const respValido =
+    !menor ||
+    (respNome.trim().length > 0 &&
+      /^[^@\s]+@[^@\s]+$/.test(respEmailLc) &&
+      respEmailLc !== email.trim().toLowerCase() &&
+      !PT_EMAILS.includes(respEmailLc));
+  const valid = nome.trim().length > 0 && email.trim().includes('@') && respValido;
 
   async function handleSave() {
     if (!valid || saving) return;
@@ -47,6 +61,9 @@ export function AlunoFormModal({ aluno, onClose }: AlunoFormModalProps) {
       genero: genero.trim() || undefined,
       objetivo: objetivo.trim() || undefined,
       restricoes: restricoes.trim() || undefined,
+      responsavel: menor
+        ? { nome: respNome.trim(), email: respEmailLc, parentesco: respParentesco.trim() || 'Responsável legal' }
+        : undefined,
     };
 
     const saved = isEdit ? { ...aluno, ...patch } : addAluno(patch);
@@ -54,7 +71,14 @@ export function AlunoFormModal({ aluno, onClose }: AlunoFormModalProps) {
 
     await syncAlunoPerfilToCloud(saved);
     setSaving(false);
-    showToast(isEdit ? '✅ Aluno atualizado' : '✅ Aluno cadastrado', 'success');
+    showToast(
+      menor
+        ? '✅ Aluno salvo. O acesso dele só é liberado depois que o responsável autorizar no app.'
+        : isEdit
+          ? '✅ Aluno atualizado'
+          : '✅ Aluno cadastrado',
+      'success'
+    );
     onClose();
   }
 
@@ -101,6 +125,26 @@ export function AlunoFormModal({ aluno, onClose }: AlunoFormModalProps) {
             <span>Lesões / Restrições</span>
             <textarea rows={2} value={restricoes} onChange={(e) => setRestricoes(e.target.value)} />
           </label>
+          {menor && (
+            <>
+              <p className="cli-form-field full" role="note">
+                Aluno {faixaEtaria(dataNascimento) === 'crianca' ? 'criança (menor de 12 anos)' : 'adolescente (12 a 17 anos)'}: informe o responsável
+                legal. Ele precisa entrar no VolumFocus com esta conta Google para autorizar; sem isso o aluno não acessa o app.
+              </p>
+              <label className="cli-form-field full">
+                <span>Responsável legal — nome</span>
+                <input value={respNome} onChange={(e) => setRespNome(e.target.value)} />
+              </label>
+              <label className="cli-form-field">
+                <span>E-mail Google do responsável</span>
+                <input type="email" value={respEmail} onChange={(e) => setRespEmail(e.target.value)} />
+              </label>
+              <label className="cli-form-field">
+                <span>Parentesco</span>
+                <input value={respParentesco} onChange={(e) => setRespParentesco(e.target.value)} placeholder="Mãe, pai, tutor…" />
+              </label>
+            </>
+          )}
         </div>
 
         <button className="btn-block-primary" disabled={!valid || saving} onClick={handleSave}>

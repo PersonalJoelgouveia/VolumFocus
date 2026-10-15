@@ -3,6 +3,7 @@ import type { PhysicalAssessment } from '../../types/assessment';
 import { classificarIMC, classificarRCE, classificarRCQ, TRIAGEM_SAUDE_ITENS } from '../../utils/onlineAssessment';
 import { inferirSexoDoGenero } from '../../utils/pollock7';
 import { useAlunoStore } from '../../store/useAlunoStore';
+import { TEXTO_AVALIACAO_ONLINE } from '../../lib/consentimento';
 import './OnlineAssessmentForm.css';
 
 interface OnlineReviewProps {
@@ -17,6 +18,8 @@ interface OnlineReviewProps {
   /** Texto do botão de confirmação no modo 'aluno' — "Enviar avaliação"
    *  por padrão, ou "Salvar alterações" quando o Personal está editando. */
   labelEnviar?: string;
+  /** Aceite eletrônico (aluno adulto enviando): o botão só habilita com o aceite marcado. */
+  aceite?: { checked: boolean; onChange: (v: boolean) => void };
 }
 
 /** Uma linha de dado com a origem explícita — seção 18: diferenciar
@@ -33,7 +36,7 @@ function LinhaOrigem({ label, valor, origem }: { label: string; valor: string; o
   );
 }
 
-export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRevisada, enviando, labelEnviar }: OnlineReviewProps) {
+export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRevisada, enviando, labelEnviar, aceite }: OnlineReviewProps) {
   const [nota, setNota] = useState('');
   const imcClass = classificarIMC(assessment.anthropometry.imc);
   const rceClass =
@@ -107,6 +110,16 @@ export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRev
         </div>
       )}
 
+      {mode === 'aluno' && aceite && (
+        <label className="oa-aceite">
+          <input type="checkbox" checked={aceite.checked} onChange={(e) => aceite.onChange(e.target.checked)} />
+          <span>
+            <strong>{TEXTO_AVALIACAO_ONLINE.titulo}.</strong> {TEXTO_AVALIACAO_ONLINE.texto}
+            <em> (versão {TEXTO_AVALIACAO_ONLINE.versao})</em>
+          </span>
+        </label>
+      )}
+
       {mode === 'aluno' && (
         <div className="oa-actions">
           {onVoltar && (
@@ -114,7 +127,7 @@ export function OnlineReview({ assessment, mode, onVoltar, onEnviar, onMarcarRev
               Voltar
             </button>
           )}
-          <button type="button" className="btn btn-primary" onClick={onEnviar} disabled={enviando}>
+          <button type="button" className="btn btn-primary" onClick={onEnviar} disabled={enviando || (!!aceite && !aceite.checked)}>
             {enviando ? 'Enviando…' : (labelEnviar ?? 'Enviar avaliação')}
           </button>
         </div>

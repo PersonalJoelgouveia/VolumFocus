@@ -219,8 +219,8 @@ export function AvaliacaoFisicaModal({
         alunoId={alunoId}
         onCancel={editando ? handleCancelarEdicao : () => setStep('resumo')}
         assessmentExistente={editando ?? undefined}
-        onSave={async (assessment) => {
-          const ok = editando ? await editar(assessment.id, assessment) : await salvar(assessment);
+        onSave={async (assessment, opts) => {
+          const ok = editando ? await editar(assessment.id, assessment) : await salvar(assessment, opts);
           if (ok) {
             setEditando(null);
             setStep('resumo');

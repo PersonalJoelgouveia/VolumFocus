@@ -85,6 +85,18 @@ export interface Aluno {
   restricoes?: string;
   ultimoTreino?: string;
   rotina: AlunoRotina;
+  /**
+   * Responsável legal (só para menores de 18). Fica SOMENTE no dispositivo do Personal e em
+   * `responsaveis/{email}` no Firestore — o repositório o remove de `perfilAluno`, que o aluno e o outro
+   * Personal conseguem ler.
+   */
+  responsavel?: ResponsavelAluno;
+}
+
+export interface ResponsavelAluno {
+  nome: string;
+  email: string;
+  parentesco: string;
 }
 
 /**

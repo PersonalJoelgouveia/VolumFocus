@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { ResponsavelPanel } from './ResponsavelPanel';
 import './AuthGate.css';
 
 interface AuthGateProps {
@@ -116,11 +117,21 @@ export function AuthGate({ children }: AuthGateProps) {
           </div>
         )}
 
+        {status === 'responsavel' && user && (
+          <ResponsavelPanel email={user.email} busy={busy} onSwitchAccount={tryAnotherAccount} />
+        )}
+
         {status === 'guardian-pending' && (
           <div className="vf-gate-state">
             <h2>Aguardando responsável</h2>
             <p>Conectado como {user?.email}</p>
-            <p>O acesso desta conta depende da confirmação de um responsável legal. Assim que ela for concluída, você poderá entrar.</p>
+            <p>
+              Como você é menor de 18 anos, o acesso depende da autorização do seu responsável legal. Peça a ele que entre no
+              VolumFocus com a conta Google indicada ao seu Personal e confirme a autorização. Depois, toque em "Verificar de novo".
+            </p>
+            <button className="btn btn-primary" disabled={busy} onClick={() => window.location.reload()}>
+              Verificar de novo
+            </button>
             <button className="btn btn-ghost" disabled={busy} onClick={tryAnotherAccount}>
               Tentar com outra conta
             </button>

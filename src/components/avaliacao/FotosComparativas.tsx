@@ -8,6 +8,7 @@ import {
   savePhoto,
   type PhotoPose,
 } from '../../lib/assessmentPhotoStore';
+import { useUsoImagemDoAluno } from '../../hooks/useUsoImagemDoAluno';
 import './FotosComparativas.css';
 
 const POSE_LABELS: Record<PhotoPose, string> = {
@@ -64,7 +65,22 @@ interface FotosComparativasProps {
  * uma moldura estática de enquadramento, e a imagem salva é exatamente o
  * frame capturado (apenas redimensionado/recomprimido).
  */
-export function FotosComparativas({ alunoId, assessmentId, podeEditar = true }: FotosComparativasProps) {
+/** Aluno menor sem a autorização (separada) de uso de imagem do responsável: sem fotos. */
+export function FotosComparativas(props: FotosComparativasProps) {
+  const usoImagemOk = useUsoImagemDoAluno(props.alunoId);
+  if (usoImagemOk !== true) {
+    return (
+      <p className="vf-gate-info">
+        {usoImagemOk === null
+          ? 'Verificando autorização de uso de imagem…'
+          : 'Fotos indisponíveis: aluno menor de 18 anos sem a autorização de uso de imagem do responsável legal.'}
+      </p>
+    );
+  }
+  return <FotosComparativasInner {...props} />;
+}
+
+function FotosComparativasInner({ alunoId, assessmentId, podeEditar = true }: FotosComparativasProps) {
   const [urls, setUrls] = useState<Partial<Record<PhotoPose, string>>>({});
   const [salvandoPose, setSalvandoPose] = useState<PhotoPose | null>(null);
   const [erro, setErro] = useState<string | null>(null);

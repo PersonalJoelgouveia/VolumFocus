@@ -92,3 +92,65 @@
   color: var(--text);
   box-shadow: 0 0 0 1px var(--border);
 }
+
+/* Painel do responsável legal (menores) */
+.vf-resp-panel {
+  max-height: 80vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.vf-resp-panel > h2,
+.vf-resp-panel > p {
+  text-align: center;
+}
+.vf-resp-card {
+  margin: 12px 0;
+  padding: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.vf-resp-card h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+.vf-resp-sub {
+  margin: 4px 0;
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+.vf-resp-fin {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.vf-resp-fin-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.vf-resp-texto {
+  margin: 6px 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.vf-resp-badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+.vf-resp-badge.ok { color: var(--green, #2e9e5b); }
+.vf-resp-badge.neg { color: var(--red, #d64545); }
+.vf-resp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.vf-resp-actions .btn {
+  min-height: 44px;
+}

@@ -12,6 +12,7 @@ import { useAlunoStore } from './useAlunoStore';
 import { setLocalAuthUid, setLocalOwnerUUID } from '../lib/localOwner';
 import { mapAuthError, type AuthNoticeKind } from '../lib/authErrors';
 import { decideAccess } from '../lib/accessPolicy';
+import { avaliarSituacaoDoMenor, buscarVinculosDoResponsavel } from '../lib/consentimentoRepository';
 
 /** Sucessor de PT_EMAILS (index.html ~4247) — únicos e-mails com permissão
  *  de Personal Trainer. Alunos autenticam com qualquer conta Google já
@@ -24,8 +25,9 @@ export interface AuthUser {
   picture: string | null;
 }
 
-/** 'guardian-pending': reservado ao consentimento de responsável legal (próxima etapa; ainda não é atingido). */
-export type GateStatus = 'loading' | 'login' | 'denied' | 'guardian-pending' | 'granted';
+/** 'guardian-pending': aluno MENOR aguardando a autorização do responsável legal.
+ *  'responsavel': conta de responsável legal — vê só o painel de autorização, nunca o app. */
+export type GateStatus = 'loading' | 'login' | 'denied' | 'guardian-pending' | 'responsavel' | 'granted';
 
 /**
  * Sucessor direto da distinção "Não logado / Personal / Aluno" usada em
@@ -53,6 +55,10 @@ interface AuthState {
   errorMessage: string | null;
   /** 'info' (ex.: login cancelado) ou 'error' — define a cor do aviso no gate. */
   errorKind: AuthNoticeKind;
+  /** Fotos/vídeos liberados: adulto/Personal sempre; menor só com a autorização opcional de uso de imagem. */
+  usoImagemOk: boolean;
+  /** Aluno ainda menor de 18 (as Rules dispensam o aceite individual: vale a autorização do responsável). */
+  menorDeIdade: boolean;
 
   /** Registra o listener onAuthStateChanged uma única vez — sucessor de vfGate.start()
    *  + vfAuth.init(). Chamado uma vez no topo do App. */
@@ -130,6 +136,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   busy: false,
   errorMessage: null,
   errorKind: 'error',
+  usoImagemOk: true,
+  menorDeIdade: false,
 
   init: () => {
     if (listenerAttached) return;
@@ -156,11 +164,31 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const emailLc = (fbUser.email ?? '').toLowerCase();
       const isPT = PT_EMAILS.includes(emailLc);
       let alunoDocExists = false;
+      let menor = false;
+      let consentimentoOk = true;
+      let usoImagemOk = true;
+      let responsavelVinculado = false;
 
       if (!isPT) {
         try {
           const snap = await getDoc(doc(db, 'alunos', emailLc));
           alunoDocExists = snap.exists();
+          if (alunoDocExists) {
+            // Menor: lê vínculo + autorizações do Firestore (as Rules também impõem). Falha => cai no catch
+            // abaixo e NÃO libera (fail-closed).
+            const sit = await avaliarSituacaoDoMenor(emailLc, snap.data()?.maioridadeEm);
+            menor = sit.menor;
+            consentimentoOk = sit.obrigatorioOk;
+            usoImagemOk = sit.usoImagemOk;
+          } else {
+            // Conta que não é aluno: pode ser responsável legal de algum menor. Falha aqui não é fatal
+            // (ex.: Rules sem a Etapa C) — a conta só segue como "acesso não autorizado".
+            try {
+              responsavelVinculado = (await buscarVinculosDoResponsavel(emailLc)).length > 0;
+            } catch {
+              responsavelVinculado = false;
+            }
+          }
         } catch (e) {
           // Falha ao consultar o Firestore (rede/permissão) — mantém o e-mail
           // já identificado pelo Firebase Auth, mas não libera o acesso;
@@ -179,8 +207,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         if (auth.currentUser?.uid !== fbUser.uid) return;
       }
 
-      const access = decideAccess({ isPT, alunoDocExists });
-      const authorized = access.role !== null && !access.guardianPending;
+      const access = decideAccess({ isPT, alunoDocExists, menor, consentimentoOk, responsavelVinculado });
+      const authorized = (access.role === 'personal' || access.role === 'aluno') && !access.guardianPending;
       const user = toAuthUser(fbUser);
 
       if (access.guardianPending) {
@@ -189,6 +217,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         useUIStore.getState().setPersonalMode(false);
         useUIStore.getState().setAlunoMode(false);
         set({ status: 'guardian-pending', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
+        return;
+      }
+
+      if (access.role === 'responsavel') {
+        pendingSyncOnGrant = false;
+        setLocalAuthUid(null);
+        useUIStore.getState().setPersonalMode(false);
+        useUIStore.getState().setAlunoMode(false);
+        set({ status: 'responsavel', role: 'nao-logado', user, ownerUUID: null, ownerUUIDStatus: 'idle', errorMessage: null });
         return;
       }
 
@@ -203,7 +240,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         setLocalAuthUid(fbUser.uid, emailLc); // só contas autorizadas acessam dados locais
         useUIStore.getState().setPersonalMode(isPT);
         useUIStore.getState().setAlunoMode(!isPT);
-        set({ status: 'granted', role: isPT ? 'personal' : 'aluno', user, errorMessage: null });
+        set({ status: 'granted', role: isPT ? 'personal' : 'aluno', user, errorMessage: null, usoImagemOk, menorDeIdade: menor });
         // Só contas autorizadas (PT ou aluno cadastrado) ganham ownerUUID.
         resolveOwnerUUID(fbUser.uid, set);
         // Carrega as notificações de "treino concluído" só pro Personal —

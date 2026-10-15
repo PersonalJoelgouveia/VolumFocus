@@ -65,7 +65,16 @@ interface PersonalVideoRecorderProps {
  * (ExerciseMediaModal, alcançável em Treinos → Semana Atual), pra não
  * duplicar a lógica de câmera/IndexedDB em dois lugares.
  */
-export function PersonalVideoRecorder({ exercise }: PersonalVideoRecorderProps) {
+/** Menor sem a autorização (separada) de uso de imagem do responsável: não grava vídeo. */
+export function PersonalVideoRecorder(props: PersonalVideoRecorderProps) {
+  const usoImagemOk = useAuthStore((s) => s.usoImagemOk);
+  if (!usoImagemOk) {
+    return <p className="vf-gate-info">Gravação de vídeo disponível após a autorização do responsável legal.</p>;
+  }
+  return <PersonalVideoRecorderInner {...props} />;
+}
+
+function PersonalVideoRecorderInner({ exercise }: PersonalVideoRecorderProps) {
   // ownerUUID da sessão: gatilho de recarga/limpeza (troca de conta). O namespace em si é
   // resolvido DENTRO de lib/localVideoStore.ts — nada de identidade vem por argumento.
   const ownerUUID = useAuthStore((s) => s.ownerUUID);

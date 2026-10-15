@@ -1,0 +1,519 @@
+rules_version = '2';
+
+// =============================================================================
+// VolumFocus — Firestore Security Rules  (PROPOSTA, ainda NÃO publicada)
+//
+// Modelo: o frontend NÃO é fronteira de confiança. Quem é quem vem SEMPRE de
+// request.auth.token (e-mail verificado pelo Google), nunca de campos enviados.
+//   - Personal (PT_EMAILS): lê/escreve SÓ os clientes do seu contexto de ownership:
+//     alunos/{email}.ownerUUID == userOwners/{request.auth.uid}.ownerUUID (conferido
+//     AQUI no servidor; o ownerUUID enviado pelo React nunca vale por si só).
+//     <-- PT_EMAILS: manter igual a src/store/useAuthStore.ts E em storage.rules.
+//   - Aluno: só o próprio caminho /alunos/{seu e-mail}/..., e só CRIA a própria
+//     avaliação online (campos fixos) e a notificação de treino concluído.
+//   - Todo o resto: negado (default deny).
+//
+// ANTES DE PUBLICAR: rodar rules-tests/ no Emulator e conferir no Rules
+// Playground. Exporte as regras atuais do Console como backup.
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- identidade (sempre derivada do token) --------------------------------
+    function logado() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function emailToken() {
+      return request.auth.token.email.lower();
+    }
+    function ehPT() {
+      return logado() &&
+        emailToken() in ['joelgouveia16@gmail.com', 'personaljoelgouveia@gmail.com'];
+    }
+    function ehDono(email) {
+      return logado() && emailToken() == email;
+    }
+    function cadastrado(email) {
+      return exists(/databases/$(database)/documents/alunos/$(email));
+    }
+    // Aluno autenticado E já cadastrado pelo Personal.
+    function alunoLogadoCadastrado() {
+      let e = emailToken();
+      return logado() && exists(/databases/$(database)/documents/alunos/$(e));
+    }
+
+    // ---- MENORES + CONSENTIMENTO DO RESPONSÁVEL (Etapa C) -----------------------------------
+    // PROPOSTA — exige revisão jurídica antes de publicar (ver docs/LGPD_Menores_Requisitos.md).
+    // Menor = alunos/{email}.maioridadeEm (AAAA-MM-DD do 18º aniversário) ainda no futuro.
+    // Doc sem o campo = adulto (legado). O campo, uma vez gravado, é imutável (ver alunoAtualizacaoValida).
+    // Fail-closed: data malformada => erro de avaliação => acesso negado.
+    function menorDe(a) {
+      return exists(/databases/$(database)/documents/alunos/$(a))
+        && get(/databases/$(database)/documents/alunos/$(a)).data.get('maioridadeEm', null) != null
+        && request.time < timestamp.date(
+          int(get(/databases/$(database)/documents/alunos/$(a)).data.maioridadeEm.split('-')[0]),
+          int(get(/databases/$(database)/documents/alunos/$(a)).data.maioridadeEm.split('-')[1]),
+          int(get(/databases/$(database)/documents/alunos/$(a)).data.maioridadeEm.split('-')[2]));
+    }
+    function respDe(a) {
+      return get(/databases/$(database)/documents/responsaveis/$(a)).data;
+    }
+    // O Google verificado logado é o responsável vinculado a este menor.
+    function ehResponsavelDe(a) {
+      return logado()
+        && exists(/databases/$(database)/documents/responsaveis/$(a))
+        && respDe(a).responsavelEmail == emailToken();
+    }
+    // Estado vigente da finalidade = aceito, dado pelo MESMO responsável hoje vinculado
+    // (se o Personal trocar o responsável, a autorização anterior deixa de valer).
+    function aceitoVigente(a, fin) {
+      return exists(/databases/$(database)/documents/consentimentos/$(a)/estado/$(fin))
+        && get(/databases/$(database)/documents/consentimentos/$(a)/estado/$(fin)).data.decisao == 'aceito'
+        && exists(/databases/$(database)/documents/responsaveis/$(a))
+        && get(/databases/$(database)/documents/consentimentos/$(a)/estado/$(fin)).data.responsavelEmail == respDe(a).responsavelEmail;
+    }
+    // Funcionalidades dependentes: tratamento de dados + atendimento (uso_imagem é opcional e só vale na UI).
+    function consentOk(a) {
+      return !menorDe(a) || (aceitoVigente(a, 'tratamento_dados') && aceitoVigente(a, 'atendimento'));
+    }
+    function finalidadeValida(f) { return f in ['tratamento_dados', 'atendimento', 'uso_imagem']; }
+    function decisaoValida(d) { return d in ['aceito', 'recusado', 'revogado']; }
+    function maioridadeOk(d) {
+      return !('maioridadeEm' in d)
+        || (d.maioridadeEm is string
+            && d.maioridadeEm.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'));
+    }
+    // Vínculo Personal <-> responsável: gravado só pelo Personal DONO do menor. O responsável nunca
+    // é um Personal nem o próprio aluno (impede o Personal de se autoaprovar).
+    function responsavelValido(a) {
+      let d = request.resource.data;
+      return menorDe(a)
+        && d.keys().hasOnly(['alunoEmail', 'alunoNome', 'responsavelEmail', 'responsavelNome', 'parentesco', 'personalEmail', 'ownerUUID', 'atualizadoEm'])
+        && d.keys().hasAll(['alunoEmail', 'alunoNome', 'responsavelEmail', 'responsavelNome', 'parentesco', 'personalEmail', 'ownerUUID', 'atualizadoEm'])
+        && d.alunoEmail == a
+        // referência ao proprietário: é o ownerUUID do Personal logado E o gravado no cliente (servidor confere)
+        && isMyOwnerUUID(d.ownerUUID)
+        && d.ownerUUID == get(/databases/$(database)/documents/alunos/$(a)).data.get('ownerUUID', null)
+        && d.personalEmail == emailToken()
+        && d.responsavelEmail is string && d.responsavelEmail.size() <= 254
+        && d.responsavelEmail.matches('^[^@\\s]+@[^@\\s]+$')
+        && d.responsavelEmail == d.responsavelEmail.lower()
+        && d.responsavelEmail != a
+        && !(d.responsavelEmail in ['joelgouveia16@gmail.com', 'personaljoelgouveia@gmail.com'])
+        && d.alunoNome is string && d.alunoNome.size() <= 120
+        && d.responsavelNome is string && d.responsavelNome.size() <= 120
+        && d.parentesco is string && d.parentesco.size() <= 40
+        && d.atualizadoEm == request.time;
+    }
+    // Estado vigente (decisão atual por finalidade) — só o responsável grava, junto com o evento (batch).
+    function estadoValido(a, fin) {
+      let d = request.resource.data;
+      let ev = getAfter(/databases/$(database)/documents/consentimentos/$(a)/eventos/$(d.eventoId)).data;
+      return ehResponsavelDe(a)
+        && finalidadeValida(fin)
+        && d.keys().hasOnly(['finalidade', 'decisao', 'versaoTexto', 'textoHash', 'responsavelEmail', 'eventoId', 'atualizadoEm'])
+        && d.keys().hasAll(['finalidade', 'decisao', 'versaoTexto', 'textoHash', 'responsavelEmail', 'eventoId', 'atualizadoEm'])
+        && d.finalidade == fin
+        && decisaoValida(d.decisao)
+        && d.responsavelEmail == emailToken()
+        && d.atualizadoEm == request.time
+        && existsAfter(/databases/$(database)/documents/consentimentos/$(a)/eventos/$(d.eventoId))
+        && ev.finalidade == fin && ev.decisao == d.decisao && ev.versaoTexto == d.versaoTexto
+        && ev.textoHash == d.textoHash && ev.responsavelEmail == emailToken() && ev.alunoEmail == a
+        && ev.tipo == 'consentimento_responsavel';
+    }
+    // ---- EVENTO de consentimento/aceite (trilha imutável) ------------------------------------------
+    // Nada do que o frontend manda vale por si: uid, e-mail, provedor e momento do login são CONFERIDOS
+    // contra o token que o Firebase Auth validou; criadoEm == request.time (hora do servidor);
+    // ownerUUID == o gravado no cliente. Sem update/delete: correção = NOVO evento (substituiEventoId).
+    function eventoBaseValido(a) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['alunoEmail', 'ownerUUID', 'autorUid', 'autorPapel', 'tipo', 'finalidade', 'decisao',
+                               'versaoTexto', 'textoHash', 'provedor', 'authTime', 'criadoEm',
+                               'responsavelEmail', 'avaliacaoId', 'substituiEventoId'])
+        && d.keys().hasAll(['alunoEmail', 'ownerUUID', 'autorUid', 'autorPapel', 'tipo', 'finalidade', 'decisao',
+                            'versaoTexto', 'textoHash', 'provedor', 'authTime', 'criadoEm'])
+        && d.alunoEmail == a
+        && exists(/databases/$(database)/documents/alunos/$(a))
+        && d.ownerUUID is string
+        && d.ownerUUID == get(/databases/$(database)/documents/alunos/$(a)).data.get('ownerUUID', null)
+        && d.autorUid == request.auth.uid
+        && d.provedor == request.auth.token.firebase.sign_in_provider
+        && d.authTime == request.auth.token.auth_time
+        && d.criadoEm == request.time
+        && decisaoValida(d.decisao)
+        && d.versaoTexto is string && d.versaoTexto.size() <= 20
+        && d.textoHash is string && d.textoHash.matches('^[0-9a-f]{64}$')
+        && (!('substituiEventoId' in d)
+            || (d.substituiEventoId is string && d.substituiEventoId.size() <= 40
+                && exists(/databases/$(database)/documents/consentimentos/$(a)/eventos/$(d.substituiEventoId))));
+    }
+    function eventoValido(a, id) {
+      let d = request.resource.data;
+      return eventoBaseValido(a)
+        && (
+          // (1) autorização do RESPONSÁVEL legal: tem de ir junto com o estado vigente (mesmo batch)
+          (d.autorPapel == 'responsavel' && d.tipo == 'consentimento_responsavel'
+            && ehResponsavelDe(a) && menorDe(a)
+            && finalidadeValida(d.finalidade)
+            && d.responsavelEmail == emailToken()
+            && !('avaliacaoId' in d)
+            && existsAfter(/databases/$(database)/documents/consentimentos/$(a)/estado/$(d.finalidade))
+            && getAfter(/databases/$(database)/documents/consentimentos/$(a)/estado/$(d.finalidade)).data.eventoId == id)
+          ||
+          // (2) aceite do próprio ALUNO ADULTO ao enviar a avaliação online (mesmo batch da avaliação)
+          (d.autorPapel == 'aluno' && d.tipo == 'aceite_avaliacao_online'
+            && ehDono(a) && !menorDe(a)
+            && d.finalidade == 'avaliacao_online' && d.decisao == 'aceito'
+            && !('responsavelEmail' in d)
+            && d.avaliacaoId is string && id == 'aceite_' + d.avaliacaoId
+            && existsAfter(/databases/$(database)/documents/alunos/$(a)/avaliacoesFisicas/$(d.avaliacaoId))
+            && getAfter(/databases/$(database)/documents/alunos/$(a)/avaliacoesFisicas/$(d.avaliacaoId)).data.submittedBy == 'aluno')
+        );
+    }
+    // A avaliação online de aluno ADULTO só nasce junto do evento de aceite correspondente.
+    function aceiteAvaliacaoApos(a, id) {
+      return existsAfter(/databases/$(database)/documents/consentimentos/$(a)/eventos/$('aceite_' + id))
+        && getAfter(/databases/$(database)/documents/consentimentos/$(a)/eventos/$('aceite_' + id)).data.avaliacaoId == id
+        && getAfter(/databases/$(database)/documents/consentimentos/$(a)/eventos/$('aceite_' + id)).data.decisao == 'aceito';
+    }
+
+    // ---- ownership: Firebase Auth UID -> ownerUUID (etapas 1-3) ----------------
+    // Fonte de verdade: userOwners/{uid} (create-only, par com o índice ownerUUIDs).
+    // Tudo falha FECHADO: sem vínculo / sem campo / tipo errado => nega.
+    function ownerUuidOk(id) {
+      return id is string
+        && id.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+    }
+    function hasOwnerLink() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/userOwners/$(request.auth.uid));
+    }
+    function myOwnerUUID() {
+      return get(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID;
+    }
+    // "este ownerUUID (de path ou de payload) é MEU?"
+    function isMyOwnerUUID(id) {
+      return hasOwnerLink() && id is string && id == myOwnerUUID();
+    }
+
+    // ---- ownership dos CLIENTES: alunos/{email}.ownerUUID ------------------------
+    // Legado SEM dono: DESLIGADO. Clientes/notificações anteriores ao ownership precisam
+    // ter sido migrados ANTES de publicar estas regras (scripts/migrar-legados-ownership.mjs).
+    // Doc sem ownerUUID fica inacessível a qualquer Personal (o aluno segue lendo o próprio).
+    function aceitarLegadoSemDono() { return false; }
+
+    function semDono(d) { return !('ownerUUID' in d); }
+    function meuAluno(d) { return 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID); }
+    function paiAluno(email) {
+      return get(/databases/$(database)/documents/alunos/$(email)).data;
+    }
+    // Personal autenticado E dono do cliente (via doc-pai). Usado nas subcoleções.
+    function ptDoAluno(email) {
+      return ehPT()
+        && cadastrado(email)
+        && (meuAluno(paiAluno(email)) || (aceitarLegadoSemDono() && semDono(paiAluno(email))));
+    }
+    // ---- treino cruzado entre os DOIS Personals (ambos em ehPT(), lista fixa) --------------------
+    // Qualquer Personal pode ler e montar ROTINAS de qualquer cliente já cadastrado (inclusive de
+    // clientes do outro Personal ou o próprio e-mail do outro Personal cadastrado como aluno).
+    // Fica FORA desta exceção: avaliações, anotações (prontuário), backups, notificações, delete.
+    function ptRotinaAcesso(email) {
+      return ehPT() && cadastrado(email);
+    }
+    // Criar cliente: o dono gravado TEM que ser o meu; `ownerId` é reservado (nunca aceito).
+    function alunoCriacaoValida() {
+      let d = request.resource.data;
+      return ehPT() && !('ownerId' in d) && 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID) && maioridadeOk(d);
+    }
+    // Atualizar cliente: dono imutável. Única exceção (transitória): reivindicar doc sem dono.
+    function alunoAtualizacaoValida() {
+      let d = request.resource.data;
+      return ehPT() && !('ownerId' in d)
+        && maioridadeOk(d)
+        && (!('maioridadeEm' in resource.data) || d.get('maioridadeEm', null) == resource.data.maioridadeEm)
+        && (
+          (meuAluno(resource.data) && 'ownerUUID' in d && d.ownerUUID == resource.data.ownerUUID)
+          || (aceitarLegadoSemDono() && semDono(resource.data) && 'ownerUUID' in d && isMyOwnerUUID(d.ownerUUID))
+        );
+    }
+
+    // ---- recursos SENSÍVEIS do cliente (etapa 4) -----------------------------------
+    // Dono do recurso = dono do CLIENTE (ptDoAluno, via doc-pai alunos/{email}): fonte única,
+    // sem cópia de ownerUUID no recurso que possa divergir. Por isso `ownerUUID`/`ownerId` são
+    // RESERVADOS: nenhum recurso pode carregá-los (create nem update) — nada a "alterar".
+    // `alunoId` NÃO identifica o cliente (o aluno grava um id local do aparelho dele); quem
+    // identifica é o caminho /alunos/{email}. Ele só é imutável, para ninguém "migrar" o recurso.
+    function semCamposDeDono(d) { return !('ownerUUID' in d) && !('ownerId' in d); }
+    function submitterOk(d) { return !('submittedBy' in d) || d.submittedBy in ['aluno', 'personal']; }
+    // Personal cria avaliação (qualquer protocolo; o aluno usa avaliacaoOnlineValida abaixo).
+    function avaliacaoPTCriacaoValida(id) {
+      let d = request.resource.data;
+      return semCamposDeDono(d)
+        && d.id == id
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && submitterOk(d);
+    }
+    // Atualizar avaliação: id/alunoId/submittedBy imutáveis (ausente == ausente).
+    function avaliacaoAtualizacaoValida(id) {
+      let d = request.resource.data;
+      let o = resource.data;
+      return semCamposDeDono(d)
+        && d.get('id', id) == id
+        && d.get('alunoId', null) == o.get('alunoId', null)
+        && d.get('submittedBy', null) == o.get('submittedBy', null)
+        && submitterOk(d);
+    }
+    // Anotação (prontuário): campos fixos; autoria = e-mail do token (não forjável).
+    function anotacaoCamposOk(d) {
+      return d.keys().hasOnly(['id', 'alunoId', 'alunoNome', 'treinoId', 'treinoNome', 'sessionId',
+                               'conteudo', 'createdAt', 'updatedAt', 'authorId', 'authorName'])
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && d.conteudo is string && d.conteudo.size() <= 200000
+        && (!('alunoNome' in d) || (d.alunoNome is string && d.alunoNome.size() <= 200))
+        && (!('treinoId' in d) || (d.treinoId is string && d.treinoId.size() <= 128))
+        && (!('treinoNome' in d) || (d.treinoNome is string && d.treinoNome.size() <= 200))
+        && (!('sessionId' in d) || (d.sessionId is string && d.sessionId.size() <= 128))
+        && (!('authorName' in d) || (d.authorName is string && d.authorName.size() <= 200))
+        && (!('createdAt' in d) || (d.createdAt is string && d.createdAt.size() <= 40))
+        && (!('updatedAt' in d) || (d.updatedAt is string && d.updatedAt.size() <= 40));
+    }
+    function anotacaoCriacaoValida(id) {
+      let d = request.resource.data;
+      return anotacaoCamposOk(d)
+        && d.keys().hasAll(['id', 'alunoId', 'alunoNome', 'conteudo', 'createdAt', 'updatedAt', 'authorId'])
+        && d.id == id
+        && d.authorId is string && d.authorId.lower() == emailToken();
+    }
+    function anotacaoAtualizacaoValida() {
+      let d = request.resource.data;
+      let o = resource.data;
+      return anotacaoCamposOk(d)
+        && d.get('alunoId', null) == o.get('alunoId', null)
+        && d.get('authorId', null) == o.get('authorId', null)
+        && d.get('createdAt', null) == o.get('createdAt', null)
+        && d.get('id', null) == o.get('id', null);
+    }
+
+    // ---- avaliação online criada pelo ALUNO -----------------------------------
+    // Só campos esperados; sem `review`/`evaluator`; status fixo; id == id do
+    // documento; faixas numéricas plausíveis. (O Personal não passa por aqui.)
+    function avaliacaoOnlineValida(email, id) {
+      let d = request.resource.data;
+      return ehDono(email)
+        && cadastrado(email)
+        && d.keys().hasOnly(['id', 'alunoId', 'date', 'protocol', 'notes', 'anthropometry',
+                             'circumferences', 'skinfolds', 'results', 'createdAt', 'updatedAt',
+                             'status', 'submittedBy', 'questionnaire'])
+        && d.keys().hasAll(['id', 'alunoId', 'date', 'protocol', 'anthropometry',
+                            'circumferences', 'skinfolds', 'results', 'createdAt', 'updatedAt',
+                            'status', 'submittedBy'])
+        && d.id == id
+        && d.protocol == 'online'
+        && d.submittedBy == 'aluno'
+        && d.status == 'enviada'
+        && d.alunoId is string && d.alunoId.size() <= 128
+        && d.date is string && d.date.size() <= 40
+        && d.createdAt is string && d.createdAt.size() <= 40
+        && d.updatedAt is string && d.updatedAt.size() <= 40
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 5000))
+        && d.anthropometry is map
+        && d.anthropometry.keys().hasOnly(['peso', 'altura', 'imc'])
+        && d.anthropometry.peso is number && d.anthropometry.peso >= 20 && d.anthropometry.peso <= 500
+        && d.anthropometry.altura is number && d.anthropometry.altura >= 50 && d.anthropometry.altura <= 260
+        && d.anthropometry.imc is number && d.anthropometry.imc >= 5 && d.anthropometry.imc <= 100
+        && d.circumferences is list && d.circumferences.size() <= 60
+        && d.skinfolds is map
+        && d.results is map
+        && d.results.keys().hasOnly(['relacaoCinturaQuadril', 'relacaoCinturaEstatura'])
+        && (!('questionnaire' in d) || d.questionnaire is map);
+    }
+
+    // ---- rotinas do aluno: alunos/{email}/rotinas/{id} -------------------------
+    // Só o Personal (PT_EMAILS) escreve; o aluno só LÊ as próprias. Ninguém apaga
+    // (histórico preservado). Usa as funções de identidade acima — nada novo de auth.
+    //
+    // Formato fixo: id == id do documento; `rotina` = 7 dias; `ativa` booleano.
+    function rotinaFormatoValido(id) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['id', 'nome', 'rotina', 'ativa', 'criadaEm', 'atualizadaEm', 'personalEmail'])
+        && d.keys().hasAll(['id', 'nome', 'rotina', 'ativa', 'criadaEm', 'atualizadaEm', 'personalEmail'])
+        && d.id == id
+        && id.size() <= 128
+        && d.nome is string && d.nome.size() > 0 && d.nome.size() <= 120
+        && d.rotina is list && d.rotina.size() == 7
+        && d.ativa is bool
+        && d.criadaEm is string && d.criadaEm.size() <= 40
+        && d.atualizadaEm is string && d.atualizadaEm.size() <= 40
+        && d.personalEmail is string && d.personalEmail.size() <= 254;
+    }
+    // Criar: PT, para um aluno JÁ cadastrado (não cria lixo em caminho de quem não existe),
+    // e `personalEmail` é o do próprio token — não dá para forjar autoria.
+    function rotinaCriacaoValida(email, id) {
+      return ptRotinaAcesso(email) && consentOk(email)
+        && rotinaFormatoValido(id)
+        && request.resource.data.personalEmail == emailToken();
+    }
+    // Atualizar (editar conteúdo, ativar/desativar): PT; id, criadaEm e autoria são imutáveis.
+    function rotinaAtualizacaoValida(email, id) {
+      return ptRotinaAcesso(email) && consentOk(email)
+        && rotinaFormatoValido(id)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.criadaEm == resource.data.criadaEm
+        && request.resource.data.personalEmail == resource.data.personalEmail;
+    }
+
+    // ---- notificação "treino concluído" ---------------------------------------
+    // O dono da notificação é o Personal DONO DO CLIENTE: para o aluno, o ownerUUID do próprio
+    // alunos/{seu e-mail} (lido AQUI no servidor); para o Personal, o dele. O valor enviado pelo
+    // React só vale se bater — nunca por si só.
+    function notificacaoDonoOk(d) {
+      return d.ownerUUID is string
+        && (
+          (ehPT() && isMyOwnerUUID(d.ownerUUID))
+          || (alunoLogadoCadastrado()
+              && d.ownerUUID == get(/databases/$(database)/documents/alunos/$(emailToken())).data.get('ownerUUID', null))
+        );
+    }
+    function notificacaoValida(id) {
+      let d = request.resource.data;
+      return (ehPT() || (alunoLogadoCadastrado() && consentOk(emailToken())))
+        && d.keys().hasOnly(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm', 'ownerUUID'])
+        && d.keys().hasAll(['id', 'alunoEmail', 'alunoNome', 'dia', 'dataTreino', 'lida', 'criadaEm', 'ownerUUID'])
+        && notificacaoDonoOk(d)
+        && id.size() <= 200
+        && d.id == id
+        && d.alunoEmail == emailToken()
+        && d.lida == false
+        && d.alunoNome is string && d.alunoNome.size() <= 120
+        && d.dia is number && d.dia >= 0 && d.dia <= 31
+        && d.dataTreino is string && d.dataTreino.size() <= 20
+        && d.criadaEm is string && d.criadaEm.size() <= 40;
+    }
+
+    // ---- /alunos/{email} -------------------------------------------------------
+    match /alunos/{email} {
+      // `get` do próprio e-mail também vale para doc inexistente (é o gate do app).
+      // Aluno: só o próprio caminho. Personal: só se for o DONO do cliente
+      // (conhecer o ID/e-mail do cliente de outro Personal não dá acesso).
+      allow get: if ehDono(email)
+        || ptRotinaAcesso(email)
+        || (ehPT() && (meuAluno(resource.data) || (aceitarLegadoSemDono() && semDono(resource.data))));
+      // Sem list: enumerar clientes é negado (o app não lista a coleção; usa o e-mail).
+      allow list: if false;
+      allow create: if alunoCriacaoValida();
+      allow update: if alunoAtualizacaoValida();
+      // Ninguém apaga o doc do cliente pelo app: o Firestore NÃO apaga as subcoleções junto, e um
+      // outro Personal poderia recriar /alunos/{email} com o PRÓPRIO ownerUUID e passar a ler as
+      // avaliações/anotações/rotinas órfãs desse caminho. Remoção só pelo Admin SDK (que apaga a árvore toda).
+      allow delete: if false;
+
+      match /avaliacoesFisicas/{id} {
+        allow get, list: if (ehDono(email) && consentOk(email)) || ptDoAluno(email);
+        allow update: if ptDoAluno(email) && consentOk(email) && avaliacaoAtualizacaoValida(id);
+        allow delete: if ptDoAluno(email);
+        allow create: if (ptDoAluno(email) && consentOk(email) && avaliacaoPTCriacaoValida(id))
+          || (avaliacaoOnlineValida(email, id) && consentOk(email)
+              && (menorDe(email) || aceiteAvaliacaoApos(email, id)));
+      }
+
+      match /rotinas/{id} {
+        allow get, list: if (ehDono(email) && consentOk(email)) || ptRotinaAcesso(email);
+        allow create: if rotinaCriacaoValida(email, id);
+        allow update: if rotinaAtualizacaoValida(email, id);
+        allow delete: if false;
+      }
+
+      // Prontuário: só o Personal DONO do cliente (o aluno NUNCA lê).
+      match /anotacoes/{id} {
+        allow read, delete: if ptDoAluno(email);
+        allow create: if ptDoAluno(email) && consentOk(email) && anotacaoCriacaoValida(id);
+        allow update: if ptDoAluno(email) && consentOk(email) && anotacaoAtualizacaoValida();
+      }
+    }
+
+    // ---- /notificacoesTreinos/{id} --------------------------------------------
+    match /notificacoesTreinos/{id} {
+      allow create: if notificacaoValida(id);
+      // Só o Personal DONO lê/marca lida/apaga. A consulta do app filtra por ownerUUID == o dele.
+      // Notificações antigas (sem ownerUUID) ficam ilegíveis de propósito: não há como provar de quem são.
+      allow get, list: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID);
+      allow update: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida']);
+      allow delete: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID);
+    }
+
+    // ---- /responsaveis/{alunoEmail}: vínculo menor <-> responsável legal ----------------------
+    // Visível só ao responsável vinculado, ao próprio menor e ao Personal DONO. Nunca fica no doc
+    // alunos/{email} (que o outro Personal consegue ler). Sem delete (a trilha não some).
+    match /responsaveis/{a} {
+      allow get: if ehDono(a) || ptDoAluno(a)
+        || (logado() && resource.data.responsavelEmail == emailToken());
+      // O responsável descobre os menores dele consultando where('responsavelEmail','==', e-mail dele).
+      allow list: if logado() && resource.data.responsavelEmail == emailToken();
+      allow create: if ptDoAluno(a) && responsavelValido(a);
+      allow update: if ptDoAluno(a) && responsavelValido(a)
+        && request.resource.data.alunoEmail == resource.data.alunoEmail;
+      allow delete: if false;
+    }
+
+    // ---- /consentimentos/{alunoEmail}: prova de autorização do responsável -----------------------
+    // eventos = trilha IMUTÁVEL (create-only, hora do servidor); estado = decisão vigente por finalidade.
+    // Só o responsável vinculado escreve; o frontend/Personal/aluno não aprovam nem editam a prova.
+    match /consentimentos/{a} {
+      match /eventos/{id} {
+        // Quem pode ver a prova: o responsável; o Personal DONO (controlador — precisa demonstrar o
+        // consentimento); o aluno adulto, só os aceites que ele próprio fez. O menor e o outro Personal: não.
+        allow get, list: if ehResponsavelDe(a) || ptDoAluno(a)
+          || (ehDono(a) && resource.data.autorUid == request.auth.uid);
+        allow create: if eventoValido(a, id);
+        allow update, delete: if false;
+      }
+      match /estado/{fin} {
+        allow get: if ehResponsavelDe(a) || ehDono(a) || ptDoAluno(a);
+        allow list: if false;
+        allow create: if estadoValido(a, fin)
+          && request.resource.data.decisao in ['aceito', 'recusado'];
+        allow update: if estadoValido(a, fin)
+          && (request.resource.data.decisao != 'revogado' || resource.data.decisao == 'aceito');
+        allow delete: if false;
+      }
+    }
+
+    // ---- /backups/{email}: cada usuário só no próprio -------------------------
+    match /backups/{email} {
+      allow read, write: if ehDono(email) && consentOk(email);
+    }
+
+    // ---- /userOwners/{uid}: vínculo Auth UID -> ownerUUID (create-only) -------------
+    match /userOwners/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && (ehPT() || alunoLogadoCadastrado())
+        && request.resource.data.keys().hasOnly(['ownerUUID', 'createdAt'])
+        && ownerUuidOk(request.resource.data.ownerUUID)
+        && request.resource.data.createdAt == request.time
+        // o índice reverso nasce na MESMA transação/batch, apontando pra este uid
+        && existsAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID))
+        && getAfter(/databases/$(database)/documents/ownerUUIDs/$(request.resource.data.ownerUUID)).data.uid == uid;
+      allow update, delete: if false;
+    }
+
+    // ---- /ownerUUIDs/{ownerUUID}: índice reverso (id = UUID => nunca repete) ---------
+    match /ownerUUIDs/{ownerUUID} {
+      allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow list: if false;
+      allow create: if request.auth != null
+        && ownerUuidOk(ownerUUID)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/userOwners/$(request.auth.uid)).data.ownerUUID == ownerUUID;
+      allow update, delete: if false;
+    }
+
+    // Qualquer outro caminho: negado.
+  }
+}
