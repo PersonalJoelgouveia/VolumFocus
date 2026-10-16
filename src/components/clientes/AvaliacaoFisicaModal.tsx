@@ -13,6 +13,9 @@ import { OnlineAssessmentForm } from './OnlineAssessmentForm';
 import { OnlineReview } from './OnlineReview';
 import { PhysicalAssessmentDashboard } from '../../views/PhysicalAssessmentDashboard';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useUsoImagemDoAluno } from '../../hooks/useUsoImagemDoAluno';
+import { RelatorioAvaliacao } from '../relatorio/RelatorioAvaliacao';
+import { CompartilharRelatorio } from '../relatorio/CompartilharRelatorio';
 import './ClientesView.css';
 import './AvaliacaoFisicaModal.css';
 
@@ -61,6 +64,9 @@ export function AvaliacaoFisicaModal({
   const podeComparar = assessments.length >= 2;
   const { loading, error, retry, canWrite, podeEnviarOnline, salvar, editar, remover } = usePhysicalAssessments(alunoId);
   const personalEmail = useAuthStore((s) => s.user?.email);
+  const alunoLocal = useAlunoStore((s) => s.alunos.find((a) => a.id === alunoId));
+  const usoImagemOk = useUsoImagemDoAluno(alunoId);
+  const [relatorioId, setRelatorioId] = useState<string | null>(null);
 
   const [step, setStep] = useState<
     'resumo' | 'protocolo' | 'skinfold-form' | 'bioimpedance-form' | 'online-form' | 'revisar-online' | 'evolucao' | 'comparar'
@@ -188,6 +194,19 @@ export function AvaliacaoFisicaModal({
     }
     setEditando(null);
     setStep('resumo');
+  }
+
+  if (relatorioId) {
+    return (
+      <RelatorioAvaliacao
+        nome={alunoLocal?.nome ?? ''}
+        avaliacaoId={relatorioId}
+        assessments={assessments}
+        onClose={() => setRelatorioId(null)}
+        fotos={canWrite ? { alunoId, liberado: usoImagemOk === true } : undefined}
+        barra={canWrite && alunoLocal?.email ? <CompartilharRelatorio alunoEmail={alunoLocal.email} avaliacaoId={relatorioId} /> : undefined}
+      />
+    );
   }
 
   if (step === 'skinfold-form') {
@@ -356,6 +375,7 @@ export function AvaliacaoFisicaModal({
                   canWrite={canWrite}
                   onRemover={remover}
                   onEditar={canWrite ? handleEditar : undefined}
+                  onRelatorio={(id) => setRelatorioId(id)}
                   onNovaAvaliacao={!readOnly && canWrite ? () => { setEditando(null); setStep('protocolo'); } : undefined}
                   onRevisar={
                     canWrite

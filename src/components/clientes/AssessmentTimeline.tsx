@@ -31,6 +31,8 @@ interface AssessmentTimelineProps {
   onNovaAvaliacao?: () => void;
   /** Abre a revisão do Personal — só relevante para avaliações Online com status 'enviada'. */
   onRevisar?: (assessmentId: string) => void;
+  /** Abre o relatório (PDF por impressão) desta avaliação. */
+  onRelatorio?: (assessmentId: string) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -85,7 +87,7 @@ function ComposicaoDoughnut({ percentualMassaMagra, percentualGordura }: { perce
  * confirmação de exclusão e sincronização com o Firestore continuam no
  * hook (não duplicadas aqui).
  */
-export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar, onNovaAvaliacao, onRevisar, alunoId }: AssessmentTimelineProps) {
+export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar, onNovaAvaliacao, onRevisar, onRelatorio, alunoId }: AssessmentTimelineProps) {
   const [expandidoId, setExpandidoId] = useState<string | null>(null);
   const showToast = useUIStore((s) => s.showToast);
   const aluno = useAlunoStore((s) => (alunoId ? s.getAluno(alunoId) : undefined));
@@ -272,6 +274,11 @@ export function AssessmentTimeline({ assessments, canWrite, onRemover, onEditar,
                 >
                   {expandido ? 'Ocultar' : 'Ver avaliação'}
                 </button>
+                {onRelatorio && (
+                  <button type="button" className="btn btn-ghost" onClick={() => onRelatorio(a.id)}>
+                    Relatório
+                  </button>
+                )}
                 {canWrite && a.status === 'enviada' && onRevisar && (
                   <button type="button" className="btn btn-primary at-revisar-btn" onClick={() => onRevisar(a.id)}>
                     Revisar

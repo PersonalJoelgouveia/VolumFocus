@@ -1,0 +1,40 @@
+.rel-overlay { position: fixed; inset: 0; z-index: 3000; background: #eef0f2; overflow: auto; color: #111; }
+.rel-toolbar { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid #ccc; }
+.rel-check { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+.rel-doc { max-width: 800px; margin: 16px auto; background: #fff; padding: 28px 32px; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; box-shadow: 0 1px 6px rgba(0,0,0,.15); }
+.rel-doc h1 { font-size: 22px; margin: 0 0 12px; }
+.rel-doc h2 { font-size: 15px; margin: 18px 0 8px; border-bottom: 1px solid #bbb; padding-bottom: 3px; }
+.rel-cab-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 16px; }
+.rel-cab-grid span { display: block; font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .03em; }
+.rel-tab { width: 100%; border-collapse: collapse; }
+.rel-tab th, .rel-tab td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e2e2e2; }
+.rel-tab th { font-size: 11px; color: #555; text-transform: uppercase; }
+.rel-barra { -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex; width: 100%; height: 28px; border-radius: 4px; overflow: hidden; font-size: 11px; color: #fff; }
+.rel-barra > div { display: flex; align-items: center; padding-left: 8px; white-space: nowrap; overflow: hidden; }
+.rel-barra-magra { background: #0b7a75; }
+.rel-barra-gordura { background: #6b46c1; }
+.rel-graficos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.rel-grafico-t { font-size: 12px; font-weight: 600; }
+.rel-fotos { display: flex; flex-direction: column; gap: 10px; }
+.rel-foto-linha { display: flex; gap: 10px; align-items: flex-start; break-inside: avoid; }
+.rel-foto-pose { width: 90px; font-weight: 600; }
+.rel-foto { text-align: center; } .rel-foto img { height: 200px; width: auto; border: 1px solid #ccc; }
+.rel-vazio { color: #666; }
+.rel-rodape { margin-top: 22px; padding-top: 8px; border-top: 1px solid #bbb; font-size: 11px; color: #555; }
+.rel-msg { max-width: 520px; margin: 60px auto; background: #fff; padding: 24px; border-radius: 8px; text-align: center; }
+
+@media print {
+  body.rel-printing > *:not(.rel-overlay) { display: none !important; }
+  body.rel-printing { background: #fff !important; }
+  .rel-overlay { position: static !important; overflow: visible !important; background: #fff !important; }
+  .rel-toolbar { display: none !important; }
+  .rel-doc { box-shadow: none; margin: 0; max-width: none; padding: 0; }
+  .rel-nobreak, .rel-tab tr { break-inside: avoid; }
+  @page { margin: 14mm; }
+}
+.rel-share { display: flex; flex-direction: column; gap: 6px; font-size: 13px; width: 100%; }
+.rel-share-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.rel-share-link { width: 100%; font-size: 12px; padding: 4px; }
+.rel-share-msg { color: #444; }
+.rel-share-lista { margin: 0; padding-left: 16px; }
+.rel-share-lista li { display: flex; gap: 8px; align-items: center; justify-content: space-between; }

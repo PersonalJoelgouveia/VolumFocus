@@ -480,6 +480,67 @@ service cloud.firestore {
       }
     }
 
+    // ---- /compartilhamentos/{shareId}: LINK PROTEGIDO do relatório de avaliação (Mini 8) -----------------
+    // O link (#/relatorio/<shareId>) é só um PONTEIRO opaco (22 caracteres aleatórios): o e-mail do aluno,
+    // o id da avaliação e o ownerUUID ficam AQUI, nunca na URL. O ponteiro NÃO concede acesso aos dados:
+    // as avaliações continuam protegidas pelas Rules de /alunos/{email}/avaliacoesFisicas (dono + consentOk).
+    // Revogar/expirar derruba o link (e o respectivo histórico de acessos fica com o Personal dono).
+    // Quem abre precisa estar logado (Google verificado) E ser o Personal dono ou o próprio aluno.
+    function shareIdOk(id) { return id is string && id.matches('^[A-Za-z0-9_-]{22}$'); }
+    function shareAtivo(d) {
+      return d.revogadoEm == null && request.time < d.expiraEm;
+    }
+    // O Personal dono sempre enxerga o compartilhamento (para gerir/revogar); o aluno só enquanto ativo.
+    function podeVerShare(d) {
+      return (ptDoAluno(d.alunoEmail) && isMyOwnerUUID(d.ownerUUID))
+        || (ehDono(d.alunoEmail) && d.paraAluno == true && shareAtivo(d) && consentOk(d.alunoEmail));
+    }
+    function shareCriacaoValida(id) {
+      let d = request.resource.data;
+      return shareIdOk(id)
+        && d.keys().hasOnly(['alunoEmail', 'avaliacaoId', 'ownerUUID', 'criadoPorUid', 'criadoEm', 'expiraEm', 'revogadoEm', 'paraAluno'])
+        && d.keys().hasAll(['alunoEmail', 'avaliacaoId', 'ownerUUID', 'criadoPorUid', 'criadoEm', 'expiraEm', 'revogadoEm', 'paraAluno'])
+        && d.alunoEmail is string && ptDoAluno(d.alunoEmail)
+        && consentOk(d.alunoEmail)
+        && d.ownerUUID == paiAluno(d.alunoEmail).ownerUUID && isMyOwnerUUID(d.ownerUUID)
+        && d.avaliacaoId is string && d.avaliacaoId.size() > 0 && d.avaliacaoId.size() <= 128
+        && exists(/databases/$(database)/documents/alunos/$(d.alunoEmail)/avaliacoesFisicas/$(d.avaliacaoId))
+        && d.criadoPorUid == request.auth.uid
+        && d.criadoEm == request.time
+        && d.expiraEm is timestamp && d.expiraEm > request.time
+        && d.expiraEm <= request.time + duration.value(30, 'd')
+        && d.revogadoEm == null
+        && d.paraAluno is bool;
+    }
+    match /compartilhamentos/{shareId} {
+      allow get: if podeVerShare(resource.data);
+      // O Personal dono lista os compartilhamentos dele (filtrando por ownerUUID + alunoEmail).
+      allow list: if ehPT() && isMyOwnerUUID(resource.data.ownerUUID);
+      allow create: if shareCriacaoValida(shareId);
+      // Único update permitido: revogar (revogadoEm null -> hora do servidor), pelo Personal dono.
+      allow update: if ptDoAluno(resource.data.alunoEmail) && isMyOwnerUUID(resource.data.ownerUUID)
+        && resource.data.revogadoEm == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revogadoEm'])
+        && request.resource.data.revogadoEm == request.time;
+      allow delete: if ptDoAluno(resource.data.alunoEmail) && isMyOwnerUUID(resource.data.ownerUUID);
+
+      // Trilha de acessos: create-only, hora do servidor, autor = token. Leitura só do Personal dono.
+      match /acessos/{logId} {
+        function shareDoc() { return get(/databases/$(database)/documents/compartilhamentos/$(shareId)).data; }
+        allow get, list: if ptDoAluno(shareDoc().alunoEmail) && isMyOwnerUUID(shareDoc().ownerUUID);
+        allow create: if logado()
+          && request.resource.data.keys().hasOnly(['autorUid', 'autorPapel', 'acao', 'criadoEm'])
+          && request.resource.data.autorUid == request.auth.uid
+          && request.resource.data.criadoEm == request.time
+          && request.resource.data.acao in ['abriu', 'gerou_pdf']
+          && request.resource.data.autorPapel in ['personal', 'aluno']
+          && podeVerShare(shareDoc())
+          && (request.resource.data.autorPapel == 'aluno' ? ehDono(shareDoc().alunoEmail) : ehPT())
+          && (ehPT() ? true : shareAtivo(shareDoc()));
+        allow update, delete: if false;
+      }
+    }
+
     // ---- /backups/{email}: cada usuário só no próprio -------------------------
     match /backups/{email} {
       allow read, write: if ehDono(email) && consentOk(email);
