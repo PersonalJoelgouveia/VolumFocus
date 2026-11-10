@@ -6,6 +6,7 @@ import { MUSCLE_GROUPS } from '../../types/exercise';
 import type { MuscleGroup } from '../../types/exercise';
 import { norm } from '../../utils/importParser';
 import { genLogEntryId } from '../../utils/logEntryId';
+import { DecimalInput } from '../shared/DecimalInput';
 import type { StrengthLogEntry, CardioLogEntry } from '../../types/workout';
 import './AddExerciseModal.css';
 
@@ -249,14 +250,7 @@ export function AddExerciseModal() {
                 </div>
                 <div className="addex-field-row">
                   <label className="addex-label">Carga (kg)</label>
-                  <input
-                    type="number"
-                    className="addex-input"
-                    min={0}
-                    step={0.5}
-                    value={load}
-                    onChange={(e) => setLoad(Number(e.target.value))}
-                  />
+                  <DecimalInput className="addex-input" value={load} onValueChange={setLoad} />
                 </div>
               </>
             )}

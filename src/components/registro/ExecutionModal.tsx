@@ -9,6 +9,7 @@ import { registrarTreinoConcluido } from '../../lib/notificacaoRepository';
 import { isCardioLogEntry } from '../../types/workout';
 import type { StrengthLogEntry } from '../../types/workout';
 import { MUSCLE_COLOR } from '../../data/muscleColors';
+import { parseDecimal, sanitizeDecimalInput } from '../../utils/decimalInput';
 import { ExecutionMediaSection } from './ExecutionMediaSection';
 import './ExecutionModal.css';
 
@@ -159,7 +160,7 @@ export function ExecutionModal() {
   function saveEdit(k: number) {
     if (exec.day === null || exec.idx === null || !strengthEntry) return;
     const newReps = Math.max(1, parseInt(editReps, 10) || 1);
-    const newLoad = Math.max(0, parseFloat(editLoad) || 0);
+    const newLoad = Math.max(0, parseDecimal(editLoad) ?? 0);
 
     const serieLoads = strengthEntry.serieLoads?.length
       ? [...strengthEntry.serieLoads]
@@ -273,13 +274,12 @@ export function ExecutionModal() {
                           />
                           <span>×</span>
                           <input
-                            type="number"
+                            type="text"
                             inputMode="decimal"
-                            min={0}
-                            step={0.5}
+                            autoComplete="off"
                             value={editLoad}
                             aria-label="Carga em kg"
-                            onChange={(e) => setEditLoad(e.target.value)}
+                            onChange={(e) => setEditLoad(sanitizeDecimalInput(e.target.value))}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') saveEdit(k);
                               else if (e.key === 'Escape') exec.cancelEditSet();

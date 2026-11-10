@@ -6,6 +6,7 @@ import { MUSCLE_COLOR } from '../../data/muscleColors';
 import type { AlunoExercicio } from '../../types/aluno';
 import { isAlunoExercicioCardio } from '../../types/aluno';
 import { resolverExercisePorNome, sugerirSubstitutos } from '../../utils/sugerirSubstitutos';
+import { parseDecimal, sanitizeDecimalInput } from '../../utils/decimalInput';
 import './ClientesView.css';
 
 interface ExercicioFormModalProps {
@@ -104,7 +105,7 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
         nome,
         series: parseInt(series, 10) || 1,
         reps: reps.trim() || '10',
-        carga: parseFloat(carga) || 0,
+        carga: Math.max(0, parseDecimal(carga) ?? 0),
         ...(rir !== '' && { rir: parseInt(rir, 10) }),
         ...(existing && !isAlunoExercicioCardio(existing) && existing.sugestao ? { sugestao: existing.sugestao } : {}),
         ...(notesVal && { notes: notesVal }),
@@ -219,7 +220,7 @@ export function ExercicioFormModal({ existing, onSave, onRemove, onClose }: Exer
                 </label>
                 <label className="cli-form-field">
                   <span>Carga (kg)</span>
-                  <input type="number" min={0} step={0.5} value={carga} onChange={(e) => setCarga(e.target.value)} />
+                  <input type="text" inputMode="decimal" autoComplete="off" value={carga} onChange={(e) => setCarga(sanitizeDecimalInput(e.target.value))} />
                 </label>
                 <label className="cli-form-field">
                   <span>RIR (opcional)</span>

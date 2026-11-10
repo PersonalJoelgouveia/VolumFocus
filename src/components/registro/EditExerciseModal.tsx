@@ -3,6 +3,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { norm } from '../../utils/importParser';
+import { DecimalInput } from '../shared/DecimalInput';
 import type { Exercise } from '../../types/exercise';
 import type { StrengthLogEntry } from '../../types/workout';
 import '../modals/AddExerciseModal.css';
@@ -210,13 +211,9 @@ export function EditExerciseModal({ entry, exercise, onUpdate, onRemoveExercise,
                 <span>reps</span>
               </div>
               <div className="editex-serie-field">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step={0.5}
+                <DecimalInput
                   value={s.load}
-                  onChange={(e) => updateSerie(i, { load: Math.max(0, Number(e.target.value) || 0) })}
+                  onValueChange={(n) => updateSerie(i, { load: Math.max(0, n) })}
                   aria-label="Carga em kg"
                 />
                 <span>kg</span>
