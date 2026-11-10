@@ -106,7 +106,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
     const s = get();
     if (!s.isRunning || s.startTs === null) return;
     const live = s.elapsedSeconds + Math.floor((Date.now() - s.startTs) / 1000);
-    set({ displaySeconds: live });
+    if (live !== s.displaySeconds) set({ displaySeconds: live });
   },
 
   restSecondsRemaining: null,

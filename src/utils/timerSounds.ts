@@ -45,12 +45,49 @@ export const END_SOUND_OPTIONS: { id: EndSoundId; label: string }[] = [
 
 let sharedCtx: AudioContext | null = null;
 
-function getContext(): AudioContext | null {
+/** AudioContext compartilhado (criado sob demanda). `null` sem Web Audio API. */
+export function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
-  if (!sharedCtx) sharedCtx = new Ctor();
+  if (!sharedCtx) {
+    try {
+      sharedCtx = new Ctor();
+    } catch {
+      return null;
+    }
+  }
   return sharedCtx;
+}
+
+const getContext = getAudioContext;
+
+let unlocked = false;
+
+/**
+ * Libera o áudio sob a política de autoplay (iOS/Android/desktop): precisa ser
+ * chamado DENTRO de um gesto do usuário (toque/clique/tecla). Retoma o contexto
+ * se estiver `suspended`/`interrupted` e toca 1 amostra muda uma única vez (o
+ * "desbloqueio" que o iOS Safari exige). Idempotente e nunca lança erro.
+ */
+export function unlockAudio(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state !== 'running') {
+    ctx.resume().catch(() => {
+      /* só libera no próximo gesto do usuário */
+    });
+  }
+  if (unlocked) return;
+  try {
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, 22050);
+    src.connect(ctx.destination);
+    src.start(0);
+    unlocked = true;
+  } catch {
+    /* tenta de novo no próximo gesto */
+  }
 }
 
 /** Toca um som pré-definido (`SoundId`) no volume dado (0 a 1). Silencioso
