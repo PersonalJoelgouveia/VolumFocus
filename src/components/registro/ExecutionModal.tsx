@@ -5,6 +5,10 @@ import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAchievementStore } from '../../store/useAchievementStore';
+import { useTimerAudioStore } from '../../store/useTimerAudioStore';
+import { cancelAlarm, ensureAlarmRinging, scheduleAlarm } from '../../utils/restAlarm';
+import { unlockAudio } from '../../utils/timerSounds';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { registrarTreinoConcluido } from '../../lib/notificacaoRepository';
 import { isCardioLogEntry } from '../../types/workout';
 import type { StrengthLogEntry } from '../../types/workout';
@@ -55,12 +59,12 @@ export function ExecutionModal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exec.isOpen, exec.day, exec.idx]);
 
-  // Tick do timer de descanso — um único setInterval, montado só enquanto o
-  // modal está aberto e o timer rodando/tocando o alarme (mesmo padrão do
-  // <TimerEngine> global, mas escopado à vida do modal).
+  // Tick do timer de descanso. O tempo vem de `endAt` (timestamp), então o
+  // intervalo só "atualiza a tela": se o navegador atrasar/congelar o timer em
+  // segundo plano, o próximo tick (ou o retorno à aba) recalcula o valor certo.
   useEffect(() => {
     if (!exec.isOpen || !exec.running) return;
-    const id = setInterval(() => {
+    const run = () => {
       const { justFinished } = useExecStore.getState().tick();
       if (justFinished) {
         if (navigator.vibrate) {
@@ -72,9 +76,60 @@ export function ExecutionModal() {
         }
         showToast('⏰ Descanso finalizado — bora pra próxima série!');
       }
-    }, 1000);
-    return () => clearInterval(id);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') run();
+    };
+    const id = setInterval(run, 250);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', run);
+    window.addEventListener('focus', run);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', run);
+      window.removeEventListener('focus', run);
+    };
   }, [exec.isOpen, exec.running, showToast]);
+
+  // Política de autoplay: o AudioContext só pode ser liberado dentro de um
+  // gesto do usuário. Enquanto o modal está aberto, qualquer toque/tecla o libera.
+  useEffect(() => {
+    if (!exec.isOpen) return;
+    const unlock = () => unlockAudio();
+    const opts = { capture: true, passive: true } as const;
+    document.addEventListener('pointerdown', unlock, opts);
+    document.addEventListener('keydown', unlock, opts);
+    document.addEventListener('visibilitychange', unlock);
+    return () => {
+      document.removeEventListener('pointerdown', unlock, opts);
+      document.removeEventListener('keydown', unlock, opts);
+      document.removeEventListener('visibilitychange', unlock);
+    };
+  }, [exec.isOpen]);
+
+  // Alarme agendado no relógio do AudioContext no instante em que o descanso
+  // começa (toca no horário certo mesmo com timers JS atrasados). Qualquer
+  // mudança de endAt (pausa, ±30s, reset, fechar) re-agenda/cancela — exceto na
+  // virada para "alarmando", quando o alarme deve continuar tocando.
+  useEffect(() => {
+    if (!exec.isOpen || !exec.running || exec.endAt === null) return;
+    scheduleAlarm(exec.endAt - Date.now(), useTimerAudioStore.getState().volume);
+    return () => {
+      if (!useExecStore.getState().alarming) cancelAlarm();
+    };
+  }, [exec.isOpen, exec.running, exec.endAt]);
+
+  // Fim do descanso: garante o som (fallback se o agendado não tocou, ex.: app
+  // voltou do segundo plano) e para tudo quando o alarme é silenciado/modal fecha.
+  useEffect(() => {
+    if (!exec.isOpen || !exec.alarming) return;
+    ensureAlarmRinging(useTimerAudioStore.getState().volume);
+    return () => cancelAlarm();
+  }, [exec.isOpen, exec.alarming]);
+
+  // Tela acordada enquanto descansa/alarma (no celular, tela bloqueada congela o JS).
+  useWakeLock(exec.isOpen && (exec.running || exec.alarming));
 
   // Debounce do salvamento de notas (600ms), como no monolito.
   useEffect(() => {

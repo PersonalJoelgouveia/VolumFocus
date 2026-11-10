@@ -5,6 +5,7 @@ import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useStrengthStore } from '../../store/useStrengthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { RIR_MESSAGES, STR_FORMULAS, STR_FORMULA_ORDER, strCalcAll } from '../../utils/strengthCalc';
+import { parseDecimal, sanitizeDecimalInput } from '../../utils/decimalInput';
 import type { StrFormulaKey, StrCalcAllResult } from '../../types/strength';
 import { isCardioLogEntry } from '../../types/workout';
 
@@ -82,7 +83,7 @@ export function StrCalcCard({ onCalculated }: StrCalcCardProps) {
   const repsForaDaZona = repsNum > 0 && (repsNum < 1 || repsNum > 12);
 
   function handleCalcular() {
-    const w = parseFloat(weight) || 0;
+    const w = parseDecimal(weight) ?? 0;
     if (!exerciseName || w <= 0 || repsNum <= 0) {
       return showToast('⚠️ Preencha exercício, carga e repetições.', 'warning');
     }
@@ -120,7 +121,7 @@ export function StrCalcCard({ onCalculated }: StrCalcCardProps) {
       <div className="grid-2">
         <div className="form-group">
           <label htmlFor="str-weight">Carga Levantada (kg)</label>
-          <input id="str-weight" type="number" inputMode="decimal" min={1} step={0.5} placeholder="Ex: 80" value={weight} onChange={(e) => setWeight(e.target.value)} />
+          <input id="str-weight" type="text" inputMode="decimal" autoComplete="off" placeholder="Ex: 80 ou 82,5" value={weight} onChange={(e) => setWeight(sanitizeDecimalInput(e.target.value))} />
         </div>
         <div className="form-group">
           <label htmlFor="str-reps">Repetições Realizadas</label>
