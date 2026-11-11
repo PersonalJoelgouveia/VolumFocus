@@ -70,3 +70,17 @@
 
 .editex-footer { display: flex; gap: 8px; margin-top: 16px; }
 .editex-danger-btn { width: 100%; margin-top: 10px; }
+
+/* Área de toque mínima de 44px. */
+.editex-serie-check::after,
+.editex-serie-remove::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+.editex-serie-check,
+.editex-serie-remove { position: relative; }

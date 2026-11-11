@@ -1,8 +1,12 @@
 .toast-stack {
   position: fixed;
   right: 26px;
-  bottom: 26px;
+  /* --toast-lift: a barra do Bloco de Notas (body.np-bar-open) empurra o toast
+     para cima dela, em vez de cobri-lo (a barra usa z-index maior). */
+  bottom: calc(26px + var(--toast-lift, 0px));
   z-index: 999;
+  /* Container sempre montado (região aria-live): não pode interceptar toques. */
+  pointer-events: none;
   display: flex;
   flex-direction: column-reverse;
   gap: 8px;
@@ -22,6 +26,7 @@
   color: #fff;
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
   cursor: pointer;
+  pointer-events: auto;
   max-width: 320px;
   animation: toastIn 0.37s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -59,7 +64,7 @@
 @media (max-width: 860px) {
   .toast-stack {
     right: 50%;
-    bottom: 90px;
+    bottom: calc(90px + var(--toast-lift, 0px));
     transform: translateX(50%);
     align-items: center;
   }

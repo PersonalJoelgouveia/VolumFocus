@@ -171,3 +171,8 @@ body.np-bar-open .cro-widget {
     bottom: 170px;
   }
 }
+
+/* A barra mede ~132px: sobe a pilha de toasts para ficar acima dela. */
+body.np-bar-open {
+  --toast-lift: 140px;
+}
