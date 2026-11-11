@@ -1,0 +1,98 @@
+.np-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Espaço para a barra fixa de timer não cobrir o fim do texto. */
+  padding-bottom: 170px;
+}
+
+.np-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 220px;
+  padding: 12px;
+  /* 16px evita o zoom automático do iOS ao focar. */
+  font-size: 16px;
+  line-height: 1.55;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.np-textarea:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
+.np-textarea[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.np-status {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+
+.np-status-synced {
+  color: var(--green);
+}
+
+.np-status-error {
+  color: var(--red);
+}
+
+.np-issues {
+  margin: 0;
+  padding: 8px 10px 8px 26px;
+  font-size: 0.78rem;
+  border-radius: var(--rs);
+}
+
+.np-issues-error {
+  color: var(--red);
+  background: var(--red-bg, rgba(255, 77, 109, 0.08));
+}
+
+.np-issues-warn {
+  color: var(--yellow);
+  background: var(--yellow-bg, rgba(251, 191, 36, 0.08));
+}
+
+.np-help {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+.np-help summary {
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.np-help pre {
+  margin: 6px 0;
+  padding: 8px 10px;
+  overflow-x: auto;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  background: var(--bg-3);
+  border-radius: var(--rs);
+}
+
+/* Botão do cabeçalho: mesma família .btn.btn-ghost do botão de Anotações (PT). */
+.np-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 10px;
+}
+
+.np-icon-btn-active {
+  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-bg, rgba(0, 196, 179, 0.1));
+}

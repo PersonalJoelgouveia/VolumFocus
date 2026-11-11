@@ -1,0 +1,173 @@
+/* Barra fixa do Bloco de Notas: exercício atual + timer de descanso.
+ * Fica acima da navegação inferior no mobile (mesma referência de 72px do
+ * .cro-widget) e rente ao rodapé no desktop. */
+.npbar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  z-index: 6900;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: var(--rl, 16px);
+  background: linear-gradient(135deg, rgba(10, 10, 14, 0.96) 0%, rgba(0, 196, 179, 0.06) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 196, 179, 0.25);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+@media (min-width: 861px) {
+  .npbar {
+    bottom: 16px;
+  }
+}
+
+.npbar-resting {
+  border-color: rgba(0, 196, 179, 0.6);
+}
+
+.npbar-ringing {
+  border-color: var(--yellow, #fbbf24);
+  animation: npbarRing 0.9s ease-in-out infinite;
+}
+
+@keyframes npbarRing {
+  0%,
+  100% {
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(251, 191, 36, 0.5);
+  }
+  50% {
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 6px rgba(251, 191, 36, 0);
+  }
+}
+
+.npbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.npbar-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.npbar-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.npbar-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.npbar-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 100px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--purple);
+  background: var(--purple-bg, rgba(167, 139, 250, 0.12));
+}
+
+.npbar-detail {
+  font-size: 0.8rem;
+  color: var(--teal);
+}
+
+.npbar-next {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.npbar-time {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 1.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: transparent;
+  border: none;
+}
+
+.npbar-resting .npbar-time {
+  color: var(--teal);
+}
+
+.npbar-ringing .npbar-time {
+  color: var(--yellow, #fbbf24);
+}
+
+.npbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.npbar-btn {
+  min-height: 44px;
+  min-width: 40px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-2, var(--text));
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+}
+
+.npbar-done {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #04201d;
+  background: var(--teal);
+  border: none;
+  border-radius: var(--rs);
+}
+
+.npbar-done:disabled {
+  opacity: 0.4;
+}
+
+/* Sobe o cronômetro flutuante global enquanto a barra está aberta. */
+body.np-bar-open .cro-widget {
+  bottom: calc(72px + 150px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 861px) {
+  body.np-bar-open .cro-widget {
+    bottom: 170px;
+  }
+}

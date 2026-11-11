@@ -4,6 +4,7 @@ import type { TreinoAgrupado } from '../utils/agruparTreinos';
 import { getTodayDayIndex } from '../utils/dayIndex';
 import { useCargasCompartilhadasSync } from '../hooks/useCargasCompartilhadasSync';
 import { useState } from 'react';
+import { NotebookPen } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { useUIStore } from '../store/useUIStore';
 import { useTimerStore } from '../store/useTimerStore';
@@ -18,6 +19,8 @@ import { AlunoRotinaSyncBanner } from '../components/registro/AlunoRotinaSyncBan
 import { MinhasRotinasSection } from '../components/registro/MinhasRotinasSection';
 import { RegistroActionsMenu } from '../components/registro/RegistroActionsMenu';
 import { QuickNoteButton } from '../components/registro/QuickNotePanel';
+import { WorkoutNotepad } from '../components/registro/WorkoutNotepad';
+import { NotepadTimerBar } from '../components/registro/NotepadTimerBar';
 import { useSessionStore } from '../store/useSessionStore';
 import type { ListMode } from '../components/registro/ExerciseListItem';
 
@@ -54,6 +57,17 @@ export function RegistroView() {
   const [mode, setMode] = useState<ListMode>('normal');
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [groupType, setGroupType] = useState<GroupType>('biset');
+  /** Modo "Bloco de Notas do Treino": o log do dia como texto editável + barra de timer fixa. */
+  const [notepad, setNotepad] = useState(false);
+
+  /** Liga/desliga o Bloco de Notas. Ligar cancela Reordenar/Conjugar (não existem sem os cards). */
+  function handleToggleNotepad() {
+    if (!notepad) {
+      setSelectedIndices(new Set());
+      setMode('normal');
+    }
+    setNotepad((v) => !v);
+  }
 
   /** Aluno: coloca o treino escolhido (A/B/C…) no dia de hoje da Semana Atual, avisando se há sobreposição. */
   async function handleUsarTreino(treino: TreinoAgrupado) {
@@ -213,6 +227,17 @@ export function RegistroView() {
             </>
           )}
 
+          <button
+            type="button"
+            className={`btn btn-ghost np-icon-btn${notepad ? ' np-icon-btn-active' : ''}`}
+            title="Bloco de Notas do Treino"
+            aria-label="Bloco de Notas do Treino"
+            aria-pressed={notepad}
+            onClick={handleToggleNotepad}
+          >
+            <NotebookPen size={18} />
+          </button>
+
           <RegistroActionsMenu
             mode={mode}
             dayLogLength={dayLog.length}
@@ -221,8 +246,14 @@ export function RegistroView() {
             onCronometrar={askToStart}
             onImportar={() => openModal('import-workout')}
             onClonarDia={() => openModal('clone-day')}
-            onToggleConjugar={handleToggleConjugar}
-            onToggleReorder={handleToggleReorder}
+            onToggleConjugar={() => {
+              setNotepad(false);
+              handleToggleConjugar();
+            }}
+            onToggleReorder={() => {
+              setNotepad(false);
+              handleToggleReorder();
+            }}
           />
         </div>
       </div>
@@ -249,14 +280,21 @@ export function RegistroView() {
           {mode === 'conjugar' && <span className="tag" style={{ marginLeft: 8 }}>TOQUE PARA SELECIONAR</span>}
         </div>
 
-        <DayExerciseList
-          dayLog={dayLog}
-          mode={mode}
-          selectedIndices={selectedIndices}
-          onToggleSelect={handleToggleSelect}
-          onUngroup={handleUngroup}
-        />
+        {notepad ? (
+          // key={selectedDay}: trocar de dia remonta e grava o rascunho pendente do dia anterior.
+          <WorkoutNotepad key={selectedDay} day={selectedDay} />
+        ) : (
+          <DayExerciseList
+            dayLog={dayLog}
+            mode={mode}
+            selectedIndices={selectedIndices}
+            onToggleSelect={handleToggleSelect}
+            onUngroup={handleUngroup}
+          />
+        )}
       </div>
+
+      {notepad && <NotepadTimerBar day={selectedDay} />}
 
       {mode === 'conjugar' && (
         <ConjugarBar
