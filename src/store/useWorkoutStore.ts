@@ -44,6 +44,11 @@ let cargaListener: CargaListener | null = null;
 export function setCargaEditadaListener(fn: CargaListener | null): void {
   cargaListener = fn;
 }
+/** Para quem grava o log em lote (setDayLog) mas quer que a edição de peso
+ *  também chegue ao sync Personal ⇄ aluno — ex.: Bloco de Notas do Treino. */
+export function notificarCargaEditada(exId: string, novaCarga: number): void {
+  cargaListener?.(exId, novaCarga);
+}
 
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
