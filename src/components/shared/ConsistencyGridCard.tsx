@@ -80,7 +80,7 @@ export function ConsistencyGridCard() {
           <div className="cgrid-stat-lbl">⚡ Ambos</div>
         </div>
         <div className="cgrid-stat">
-          <div className="cgrid-stat-val" style={{ color: 'var(--orange)' }}>
+          <div className="cgrid-stat-val" style={{ color: 'var(--orange-fg)' }}>
             {data.pctDoMes}%
           </div>
           <div className="cgrid-stat-lbl">🗓️ do Mês</div>

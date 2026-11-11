@@ -53,7 +53,7 @@ export function ConquistasView() {
           <div className="cgrid-stat-lbl">🔒 Bloqueadas</div>
         </div>
         <div className="cgrid-stat">
-          <div className="cgrid-stat-val" style={{ color: 'var(--orange)' }}>
+          <div className="cgrid-stat-val" style={{ color: 'var(--orange-fg)' }}>
             {pct}%
           </div>
           <div className="cgrid-stat-lbl">📊 Progresso</div>

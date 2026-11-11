@@ -33,7 +33,7 @@
 }
 
 .vf-gate-error {
-  color: var(--red) !important;
+  color: var(--red-fg) !important;
 }
 
 .vf-gate-box .btn {

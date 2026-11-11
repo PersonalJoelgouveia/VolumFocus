@@ -181,7 +181,7 @@ export function NovaSemanaView() {
                     <span>
                       {h.treinos} treino{h.treinos === 1 ? '' : 's'} · {h.cardio.totalMin}min cardio
                     </span>
-                    <span style={{ color: 'var(--teal)', fontSize: '0.68rem', fontWeight: 700 }}>
+                    <span style={{ color: 'var(--teal-fg)', fontSize: '0.68rem', fontWeight: 700 }}>
                       {selectedIdx === idx ? 'FECHAR ✕' : 'VER →'}
                     </span>
                   </span>

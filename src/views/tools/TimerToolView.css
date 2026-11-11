@@ -102,16 +102,16 @@
 .itv-seq-time { font-family: var(--font-mono); color: var(--text-3); flex-shrink: 0; }
 
 .itv-seq-done { opacity: 0.55; }
-.itv-seq-done .itv-seq-icon { color: var(--teal); }
+.itv-seq-done .itv-seq-icon { color: var(--teal-fg); }
 .itv-seq-done .itv-seq-name { text-decoration: line-through; }
 
 .itv-seq-atual {
   background: var(--teal-glow);
   border-color: var(--teal-border);
 }
-.itv-seq-atual .itv-seq-icon { color: var(--teal); }
+.itv-seq-atual .itv-seq-icon { color: var(--teal-fg); }
 .itv-seq-atual .itv-seq-name { color: var(--text); font-weight: 700; }
-.itv-seq-atual .itv-seq-time { color: var(--teal); font-weight: 700; }
+.itv-seq-atual .itv-seq-time { color: var(--teal-fg); font-weight: 700; }
 
 .itv-seq-proximo .itv-seq-icon { color: var(--text-2); }
 .itv-seq-proximo .itv-seq-name { color: var(--text); font-weight: 600; }
@@ -201,7 +201,7 @@
   height: 22px;
   border-radius: 50%;
   background: var(--teal-glow);
-  color: var(--teal);
+  color: var(--teal-fg);
   font-size: 0.72rem;
   font-weight: 700;
   display: flex;
@@ -225,7 +225,7 @@
   justify-content: center;
 }
 .itv-stim-icon-btn:disabled { opacity: 0.35; }
-.itv-stim-remove { color: var(--red); border-color: rgba(255, 77, 109, 0.3); }
+.itv-stim-remove { color: var(--red-fg); border-color: rgba(255, 77, 109, 0.3); }
 
 .itv-stim-fields { grid-template-columns: 1fr 1fr; }
 
@@ -291,7 +291,7 @@
   border-radius: var(--rs);
   border: 1px solid var(--teal-border);
   background: var(--teal-glow);
-  color: var(--teal);
+  color: var(--teal-fg);
   font-size: 0.76rem;
   font-weight: 700;
 }

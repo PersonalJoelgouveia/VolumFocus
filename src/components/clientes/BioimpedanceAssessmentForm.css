@@ -36,7 +36,7 @@
   background: var(--bg-3);
   border: 1px solid var(--border);
   border-radius: var(--rs);
-  color: var(--teal);
+  color: var(--teal-fg);
   font-weight: 700;
 }
 
@@ -46,7 +46,7 @@
 .bf-reset-btn {
   font-size: 0.68rem;
   font-weight: 700;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   border-radius: 999px;
@@ -59,7 +59,7 @@
 
 .bf-hint { font-size: 0.68rem; color: var(--text-3); margin-top: 4px; }
 
-.bf-error { font-size: 0.72rem; color: var(--red); margin-top: 6px; }
+.bf-error { font-size: 0.72rem; color: var(--red-fg); margin-top: 6px; }
 .bf-error-summary { text-align: center; margin: 4px 0; }
 
 .bf-summary {
@@ -76,7 +76,7 @@
 
 .bf-summary-row { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.86rem; }
 .bf-summary-row span { color: var(--text-2); }
-.bf-summary-row strong { color: var(--teal); font-size: 0.95rem; }
+.bf-summary-row strong { color: var(--teal-fg); font-size: 0.95rem; }
 
 .bf-actions { display: flex; gap: 8px; margin-top: 16px; }
 .bf-actions .btn { flex: 1; min-height: 44px; }

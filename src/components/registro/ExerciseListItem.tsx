@@ -199,7 +199,7 @@ export function ExerciseListItem({
         </div>
 
         {entry.notes && (
-          <div style={{ fontSize: '0.67rem', color: 'var(--teal)', marginTop: 5, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: '0.67rem', color: 'var(--teal-fg)', marginTop: 5, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontStyle: 'normal' }}>#</span>
             {entry.notes}
           </div>

@@ -60,7 +60,7 @@
   justify-content: center;
   transition: var(--tr);
 }
-.editex-serie-remove:hover { background: var(--red-bg); color: var(--red); }
+.editex-serie-remove:hover { background: var(--red-bg); color: var(--red-fg); }
 
 .editex-add-serie-btn { width: 100%; margin-bottom: 16px; }
 

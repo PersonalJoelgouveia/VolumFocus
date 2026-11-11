@@ -59,7 +59,7 @@
 
 .ex-tag-ag {
   background: rgba(0, 196, 179, 0.12);
-  color: var(--teal);
+  color: var(--teal-fg);
   border: 1px solid var(--teal-border);
 }
 
@@ -71,13 +71,13 @@
 
 .ex-tag-cardio {
   background: var(--red-bg);
-  color: var(--red);
+  color: var(--red-fg);
   border: 1px solid rgba(255, 77, 109, 0.25);
 }
 
 .ex-tag-est {
   background: rgba(255, 150, 64, 0.1);
-  color: var(--orange);
+  color: var(--orange-fg);
   border: 1px solid rgba(255, 150, 64, 0.2);
 }
 
@@ -106,7 +106,7 @@
 }
 
 .btn-play {
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
 }
@@ -126,7 +126,7 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--green);
+  color: var(--green-fg);
   background: rgba(34, 211, 160, 0.1);
   border: 1px solid rgba(34, 211, 160, 0.28);
   border-radius: 5px;
@@ -235,7 +235,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--purple);
+  color: var(--purple-fg);
   background: rgba(167, 139, 250, 0.15);
   border: 1px solid rgba(167, 139, 250, 0.3);
   border-radius: 5px;
@@ -259,7 +259,7 @@
 }
 
 .cj-ungroup-btn:hover {
-  color: var(--red);
+  color: var(--red-fg);
   border-color: rgba(255, 77, 109, 0.3);
 }
 
@@ -304,7 +304,7 @@
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 0.8rem;
-  color: var(--purple);
+  color: var(--purple-fg);
 }
 
 .cj-bar select {

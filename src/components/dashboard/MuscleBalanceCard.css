@@ -48,19 +48,19 @@
 .bal-alert.danger {
   background: var(--red-bg);
   border: 1px solid rgba(255, 77, 109, 0.2);
-  color: var(--red);
+  color: var(--red-fg);
 }
 
 .bal-alert.warn {
   background: var(--orange-bg);
   border: 1px solid rgba(255, 150, 64, 0.2);
-  color: var(--orange);
+  color: var(--orange-fg);
 }
 
 .bal-alert.ok {
   background: var(--green-bg);
   border: 1px solid rgba(34, 211, 160, 0.2);
-  color: var(--green);
+  color: var(--green-fg);
 }
 
 .bal-ratio {

@@ -15,7 +15,7 @@
 .mrs-card-nome { font-size: 0.86rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mrs-badge {
   flex-shrink: 0; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--teal); background: var(--teal-glow); border: 1px solid var(--teal-border);
+  color: var(--teal-fg); background: var(--teal-glow); border: 1px solid var(--teal-border);
   border-radius: 999px; padding: 2px 8px; vertical-align: middle;
 }
 .mrs-pills { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -41,7 +41,7 @@
 .mrs-tab:hover { border-color: var(--border-md); }
 .mrs-tab.active { border-color: var(--teal); background: var(--teal-glow); }
 .mrs-tab-letra { font-family: var(--font-title); font-size: 0.78rem; font-weight: 700; color: var(--text); white-space: nowrap; }
-.mrs-tab.active .mrs-tab-letra { color: var(--teal); }
+.mrs-tab.active .mrs-tab-letra { color: var(--teal-fg); }
 .mrs-tab-dias { font-size: 0.6rem; color: var(--text-3); font-family: var(--font-mono); white-space: nowrap; }
 .mrs-descanso-fim { margin-top: 12px; }
 .mrs-toggle-semana { margin: 12px 0 0; }

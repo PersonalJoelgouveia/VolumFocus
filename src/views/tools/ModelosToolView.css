@@ -41,7 +41,7 @@
 .md-nivel-num { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
 .md-nivel-nome { font-size: 0.88rem; font-weight: 600; color: var(--text); margin: 3px 0 6px; }
 .md-nivel-status { font-size: 0.72rem; color: var(--text-3); }
-.md-nivel-status.filled { color: var(--teal); }
+.md-nivel-status.filled { color: var(--teal-fg); }
 
 .md-nivel-header { margin-bottom: 16px; }
 .md-nivel-badge {
@@ -50,7 +50,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   border-radius: var(--rs);
@@ -98,7 +98,7 @@
   transition: var(--tr);
 }
 .md-fase-tab:hover { border-color: var(--border-md); }
-.md-fase-tab.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+.md-fase-tab.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal-fg); }
 
 .md-cardio-resumo {
   font-size: 0.84rem;
@@ -138,7 +138,7 @@
   height: 30px;
   border-radius: 50%;
   background: var(--teal-glow);
-  color: var(--teal);
+  color: var(--teal-fg);
   display: flex;
   align-items: center;
   justify-content: center;

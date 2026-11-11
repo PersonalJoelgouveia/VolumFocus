@@ -82,13 +82,13 @@
   border-radius: 100px;
   font-size: 0.62rem;
   font-weight: 700;
-  color: var(--purple);
+  color: var(--purple-fg);
   background: var(--purple-bg, rgba(167, 139, 250, 0.12));
 }
 
 .npbar-detail {
   font-size: 0.8rem;
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .npbar-next {
@@ -112,7 +112,7 @@
 }
 
 .npbar-resting .npbar-time {
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .npbar-ringing .npbar-time {

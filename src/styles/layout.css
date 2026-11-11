@@ -41,7 +41,7 @@
   font-size: 0.57rem;
   font-weight: 700;
   letter-spacing: 0.07em;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   border-radius: 5px;

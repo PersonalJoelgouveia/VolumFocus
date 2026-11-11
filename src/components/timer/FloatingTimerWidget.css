@@ -91,7 +91,7 @@
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 1.5rem;
-  color: var(--teal);
+  color: var(--teal-fg);
   letter-spacing: 0.04em;
   text-align: center;
   padding: 2px 0 6px;
@@ -116,7 +116,7 @@
   padding: 4px 0 2px;
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  color: var(--orange);
+  color: var(--orange-fg);
   font-weight: 600;
 }
 
@@ -162,7 +162,7 @@
 .cro-btn.cro-btn-rest {
   border-color: var(--teal-border);
   background: rgba(0, 196, 179, 0.12);
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .cro-btn.cro-btn-rest:hover {
@@ -172,7 +172,7 @@
 .cro-btn.cro-btn-stop {
   border-color: rgba(255, 77, 109, 0.3);
   background: rgba(255, 77, 109, 0.1);
-  color: var(--red);
+  color: var(--red-fg);
 }
 
 .cro-btn.cro-btn-stop:hover {

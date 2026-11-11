@@ -60,7 +60,7 @@
   width: 100%;
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
-  color: var(--teal);
+  color: var(--teal-fg);
   border-radius: var(--rs);
   padding: 10px;
   font-weight: 700;
@@ -107,7 +107,7 @@
 
 .parse-note {
   font-size: 0.67rem;
-  color: var(--teal);
+  color: var(--teal-fg);
   margin-top: 3px;
   font-style: italic;
 }
@@ -125,7 +125,7 @@
 
 .parse-unmatched {
   font-size: 0.7rem;
-  color: var(--orange);
+  color: var(--orange-fg);
   margin-top: 5px;
 }
 

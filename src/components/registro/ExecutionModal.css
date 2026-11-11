@@ -130,7 +130,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   cursor: pointer;
 }
@@ -145,11 +145,11 @@
   justify-content: center;
   font-size: 0.62rem;
   flex-shrink: 0;
-  color: var(--teal);
+  color: var(--teal-fg);
   transition: var(--tr);
 }
 .exec-set-pill.is-active { border-color: var(--teal-border); background: var(--teal-glow); }
-.exec-set-pill.is-active .exec-set-num { color: var(--teal); }
+.exec-set-pill.is-active .exec-set-num { color: var(--teal-fg); }
 .exec-set-pill.is-done { opacity: 0.5; }
 .exec-set-pill.is-done .exec-set-info { text-decoration: line-through; }
 .exec-set-pill.is-done .exec-set-check { background: var(--teal); border-color: var(--teal); color: #000; }
@@ -166,7 +166,7 @@
   color: var(--text-3);
   margin-bottom: 7px;
 }
-.exec-notes-label .exec-notes-hash { font-family: var(--font-mono); color: var(--teal); font-size: 0.85rem; letter-spacing: 0; }
+.exec-notes-label .exec-notes-hash { font-family: var(--font-mono); color: var(--teal-fg); font-size: 0.85rem; letter-spacing: 0; }
 .exec-notes-label .exec-notes-opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-3); }
 .exec-notes-input {
   width: 100%;
@@ -191,7 +191,7 @@
   align-items: center;
   gap: 3px;
   font-size: 0.6rem;
-  color: var(--teal);
+  color: var(--teal-fg);
   opacity: 0;
   transition: opacity 0.25s ease;
   margin-left: auto;
@@ -223,7 +223,7 @@
 }
 .exec-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .exec-ring-time { font-family: var(--font-mono); font-size: 2.05rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-.exec-ring.exec-ring-done .exec-ring-time { color: var(--red); animation: execPulse 0.9s ease-in-out infinite; }
+.exec-ring.exec-ring-done .exec-ring-time { color: var(--red-fg); animation: execPulse 0.9s ease-in-out infinite; }
 .exec-ring-label { font-size: 0.67rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 0 8px; line-height: 1.3; }
 .exec-ring-label.exec-ring-label-sm { font-size: 0.56rem; letter-spacing: 0.02em; }
 @keyframes execPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -252,7 +252,7 @@
   transition: var(--tr);
 }
 .exec-preset-pill:hover { border-color: var(--border-md); color: var(--text-2); }
-.exec-preset-pill.is-active { background: var(--teal-glow); border-color: var(--teal-border); color: var(--teal); }
+.exec-preset-pill.is-active { background: var(--teal-glow); border-color: var(--teal-border); color: var(--teal-fg); }
 
 @media (max-width: 767px) {
   .exec-ring { width: 168px; height: 168px; }

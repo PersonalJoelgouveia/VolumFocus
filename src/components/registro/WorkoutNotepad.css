@@ -39,11 +39,11 @@
 }
 
 .np-status-synced {
-  color: var(--green);
+  color: var(--green-fg);
 }
 
 .np-status-error {
-  color: var(--red);
+  color: var(--red-fg);
 }
 
 .np-issues {
@@ -54,12 +54,12 @@
 }
 
 .np-issues-error {
-  color: var(--red);
+  color: var(--red-fg);
   background: var(--red-bg, rgba(255, 77, 109, 0.08));
 }
 
 .np-issues-warn {
-  color: var(--yellow);
+  color: var(--yellow-fg);
   background: var(--yellow-bg, rgba(251, 191, 36, 0.08));
 }
 
@@ -92,7 +92,7 @@
 }
 
 .np-icon-btn-active {
-  color: var(--teal);
+  color: var(--teal-fg);
   border-color: var(--teal);
   background: var(--teal-bg, rgba(0, 196, 179, 0.1));
 }

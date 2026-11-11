@@ -27,7 +27,7 @@
   white-space: nowrap;
   min-height: 40px;
 }
-.sess-new-btn:hover { border-color: var(--teal-border); color: var(--teal); background: var(--teal-glow); }
+.sess-new-btn:hover { border-color: var(--teal-border); color: var(--teal-fg); background: var(--teal-glow); }
 .sess-new-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .sess-tab {
@@ -51,7 +51,7 @@
 .sess-tab:hover { border-color: var(--border-md); }
 .sess-tab.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--text); box-shadow: 0 0 0 1px var(--teal-border); }
 .sess-tab-own { color: var(--text-3); }
-.sess-tab-own.active { color: var(--teal); }
+.sess-tab-own.active { color: var(--teal-fg); }
 
 .sess-tab-dot { font-size: 0.6rem; line-height: 1; flex-shrink: 0; }
 .sess-tab-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
@@ -70,7 +70,7 @@
   flex-shrink: 0;
   transition: var(--tr);
 }
-.sess-tab-close:hover { background: var(--red-bg); color: var(--red); }
+.sess-tab-close:hover { background: var(--red-bg); color: var(--red-fg); }
 
 .sess-limit-hint { font-size: 0.65rem; color: var(--text-3); white-space: nowrap; flex-shrink: 0; padding-left: 4px; }
 

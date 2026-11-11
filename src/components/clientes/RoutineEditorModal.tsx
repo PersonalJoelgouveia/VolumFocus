@@ -160,7 +160,7 @@ export function RoutineEditorModal({ alunoId, initialDay, onClose }: RoutineEdit
             )}
           </div>
           {ex.notes && (
-            <div style={{ fontSize: '0.65rem', color: 'var(--teal)', marginTop: 4, fontStyle: 'italic' }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--teal-fg)', marginTop: 4, fontStyle: 'italic' }}>
               # {ex.notes}
             </div>
           )}

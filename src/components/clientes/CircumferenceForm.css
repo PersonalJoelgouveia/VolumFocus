@@ -96,6 +96,6 @@
 
 .cf-remove-btn:active { transform: scale(0.9); }
 
-.cf-error { font-size: 0.72rem; color: var(--red); }
+.cf-error { font-size: 0.72rem; color: var(--red-fg); }
 
 .cf-add-btn { min-height: 48px; width: 100%; }

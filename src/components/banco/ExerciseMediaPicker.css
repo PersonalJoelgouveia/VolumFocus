@@ -70,7 +70,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(4, 4, 6, 0.55);
-  color: var(--teal);
+  color: var(--teal-fg);
   font-size: 0.65rem;
   font-weight: 700;
   z-index: 3;
@@ -103,5 +103,5 @@
 .mx-yt-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mx-yt-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #fff; background: rgba(4, 4, 6, 0.28); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); pointer-events: none; }
 .mx-yt-status { font-size: 0.68rem; font-weight: 600; margin-top: 7px; min-height: 1em; }
-.mx-yt-status.mx-yt-ok { color: var(--green); }
-.mx-yt-status.mx-yt-err { color: var(--orange); }
+.mx-yt-status.mx-yt-ok { color: var(--green-fg); }
+.mx-yt-status.mx-yt-err { color: var(--orange-fg); }

@@ -69,7 +69,7 @@
   cursor: pointer;
   text-decoration: underline;
 }
-.user-chip-logout:hover { color: var(--red); }
+.user-chip-logout:hover { color: var(--red-fg); }
 .user-chip-logout:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Badge de status de sync — sucessor de #vf-sync-dot, agora dentro

@@ -22,3 +22,15 @@ html, body, #root {
     scroll-behavior: auto !important;
   }
 }
+
+/* Dígitos de largura fixa: cronômetros, cargas e contadores não "pulam" ao mudar de valor. */
+.exec-ring-time,
+.cro-time,
+.itv-time,
+.exec-set-info,
+.exec-set-edit input,
+.npbar-detail,
+input[inputmode='decimal'],
+input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}

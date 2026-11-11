@@ -61,7 +61,7 @@
 }
 
 .ne-limite-atingido {
-  color: var(--orange);
+  color: var(--orange-fg);
   font-weight: 600;
 }
 
@@ -75,7 +75,7 @@
 /* "Não sincronizado" — aviso, não erro fatal: o conteúdo já está salvo
  * localmente (ver doc do componente), só ainda não subiu pra nuvem. */
 .ne-status-alerta {
-  color: var(--orange);
+  color: var(--orange-fg);
 }
 
 @media (max-width: 640px) {

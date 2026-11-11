@@ -65,7 +65,7 @@
   transition: var(--tr);
 }
 .ns-week-chip .ns-week-chip-dt { font-weight: 700; color: var(--text); }
-.ns-week-chip.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+.ns-week-chip.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal-fg); }
 
 .ns-week-summary {
   margin-top: 14px;

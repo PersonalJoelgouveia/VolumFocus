@@ -13,7 +13,7 @@
   flex-shrink: 0;
   transition: var(--tr);
 }
-.cardio-tooltip:hover { background: var(--teal-glow); color: var(--teal); border-color: var(--teal-border); }
+.cardio-tooltip:hover { background: var(--teal-glow); color: var(--teal-fg); border-color: var(--teal-border); }
 .hidden { display: none !important; }
 
 .cardio-toggle-row { display: flex; gap: 6px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 9px; padding: 4px; }
@@ -28,23 +28,23 @@
   background: linear-gradient(135deg, var(--bg-2) 0%, rgba(0, 196, 179, 0.05) 100%);
   border-color: var(--teal-border) !important;
 }
-.cardio-result-card .card-title { color: var(--teal); }
+.cardio-result-card .card-title { color: var(--teal-fg); }
 .cardio-vo2-display { display: flex; align-items: baseline; gap: 6px; margin: 12px 0; }
 .cardio-vo2-value { font-family: var(--font-title); font-size: 2.8rem; font-weight: 800; color: #fff; line-height: 1; transition: var(--tr); }
 .cardio-vo2-unit { font-size: 0.85rem; color: var(--text-2); font-weight: 700; }
 .cardio-level-badge { display: inline-block; padding: 4px 10px; border-radius: var(--rs); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; transition: var(--tr); }
-.cardio-badge-fraco { background: var(--red-bg); color: var(--red); }
-.cardio-badge-abaixo { background: var(--orange-bg); color: var(--orange); }
-.cardio-badge-medio { background: var(--yellow-bg); color: var(--yellow); }
-.cardio-badge-bom { background: var(--teal-glow); color: var(--teal); }
-.cardio-badge-excelente { background: rgba(167, 139, 250, 0.12); color: var(--purple); }
+.cardio-badge-fraco { background: var(--red-bg); color: var(--red-fg); }
+.cardio-badge-abaixo { background: var(--orange-bg); color: var(--orange-fg); }
+.cardio-badge-medio { background: var(--yellow-bg); color: var(--yellow-fg); }
+.cardio-badge-bom { background: var(--teal-glow); color: var(--teal-fg); }
+.cardio-badge-excelente { background: rgba(167, 139, 250, 0.12); color: var(--purple-fg); }
 
 .cardio-sub-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 .cardio-sub-stat { background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--rs); padding: 10px 12px; }
 .cardio-sub-stat-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 4px; }
 .cardio-sub-stat-value { font-family: var(--font-mono); font-size: 0.92rem; font-weight: 700; color: var(--text); }
 .cardio-formula-note { font-size: 0.73rem; color: var(--text-3); line-height: 1.55; margin-top: 14px; }
-.cardio-formula-code { color: var(--purple); font-family: var(--font-mono); font-size: 0.82rem; }
+.cardio-formula-code { color: var(--purple-fg); font-family: var(--font-mono); font-size: 0.82rem; }
 
 .cardio-zones-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
 .cardio-zones-table th { text-align: left; padding: 8px 12px; font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
@@ -57,10 +57,10 @@
 .cardio-zone-bpm { font-family: var(--font-mono); font-weight: 700; color: #fff; position: relative; z-index: 1; }
 .cardio-zone-pct { font-family: var(--font-mono); font-size: 0.74rem; position: relative; z-index: 1; }
 .cardio-z1 { color: #4d9fff; } .cardio-z1-bg { background: #4d9fff; }
-.cardio-z2 { color: var(--teal); } .cardio-z2-bg { background: var(--teal); }
-.cardio-z3 { color: var(--green); } .cardio-z3-bg { background: var(--green); }
-.cardio-z4 { color: var(--orange); } .cardio-z4-bg { background: var(--orange); }
-.cardio-z5 { color: var(--red); } .cardio-z5-bg { background: var(--red); }
+.cardio-z2 { color: var(--teal-fg); } .cardio-z2-bg { background: var(--teal); }
+.cardio-z3 { color: var(--green-fg); } .cardio-z3-bg { background: var(--green); }
+.cardio-z4 { color: var(--orange-fg); } .cardio-z4-bg { background: var(--orange); }
+.cardio-z5 { color: var(--red-fg); } .cardio-z5-bg { background: var(--red); }
 
 /* Campos de formulário escopados aqui (mesmo motivo do bk-body em Banco:
    não depender de um base global de .form-group/label/input incerto). */
@@ -133,7 +133,7 @@
   padding: 2px 7px; border-radius: 99px; white-space: nowrap; line-height: 1.4;
 }
 .cardio-source-manual { background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border); }
-.cardio-source-auto { background: rgba(0, 196, 179, 0.14); color: var(--teal); border: 1px solid var(--teal-border); }
+.cardio-source-auto { background: rgba(0, 196, 179, 0.14); color: var(--teal-fg); border: 1px solid var(--teal-border); }
 .cardio-wearable-note { margin-top: 10px; font-size: 0.68rem; color: var(--text-3); text-align: center; }
 
 /* ── Mini tempo-em-zona (por sessão wearable, quando há FC amostrada + teste salvo) ── */
@@ -150,8 +150,8 @@
 .cardio-test-toggle-btn { width: 100%; justify-content: center; }
 .cooper-timer-wrap { text-align: center; padding: 10px 0 4px; }
 .cooper-timer-display { font-family: var(--font-mono); font-size: 3rem; font-weight: 800; color: var(--text); letter-spacing: -0.02em; margin-bottom: 4px; }
-.cooper-timer-display.cooper-timer-warn { color: var(--orange); }
-.cooper-timer-display.cooper-timer-done { color: var(--green); }
+.cooper-timer-display.cooper-timer-warn { color: var(--orange-fg); }
+.cooper-timer-display.cooper-timer-done { color: var(--green-fg); }
 .cooper-timer-hint { font-size: 0.75rem; color: var(--text-3); margin-bottom: 18px; }
 .cooper-timer-controls { display: flex; gap: 8px; justify-content: center; }
 .cooper-distance-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
@@ -160,8 +160,8 @@
 .cardio-hist-delta { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: var(--r); background: var(--teal-glow); border: 1px solid var(--teal-border); margin-bottom: 14px; }
 .cardio-hist-delta-icon { font-size: 1.4rem; flex-shrink: 0; }
 .cardio-hist-delta-text { font-size: 0.82rem; color: var(--text-2); }
-.cardio-hist-delta-value { font-family: var(--font-mono); font-weight: 800; color: var(--teal); }
-.cardio-hist-delta-value.cardio-hist-delta-neg { color: var(--red); }
+.cardio-hist-delta-value { font-family: var(--font-mono); font-weight: 800; color: var(--teal-fg); }
+.cardio-hist-delta-value.cardio-hist-delta-neg { color: var(--red-fg); }
 .cardio-hist-list { display: flex; flex-direction: column; gap: 8px; }
 .cardio-hist-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 13px; border-radius: var(--rs); background: var(--bg-3); border: 1px solid var(--border); font-size: 0.78rem; }
 .cardio-hist-item-left { display: flex; align-items: center; gap: 9px; min-width: 0; }

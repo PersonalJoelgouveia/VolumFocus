@@ -44,7 +44,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   padding: 3px 8px;
@@ -117,7 +117,7 @@
 .at-badge--status-revisada {
   background: none;
   border: 1px solid var(--teal);
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .at-badge--status-rascunho,
@@ -142,17 +142,17 @@
 
 .at-rcq-badge--baixo {
   background: var(--green-bg);
-  color: var(--green);
+  color: var(--green-fg);
 }
 
 .at-rcq-badge--moderado {
   background: var(--yellow-bg);
-  color: var(--yellow);
+  color: var(--yellow-fg);
 }
 
 .at-rcq-badge--alto {
   background: var(--red-bg);
-  color: var(--red);
+  color: var(--red-fg);
 }
 
 .at-doughnut-wrap {

@@ -70,7 +70,7 @@
 .met-activate-btn {
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
-  color: var(--teal);
+  color: var(--teal-fg);
   border-radius: var(--rs);
   padding: 6px 12px;
   font-size: 0.75rem;
@@ -81,7 +81,7 @@
   font-family: var(--font-mono);
   font-size: 1.6rem;
   font-weight: 700;
-  color: var(--orange);
+  color: var(--orange-fg);
 }
 
 .met-live-unit,

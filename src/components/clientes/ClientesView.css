@@ -147,7 +147,7 @@
 .cli-day-btn .cli-ds { font-size: 0.54rem; color: var(--text-3); font-family: var(--font-mono); }
 .cli-day-btn:hover { border-color: var(--border-md); }
 .cli-day-btn.active { border-color: var(--teal); background: var(--teal-glow); }
-.cli-day-btn.active .cli-dl { color: var(--teal); }
+.cli-day-btn.active .cli-dl { color: var(--teal-fg); }
 
 .cli-day-type { font-size: 0.78rem; font-weight: 700; color: var(--text-2); margin-bottom: 10px; }
 
@@ -176,7 +176,7 @@
   color: var(--text-3);
   white-space: nowrap;
 }
-.cli-ex-chip-sug { color: var(--teal); border-color: var(--teal-border); background: var(--teal-glow); }
+.cli-ex-chip-sug { color: var(--teal-fg); border-color: var(--teal-border); background: var(--teal-glow); }
 .cli-rest-day { padding: 34px 15px; text-align: center; color: var(--text-3); font-size: 0.82rem; }
 
 /* ── Editor de rotina (cli-ed) ── */
@@ -294,6 +294,6 @@
 .cli-rep-panel { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--rs); padding: 12px; margin-bottom: 10px; }
 .cli-rep-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
 .cli-rep-chip { min-width: 48px; min-height: 40px; cursor: pointer; font: inherit; font-size: 0.74rem; font-weight: 700; color: var(--text-2); background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--rs); }
-.cli-rep-chip.on { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+.cli-rep-chip.on { border-color: var(--teal); background: var(--teal-glow); color: var(--teal-fg); }
 .cli-rep-chip:disabled { opacity: 0.4; cursor: default; }
 .cli-ed-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }

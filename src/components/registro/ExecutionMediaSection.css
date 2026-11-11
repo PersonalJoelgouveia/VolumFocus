@@ -16,7 +16,7 @@
   min-height: 44px;
 }
 .exec-media-toggle:hover { border-color: var(--border-md); }
-.exec-media-toggle-chevron { transition: transform 0.2s ease; color: var(--teal); }
+.exec-media-toggle-chevron { transition: transform 0.2s ease; color: var(--teal-fg); }
 .exec-media-toggle.is-open .exec-media-toggle-chevron { transform: rotate(180deg); }
 
 .exec-media-body { margin-bottom: 16px; animation: vfade 0.18s ease; }

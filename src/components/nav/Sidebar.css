@@ -131,7 +131,7 @@
   background: var(--teal-glow);
   border-color: var(--teal-border);
   box-shadow: 0 0 12px rgba(0, 196, 179, 0.12);
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .nav-item.active::before {
