@@ -274,3 +274,18 @@
   transform: translate(-50%, -50%);
 }
 .exec-set-save-btn { position: relative; }
+
+/* Atalho para o próximo exercício, logo que o atual termina. */
+.exec-next-ex { display: flex; }
+.exec-next-ex-btn {
+  flex: 1;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.2;
+}
+.exec-next-ex-label { font-weight: 700; font-size: 0.95rem; }
+.exec-next-ex-name { font-size: 0.75rem; opacity: 0.85; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
