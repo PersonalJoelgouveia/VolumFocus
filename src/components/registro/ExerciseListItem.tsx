@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Camera, Clapperboard, Pencil, Play, Trash2 } from 'lucide-react';
+import { Camera, Clapperboard, Flame, Heart, Pencil, Play, Timer, Trash2 } from 'lucide-react';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import type { WorkoutLogEntry, StrengthLogEntry } from '../../types/workout';
 import { isCardioLogEntry } from '../../types/workout';
@@ -127,7 +127,10 @@ export function ExerciseListItem({
 
         <div className="ex-tags">
           {isCardio ? (
-            <span className="ex-tag ex-tag-cardio">❤️ Cardio</span>
+            <span className="ex-tag ex-tag-cardio">
+              <Heart size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 4 }} />
+              Cardio
+            </span>
           ) : (
             <>
               <span className="ex-tag ex-tag-ag">{exercise.agonist}</span>
@@ -143,8 +146,14 @@ export function ExerciseListItem({
         <div className="serie-chips">
           {isCardio ? (
             <>
-              <span className="cd-chip cd-chip-dur">⏱️ {entry.duration || 0} min</span>
-              <span className="cd-chip cd-chip-int">🔥 PSE {entry.intensity ?? '-'}/10</span>
+              <span className="cd-chip cd-chip-dur">
+                  <Timer size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 3 }} />
+                  {entry.duration || 0} min
+                </span>
+              <span className="cd-chip cd-chip-int">
+                  <Flame size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 3 }} />
+                  PSE {entry.intensity ?? '-'}/10
+                </span>
               {(() => {
                 const zone = CARDIO_ZONES.find((z) => z.id === entry.hrZone) ?? CARDIO_ZONES[2];
                 return (

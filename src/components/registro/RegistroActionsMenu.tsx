@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { ArrowDownUp, Check, ClipboardCopy, Download, Link2, Timer, X } from 'lucide-react';
 import type { ListMode } from './ExerciseListItem';
 import './RegistroActionsMenu.css';
 
@@ -44,27 +46,30 @@ export function RegistroActionsMenu({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [open]);
 
-  const items: { key: string; label: string; onClick: () => void; disabled?: boolean }[] = [];
+  const ic = (I: typeof Link2) => <I size={16} aria-hidden="true" />;
+  const items: { key: string; icon: ReactNode; label: string; onClick: () => void; disabled?: boolean }[] = [];
 
   if (mode !== 'reorder' && freeCount >= 2) {
     items.push({
       key: 'conjugar',
-      label: mode === 'conjugar' ? '× Cancelar Conjugar' : '🔗 Conjugar',
+      icon: mode === 'conjugar' ? ic(X) : ic(Link2),
+      label: mode === 'conjugar' ? 'Cancelar Conjugar' : 'Conjugar',
       onClick: onToggleConjugar,
     });
   }
   if (mode !== 'conjugar' && dayLogLength > 1) {
     items.push({
       key: 'reordenar',
-      label: mode === 'reorder' ? '✓ Concluir Reordenação' : '↕️ Reordenar',
+      icon: mode === 'reorder' ? ic(Check) : ic(ArrowDownUp),
+      label: mode === 'reorder' ? 'Concluir Reordenação' : 'Reordenar',
       onClick: onToggleReorder,
     });
   }
   if (mode === 'normal') {
-    items.push({ key: 'clonar', label: '📋 Clonar Dia', onClick: onClonarDia, disabled: dayLogLength === 0 });
-    items.push({ key: 'importar', label: '📥 Importar Treino', onClick: onImportar });
+    items.push({ key: 'clonar', icon: ic(ClipboardCopy), label: 'Clonar Dia', onClick: onClonarDia, disabled: dayLogLength === 0 });
+    items.push({ key: 'importar', icon: ic(Download), label: 'Importar Treino', onClick: onImportar });
     if (!isTimerActive) {
-      items.push({ key: 'cronometrar', label: '⏱️ Cronometrar Treino', onClick: onCronometrar });
+      items.push({ key: 'cronometrar', icon: ic(Timer), label: 'Cronometrar Treino', onClick: onCronometrar });
     }
   }
 
@@ -103,7 +108,8 @@ export function RegistroActionsMenu({
               disabled={item.disabled}
               onClick={() => handleSelect(item.onClick)}
             >
-              {item.label}
+              {item.icon}
+              <span>{item.label}</span>
             </button>
           ))}
         </div>

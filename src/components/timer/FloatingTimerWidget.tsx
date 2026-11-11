@@ -1,3 +1,4 @@
+import { Flame, Pause, Play, Square, Timer } from 'lucide-react';
 import { useTimerStore } from '../../store/useTimerStore';
 import { useCalorieStore } from '../../store/useCalorieStore';
 import { useUIStore } from '../../store/useUIStore';
@@ -59,7 +60,7 @@ export function FloatingTimerWidget() {
     const log = getDayLog(selectedDay);
     if (!log.length) {
       startRest(90);
-      showToast('⏱️ Descanso de 90s iniciado.');
+      showToast('<Timer size={15} aria-hidden="true" /> Descanso de 90s iniciado.');
       return;
     }
 
@@ -99,7 +100,7 @@ export function FloatingTimerWidget() {
           <div className="cro-panel-label">Tempo de Treino</div>
           {kcal !== null && (
             <div className="cro-kcal-row">
-              <span className="cro-kcal-ico">🔥</span>
+              <span className="cro-kcal-ico"><Flame size={14} aria-hidden="true" /></span>
               <span>{kcal.toFixed(1)}</span>
               <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 500 }}>kcal</span>
             </div>
@@ -107,15 +108,23 @@ export function FloatingTimerWidget() {
           <div className="cro-sep" />
           <div className="cro-actions">
             <button className="cro-btn cro-btn-rest" onClick={handleRest}>
-              ⏱️ Descanso
+              <Timer size={15} aria-hidden="true" /> Descanso
             </button>
             <button className="cro-btn" onClick={pauseResume}>
-              {isRunning ? '⏸ Pausar' : '▶ Retomar'}
+              {isRunning ? (
+                <>
+                  <Pause size={15} aria-hidden="true" /> Pausar
+                </>
+              ) : (
+                <>
+                  <Play size={15} aria-hidden="true" /> Retomar
+                </>
+              )}
             </button>
           </div>
           <div className="cro-actions" style={{ marginTop: 0 }}>
             <button className="cro-btn cro-btn-stop" style={{ gridColumn: 'span 2' }} onClick={handleStop}>
-              ⏹ Encerrar Treino
+              <Square size={14} aria-hidden="true" /> Encerrar Treino
             </button>
           </div>
         </div>

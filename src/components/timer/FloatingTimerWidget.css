@@ -178,3 +178,6 @@
 .cro-btn.cro-btn-stop:hover {
   background: rgba(255, 77, 109, 0.2);
 }
+
+.cro-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.cro-kcal-ico { display: inline-flex; color: var(--orange); }

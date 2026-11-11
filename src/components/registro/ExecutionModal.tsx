@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Heart } from 'lucide-react';
 import { useExecStore } from '../../store/useExecStore';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
@@ -237,7 +238,10 @@ export function ExecutionModal() {
           <div className="exec-ex-name">{exercise.name}</div>
           <div className="exec-ex-tags">
             {isCardio ? (
-              <span className="ex-tag ex-tag-cardio">❤️ Cardio</span>
+              <span className="ex-tag ex-tag-cardio">
+                <Heart size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 4 }} />
+                Cardio
+              </span>
             ) : (
               <>
                 <span className="ex-tag ex-tag-ag">{exercise.agonist}</span>

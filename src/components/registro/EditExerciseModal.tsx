@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Check, Pencil, Save, Trash2, X } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -131,7 +132,10 @@ export function EditExerciseModal({ entry, exercise, onUpdate, onRemoveExercise,
     <div className="modal-backdrop" onClick={onClose}>
       <div className="cli-detail-panel editex-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>✏️ {exercise.name}</h2>
+          <h2>
+            <Pencil size={18} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 8 }} />
+            {exercise.name}
+          </h2>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
             ×
           </button>
@@ -193,9 +197,10 @@ export function EditExerciseModal({ entry, exercise, onUpdate, onRemoveExercise,
                 className={`editex-serie-check${s.done ? ' checked' : ''}`}
                 onClick={() => updateSerie(i, { done: !s.done })}
                 title={s.done ? 'Marcar como não feita' : 'Marcar como feita'}
-                aria-label="Marcar série como feita"
+                aria-label={`Série ${i + 1}: ${s.done ? 'feita' : 'não feita'}`}
+                aria-pressed={!!s.done}
               >
-                ✓
+                <Check size={14} aria-hidden="true" />
               </button>
               <div className="editex-serie-field">
                 <input
@@ -222,8 +227,8 @@ export function EditExerciseModal({ entry, exercise, onUpdate, onRemoveExercise,
                 <span>kg</span>
               </div>
               {isPersonalMode && (
-                <button type="button" className="editex-serie-remove" onClick={() => removeSerie(i)} title="Remover série" aria-label="Remover série">
-                  ✕
+                <button type="button" className="editex-serie-remove" onClick={() => removeSerie(i)} title="Remover série" aria-label={`Remover série ${i + 1}`}>
+                  <X size={14} aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -239,13 +244,15 @@ export function EditExerciseModal({ entry, exercise, onUpdate, onRemoveExercise,
             Cancelar
           </button>
           <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSalvar}>
-            💾 Salvar Alterações
+            <Save size={16} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 6 }} />
+            Salvar Alterações
           </button>
         </div>
 
         {isPersonalMode && (
           <button className="btn btn-danger editex-danger-btn" onClick={handleRemoveExercicio}>
-            🗑️ Remover Exercício do Dia
+            <Trash2 size={16} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 6 }} />
+            Remover Exercício do Dia
           </button>
         )}
       </div>

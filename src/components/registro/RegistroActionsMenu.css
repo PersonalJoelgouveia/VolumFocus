@@ -64,3 +64,6 @@
   transform: translate(-50%, -50%);
 }
 .ram-toggle { position: relative; }
+
+.ram-item { display: flex; align-items: center; gap: 10px; }
+.ram-item svg { flex-shrink: 0; }
