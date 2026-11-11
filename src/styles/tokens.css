@@ -55,6 +55,14 @@
   /* Transição padrão — migrado 1:1 do :root do monolito */
   --tr: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
+  /* Escala tipográfica (menor texto legível = 0,7rem ~ 11px) */
+  --fs-2xs: 0.7rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8rem;
+  --fs-md: 0.875rem;
+  --fs-lg: 0.95rem;
+  --fs-base: 1rem;
+
   /* Fontes */
   --font-body: 'Plus Jakarta Sans', sans-serif;
   --font-title: 'Syne', sans-serif;

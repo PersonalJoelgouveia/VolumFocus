@@ -20,7 +20,7 @@
   background: transparent;
   color: var(--text-2);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
   transition: var(--tr);
@@ -41,7 +41,7 @@
   background: var(--bg-2);
   color: var(--text-2);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   transition: var(--tr);
@@ -53,7 +53,7 @@
 .sess-tab-own { color: var(--text-3); }
 .sess-tab-own.active { color: var(--teal-fg); }
 
-.sess-tab-dot { font-size: 0.6rem; line-height: 1; flex-shrink: 0; }
+.sess-tab-dot { font-size: var(--fs-2xs); line-height: 1; flex-shrink: 0; }
 .sess-tab-name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
 .sess-tab-close {
   display: flex;
@@ -65,14 +65,14 @@
   border: none;
   background: transparent;
   color: var(--text-3);
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   cursor: pointer;
   flex-shrink: 0;
   transition: var(--tr);
 }
 .sess-tab-close:hover { background: var(--red-bg); color: var(--red-fg); }
 
-.sess-limit-hint { font-size: 0.65rem; color: var(--text-3); white-space: nowrap; flex-shrink: 0; padding-left: 4px; }
+.sess-limit-hint { font-size: var(--fs-2xs); color: var(--text-3); white-space: nowrap; flex-shrink: 0; padding-left: 4px; }
 
 /* ── Modal de escolha de aluno ── */
 .sess-picker-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
@@ -91,4 +91,4 @@
 }
 .sess-picker-item:hover { border-color: var(--teal-border); background: var(--teal-glow); }
 .sess-picker-item:disabled { opacity: 0.4; cursor: not-allowed; }
-.sess-picker-empty { text-align: center; padding: 24px 10px; color: var(--text-3); font-size: 0.82rem; }
+.sess-picker-empty { text-align: center; padding: 24px 10px; color: var(--text-3); font-size: var(--fs-sm); }

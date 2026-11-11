@@ -67,7 +67,7 @@
 .cro-time {
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
   color: var(--text);
   letter-spacing: 0.04em;
   min-width: 62px;
@@ -98,7 +98,7 @@
 }
 
 .cro-panel-label {
-  font-size: 0.67rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   text-align: center;
   margin-top: -6px;
@@ -115,13 +115,13 @@
   gap: 6px;
   padding: 4px 0 2px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--orange-fg);
   font-weight: 600;
 }
 
 .cro-kcal-ico {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
 }
 
 .cro-sep {
@@ -146,7 +146,7 @@
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-2);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-family: var(--font-title);
   font-weight: 600;
   cursor: pointer;

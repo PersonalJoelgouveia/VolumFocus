@@ -21,7 +21,7 @@
   border: 1px solid var(--teal-border);
   border-radius: var(--rs);
   padding: 11px 19px;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: #fff;
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
@@ -44,7 +44,7 @@
 
 .toast-icon {
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-lg);
 }
 
 .toast-success {

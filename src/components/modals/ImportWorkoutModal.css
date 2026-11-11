@@ -51,7 +51,7 @@
   color: var(--text);
   padding: 10px 12px;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   resize: vertical;
   margin-bottom: 10px;
 }
@@ -64,7 +64,7 @@
   border-radius: var(--rs);
   padding: 10px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   margin-top: 8px;
 }
 
@@ -75,7 +75,7 @@
 .import-empty {
   padding: 14px;
   color: var(--text-3);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
 }
 
 .parse-item {
@@ -95,18 +95,18 @@
 
 .parse-name {
   font-weight: 600;
-  font-size: 0.84rem;
+  font-size: var(--fs-md);
 }
 
 .parse-detail {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   color: var(--text-2);
   margin-top: 2px;
   font-family: var(--font-mono);
 }
 
 .parse-note {
-  font-size: 0.67rem;
+  font-size: var(--fs-2xs);
   color: var(--teal-fg);
   margin-top: 3px;
   font-style: italic;
@@ -117,14 +117,14 @@
 }
 
 .parse-matched {
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   margin-top: 3px;
 }
 
 .parse-unmatched {
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   color: var(--orange-fg);
   margin-top: 5px;
 }
@@ -133,7 +133,7 @@
   display: inline-block;
   width: auto;
   padding: 3px 8px;
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   border-radius: 6px;
   margin-left: 5px;
   background: var(--bg-3);
@@ -146,12 +146,12 @@
   align-items: center;
   gap: 6px;
   margin-top: 10px;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-2);
 }
 
 .pse-num {
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }

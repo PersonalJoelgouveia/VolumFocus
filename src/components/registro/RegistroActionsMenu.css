@@ -45,7 +45,7 @@
   border-bottom: 1px solid var(--border);
   background: none;
   color: var(--text);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   min-height: 44px;
 }
 

@@ -26,7 +26,7 @@
 }
 
 .vf-gate-box p {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   color: var(--text-3);
   line-height: 1.5;
   margin: 0 0 18px;
@@ -83,7 +83,7 @@
   background: transparent;
   color: var(--text-3);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   cursor: pointer;
 }
 
@@ -112,11 +112,11 @@
 }
 .vf-resp-card h3 {
   margin: 0 0 4px;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 .vf-resp-sub {
   margin: 4px 0;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--text-3);
 }
 .vf-resp-fin {
@@ -133,12 +133,12 @@
 }
 .vf-resp-texto {
   margin: 6px 0;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: var(--text-2);
 }
 .vf-resp-badge {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -161,7 +161,7 @@
   top: 0;
   z-index: 1000;
   padding: 8px 16px;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   line-height: 1.4;
   background: var(--bg-2);
   color: var(--text);

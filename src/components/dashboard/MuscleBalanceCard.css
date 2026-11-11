@@ -6,7 +6,7 @@
 }
 
 .bal-name {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   width: 140px;
   flex-shrink: 0;
@@ -28,7 +28,7 @@
 
 .bal-count {
   font-family: var(--font-mono);
-  font-size: 0.67rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   min-width: 28px;
   text-align: right;
@@ -40,7 +40,7 @@
   gap: 8px;
   padding: 10px 13px;
   border-radius: var(--rs);
-  font-size: 0.77rem;
+  font-size: var(--fs-sm);
   line-height: 1.5;
   margin-bottom: 8px;
 }
@@ -73,5 +73,5 @@
   margin-top: 10px;
   margin-bottom: 16px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
 }

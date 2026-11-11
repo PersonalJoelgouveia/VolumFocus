@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 0.86rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text);
 }
@@ -21,7 +21,7 @@
   border: 1px solid var(--border-md);
   background: var(--bg-2);
   color: var(--text-2);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
   transition: var(--tr);
@@ -30,7 +30,7 @@
 .pcv-tab.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal-fg); }
 .pcv-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
-.pcv-empty { font-size: 0.82rem; color: var(--text-3); text-align: center; padding: 24px 8px; }
+.pcv-empty { font-size: var(--fs-sm); color: var(--text-3); text-align: center; padding: 24px 8px; }
 
 .pcv-grid { display: flex; flex-direction: column; gap: 14px; }
 
@@ -52,7 +52,7 @@
   padding: 10px;
 }
 
-.pcv-par-titulo { font-size: 0.78rem; font-weight: 700; color: var(--text-2); text-align: center; margin-bottom: 8px; }
+.pcv-par-titulo { font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); text-align: center; margin-bottom: 8px; }
 
 /* Desktop: 2 colunas (Anterior | Atual) lado a lado. Mobile: empilhado. */
 .pcv-par-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -80,10 +80,10 @@
   background: var(--bg-3);
   border-radius: var(--rs);
   color: var(--text-3);
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
 }
 
-.pcv-foto-legenda { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
+.pcv-foto-legenda { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
 
 .pcv-lightbox {
   position: fixed;

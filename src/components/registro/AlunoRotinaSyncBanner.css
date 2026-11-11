@@ -10,7 +10,7 @@
   animation: vfade 0.2s ease;
 }
 .rotina-sync-icon { font-size: 1.4rem; flex-shrink: 0; }
-.rotina-sync-text { flex: 1; min-width: 0; font-size: 0.8rem; color: var(--text-2); line-height: 1.4; }
+.rotina-sync-text { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--text-2); line-height: 1.4; }
 .rotina-sync-text strong { color: var(--text); }
 .rotina-sync-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
 @media (max-width: 480px) {

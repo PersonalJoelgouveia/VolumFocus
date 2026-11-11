@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -26,7 +26,7 @@
 }
 
 .sf-auto-tag {
-  font-size: 0.6rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: none;
   letter-spacing: 0;
@@ -48,7 +48,7 @@
   color: var(--text-2);
   font-family: inherit;
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: var(--fs-md);
   cursor: pointer;
   transition: var(--tr);
 }
@@ -67,7 +67,7 @@
 
 .sf-site-card--erro { border-color: rgba(255, 77, 109, 0.4); }
 
-.sf-site-name { font-size: 0.86rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.sf-site-name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin-bottom: 8px; }
 
 .sf-site-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
@@ -83,9 +83,9 @@
   color: var(--text);
 }
 
-.sf-site-media { font-size: 0.76rem; color: var(--text-3); margin-top: 8px; }
+.sf-site-media { font-size: var(--fs-xs); color: var(--text-3); margin-top: 8px; }
 
-.sf-error { font-size: 0.72rem; color: var(--red-fg); margin-top: 6px; }
+.sf-error { font-size: var(--fs-xs); color: var(--red-fg); margin-top: 6px; }
 .sf-error-summary { text-align: center; margin: 4px 0; }
 
 .sf-result {
@@ -100,16 +100,16 @@
   margin-top: 16px;
 }
 
-.sf-result-row { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.86rem; }
+.sf-result-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--fs-md); }
 .sf-result-row span { color: var(--text-2); }
-.sf-result-row strong { color: var(--teal-fg); font-size: 0.95rem; }
+.sf-result-row strong { color: var(--teal-fg); font-size: var(--fs-lg); }
 
 .sf-actions { display: flex; gap: 8px; margin-top: 16px; }
 .sf-actions .btn { flex: 1; min-height: 44px; }
 
 .sf-fotos { margin-top: 16px; }
 .sf-fotos-title {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;

@@ -24,7 +24,7 @@
   color: var(--text-2);
   font-family: inherit;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   white-space: nowrap;
   cursor: pointer;
   transition: var(--tr);
@@ -59,8 +59,8 @@
 .sh-overview-card:hover { border-color: var(--teal-border); background: var(--teal-glow); }
 .sh-overview-card:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 .sh-overview-ico { font-size: 1.6rem; }
-.sh-overview-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
-.sh-overview-desc { font-size: 0.78rem; color: var(--text-3); line-height: 1.4; }
+.sh-overview-title { font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
+.sh-overview-desc { font-size: var(--fs-sm); color: var(--text-3); line-height: 1.4; }
 
 /* ---------- Stub (Exames Médicos) / redirecionamento (PT em Avaliação Física) ---------- */
 .sh-stub-card,
@@ -79,8 +79,8 @@
 }
 
 .sh-stub-ico, .sh-redirect-ico { font-size: 1.8rem; }
-.sh-stub-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
-.sh-stub-txt, .sh-redirect-txt { font-size: 0.85rem; color: var(--text-2); }
+.sh-stub-title { font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
+.sh-stub-txt, .sh-redirect-txt { font-size: var(--fs-md); color: var(--text-2); }
 .sh-redirect-card .btn { margin-top: 4px; }
 
 /* ---------- Avaliação Física embutida (não-modal) ----------
@@ -138,14 +138,14 @@
 }
 
 .sd-conn-info { flex: 1; min-width: 0; }
-.sd-conn-platform { font-size: 0.92rem; font-weight: 700; color: var(--text); }
-.sd-conn-sync { font-size: 0.72rem; color: var(--text-3); margin-top: 2px; }
+.sd-conn-platform { font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
+.sd-conn-sync { font-size: var(--fs-xs); color: var(--text-3); margin-top: 2px; }
 
 .sd-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -171,7 +171,7 @@
   color: var(--teal-fg);
   font-family: inherit;
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: var(--fs-md);
   cursor: pointer;
   transition: var(--tr);
   display: flex;
@@ -197,7 +197,7 @@
 
 /* ---------- Dashboard de métricas ---------- */
 .sd-section-title {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-3);
@@ -238,10 +238,10 @@
 }
 
 .sd-neutral-ico { font-size: 1.8rem; }
-.sd-neutral-txt { font-size: 0.85rem; color: var(--text-2); max-width: 320px; }
+.sd-neutral-txt { font-size: var(--fs-md); color: var(--text-2); max-width: 320px; }
 .sd-neutral-card.sd-neutral-error .sd-neutral-txt { color: var(--red-fg); }
 
-.sd-metric-footer { font-size: 0.68rem; color: var(--text-3); margin-top: 4px; }
+.sd-metric-footer { font-size: var(--fs-2xs); color: var(--text-3); margin-top: 4px; }
 
 @keyframes sd-pulse {
   0%, 100% { opacity: 1; }
