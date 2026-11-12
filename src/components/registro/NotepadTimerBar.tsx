@@ -176,7 +176,7 @@ export function NotepadTimerBar({ day }: NotepadTimerBarProps) {
   const label = allDone
     ? '🏆 Treino do dia concluído'
     : timer.ringing
-      ? '⏰ Descanso acabou — hora da próxima série!'
+      ? '⏰ Descanso finalizado — hora da próxima série!'
       : resting
         ? 'Descansando…'
         : 'Em execução';

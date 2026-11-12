@@ -9,7 +9,7 @@ interface RegistroActionsMenuProps {
   dayLogLength: number;
   freeCount: number;
   isTimerActive: boolean;
-  onCronometrar: () => void;
+  onIniciarTreino: () => void;
   onImportar: () => void;
   onClonarDia: () => void;
   onToggleConjugar: () => void;
@@ -18,7 +18,7 @@ interface RegistroActionsMenuProps {
 
 /**
  * Menu "Ações do Treino" — sucessor dos 5 botões individuais (Conjugar,
- * Reordenar, Clonar Dia, Importar Treino, Cronometrar Treino) que antes
+ * Reordenar, Clonar Dia, Importar Treino, Iniciar Treino) que antes
  * ficavam soltos no cabeçalho de Treinos > Semana Atual. Agrupados atrás
  * de um único botão hambúrguer para reduzir ruído visual no mobile —
  * mesmas condições de visibilidade/rótulo de antes, só reorganizadas.
@@ -28,7 +28,7 @@ export function RegistroActionsMenu({
   dayLogLength,
   freeCount,
   isTimerActive,
-  onCronometrar,
+  onIniciarTreino,
   onImportar,
   onClonarDia,
   onToggleConjugar,
@@ -69,7 +69,7 @@ export function RegistroActionsMenu({
     items.push({ key: 'clonar', icon: ic(ClipboardCopy), label: 'Clonar Dia', onClick: onClonarDia, disabled: dayLogLength === 0 });
     items.push({ key: 'importar', icon: ic(Download), label: 'Importar Treino', onClick: onImportar });
     if (!isTimerActive) {
-      items.push({ key: 'cronometrar', icon: ic(Timer), label: 'Cronometrar Treino', onClick: onCronometrar });
+      items.push({ key: 'iniciar-treino', icon: ic(Timer), label: 'Iniciar Treino', onClick: onIniciarTreino });
     }
   }
 

@@ -213,9 +213,7 @@ export function ExecutionModal() {
         ? 'Exercício concluído 🎉'
         : exec.remaining > 0 && exec.remaining < exec.restDuration
           ? 'Pausado'
-          : isCardio
-            ? 'Cronômetro'
-            : 'Pronto para iniciar';
+          : 'Pronto para iniciar';
 
   const ringWarn = exec.running && exec.remaining > 0 && exec.remaining <= 10;
   const ringDone = exec.remaining <= 0;

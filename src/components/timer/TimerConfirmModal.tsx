@@ -28,8 +28,8 @@ export function TimerConfirmModal() {
     <div className="timer-modal-backdrop">
       <div className="cro-confirm-card">
         <div className="cro-confirm-icon">⏱️</div>
-        <div className="cro-confirm-title">Cronometrar o treino?</div>
-        <div className="cro-confirm-sub">Deseja cronometrar o tempo total do seu treino de hoje?</div>
+        <div className="cro-confirm-title">Iniciar o tempo do treino?</div>
+        <div className="cro-confirm-sub">Quer medir o tempo total do seu treino de hoje?</div>
         <div className="cro-confirm-btns">
           <button className="btn btn-ghost" onClick={declineStart}>
             Agora não

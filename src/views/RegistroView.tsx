@@ -243,7 +243,7 @@ export function RegistroView() {
             dayLogLength={dayLog.length}
             freeCount={freeCount}
             isTimerActive={isTimerActive}
-            onCronometrar={askToStart}
+            onIniciarTreino={askToStart}
             onImportar={() => openModal('import-workout')}
             onClonarDia={() => openModal('clone-day')}
             onToggleConjugar={() => {
