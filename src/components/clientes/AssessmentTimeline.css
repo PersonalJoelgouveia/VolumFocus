@@ -2,7 +2,7 @@
   text-align: center;
   padding: 32px 16px;
   color: var(--text-2);
-  font-size: 0.9rem;
+  font-size: var(--fs-lg);
 }
 
 .at-empty-cta { margin-top: 16px; min-height: 44px; padding: 0 24px; }
@@ -37,14 +37,14 @@
 
 .at-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 
-.at-date { font-size: 0.82rem; font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+.at-date { font-size: var(--fs-sm); font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
 
 .at-badge {
-  font-size: 0.64rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   padding: 3px 8px;
@@ -66,20 +66,20 @@
   padding: 8px 10px;
 }
 
-.at-metric span { font-size: 0.66rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.03em; }
-.at-metric strong { font-size: 0.94rem; color: var(--text); }
+.at-metric span { font-size: var(--fs-2xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.03em; }
+.at-metric strong { font-size: var(--fs-lg); color: var(--text); }
 
 .at-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-md); display: flex; flex-direction: column; gap: 12px; }
 
-.at-detail-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); margin-bottom: 6px; }
+.at-detail-title { font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); margin-bottom: 6px; }
 
 .at-detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; }
 
-.at-detail-row { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.78rem; }
+.at-detail-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--fs-sm); }
 .at-detail-row span { color: var(--text-2); }
 .at-detail-row strong { color: var(--text); }
 
-.at-detail-notes { font-size: 0.8rem; color: var(--text-2); line-height: 1.4; }
+.at-detail-notes { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.4; }
 
 .at-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 
@@ -95,7 +95,7 @@
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg-3);
-  font-size: 1rem;
+  font-size: var(--fs-base);
   cursor: pointer;
   transition: var(--tr);
 }
@@ -117,7 +117,7 @@
 .at-badge--status-revisada {
   background: none;
   border: 1px solid var(--teal);
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .at-badge--status-rascunho,
@@ -135,24 +135,24 @@
   margin-left: 4px;
   padding: 1px 6px;
   border-radius: var(--rs, 4px);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   vertical-align: middle;
 }
 
 .at-rcq-badge--baixo {
   background: var(--green-bg);
-  color: var(--green);
+  color: var(--green-fg);
 }
 
 .at-rcq-badge--moderado {
   background: var(--yellow-bg);
-  color: var(--yellow);
+  color: var(--yellow-fg);
 }
 
 .at-rcq-badge--alto {
   background: var(--red-bg);
-  color: var(--red);
+  color: var(--red-fg);
 }
 
 .at-doughnut-wrap {
@@ -177,7 +177,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 

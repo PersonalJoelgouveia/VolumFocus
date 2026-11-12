@@ -75,7 +75,7 @@ export function ListaExerciciosLeitura({ exercicios }: { exercicios: AlunoExerci
               {ex.groupType && <span className="cli-ex-chip cli-ex-chip-sug">{GROUP_LABELS[ex.groupType]}</span>}
             </div>
             {ex.notes && (
-              <div style={{ fontSize: '0.65rem', color: 'var(--teal)', marginTop: 6, fontStyle: 'italic' }}>
+              <div style={{ fontSize: '0.65rem', color: 'var(--teal-fg)', marginTop: 6, fontStyle: 'italic' }}>
                 # {ex.notes}
               </div>
             )}

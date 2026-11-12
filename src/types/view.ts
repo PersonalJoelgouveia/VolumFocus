@@ -41,7 +41,7 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
   performance: { title: 'Performance', sub: 'Testes de Força & Capacidade Aeróbica' },
   'nova-semana': { title: 'Nova Semana', sub: 'Reset de Ciclo' },
   saude: { title: 'Saúde', sub: 'Avaliação Física, Exames & Wearables' },
-  ferramentas: { title: 'Ferramentas', sub: 'Timer, Agenda & Utilitários' },
+  ferramentas: { title: 'Ferramentas', sub: 'Timer de intervalos, Agenda & Utilitários' },
   conquistas: { title: 'Conquistas', sub: 'Badges & Recordes Pessoais' },
   clientes: { title: 'Clientes', sub: 'Gestão de Alunos & Rotinas', ptOnly: true },
   notifications: {

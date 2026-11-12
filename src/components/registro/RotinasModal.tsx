@@ -211,7 +211,7 @@ export function RotinasModal() {
         )}
 
         {sessaoAtiva && (
-          <p style={{ fontSize: '0.78rem', color: 'var(--teal)', marginBottom: 8 }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--teal-fg)', marginBottom: 8 }}>
             👤 Sessão de {sessaoAtiva.alunoNome}: "Salvar Atual" cria uma nova rotina para este aluno e a torna a rotina ativa.
           </p>
         )}

@@ -19,7 +19,7 @@ interface ToolCard {
 }
 
 const CARDS: ToolCard[] = [
-  { key: 'timer', icon: '⏱', title: 'Timer', desc: 'Timer de intervalos: preparação, exercício e descanso.' },
+  { key: 'timer', icon: '⏱', title: 'Timer de intervalos', desc: 'Sequência de preparação, exercício e descanso.' },
   { key: 'agenda', icon: '📅', title: 'Agenda', desc: 'Organize seus compromissos e sessões.', comingSoon: true },
   {
     key: 'anotacoes',

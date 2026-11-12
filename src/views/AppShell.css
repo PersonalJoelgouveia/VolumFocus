@@ -50,13 +50,13 @@
 .hdr-title {
   font-family: var(--font-title);
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: var(--fs-lg);
   color: var(--text);
   letter-spacing: -0.01em;
 }
 
 .hdr-sub {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   font-weight: 500;
 }

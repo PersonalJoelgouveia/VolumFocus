@@ -1,12 +1,12 @@
 .pad-panel { max-width: 640px; max-height: 92vh; overflow-y: auto; }
 
-.pad-empty { text-align: center; padding: 32px 16px; color: var(--text-2); font-size: 0.9rem; }
+.pad-empty { text-align: center; padding: 32px 16px; color: var(--text-2); font-size: var(--fs-lg); }
 
 .pad-section { margin-top: 20px; }
 .pad-section:first-of-type { margin-top: 16px; }
 
 .pad-section-title {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -34,9 +34,9 @@
   gap: 2px;
 }
 
-.pad-card-label { font-size: 0.64rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.03em; }
+.pad-card-label { font-size: var(--fs-2xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.03em; }
 .pad-card-valor { font-size: 1.05rem; font-weight: 700; color: var(--text); }
-.pad-card-data { font-size: 0.62rem; color: var(--text-3); }
+.pad-card-data { font-size: var(--fs-2xs); color: var(--text-3); }
 
 .pad-chart-card {
   background: var(--bg-2);
@@ -46,9 +46,9 @@
   margin-bottom: 12px;
 }
 
-.pad-chart-title { font-size: 0.82rem; font-weight: 700; color: var(--text); padding-left: 8px; margin-bottom: 4px; }
+.pad-chart-title { font-size: var(--fs-sm); font-weight: 700; color: var(--text); padding-left: 8px; margin-bottom: 4px; }
 
-.pad-chart-empty { font-size: 0.8rem; color: var(--text-3); padding: 16px 8px; text-align: center; }
+.pad-chart-empty { font-size: var(--fs-sm); color: var(--text-3); padding: 16px 8px; text-align: center; }
 
 .pad-selector-row {
   display: flex;
@@ -64,13 +64,13 @@
   border: 1px solid var(--border-md);
   background: var(--bg-2);
   color: var(--text-2);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   transition: var(--tr);
 }
 
-.pad-chip.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal); }
+.pad-chip.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal-fg); }
 .pad-chip:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 .pad-toggle-row { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -83,12 +83,12 @@
   background: var(--bg-2);
   color: var(--text-2);
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: var(--tr);
 }
 
-.pad-toggle-opt.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal); }
+.pad-toggle-opt.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal-fg); }
 
 .pad-comparativo-card {
   display: flex;
@@ -101,9 +101,9 @@
   padding: 14px 16px;
 }
 
-.pad-comparativo-row { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.86rem; }
+.pad-comparativo-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--fs-md); }
 .pad-comparativo-row span { color: var(--text-2); }
-.pad-comparativo-row strong { color: var(--teal); font-size: 0.95rem; }
+.pad-comparativo-row strong { color: var(--teal-fg); font-size: var(--fs-lg); }
 
 .pad-fotos-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -117,7 +117,7 @@
   gap: 8px;
 }
 
-.pad-fotos-data { font-size: 0.72rem; font-weight: 700; color: var(--text-2); text-align: center; }
+.pad-fotos-data { font-size: var(--fs-xs); font-weight: 700; color: var(--text-2); text-align: center; }
 
 .pad-fotos-thumbs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
 
@@ -142,12 +142,12 @@
   border: 1px solid var(--border-md);
   background: var(--bg-2);
   color: var(--text-2);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
   transition: var(--tr);
 }
 
-.pad-evo-check.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal); }
+.pad-evo-check.active { border-color: var(--teal-border); background: var(--teal-glow); color: var(--teal-fg); }
 .pad-evo-check.disabled { opacity: 0.4; cursor: not-allowed; }
 .pad-evo-check input { min-height: auto; width: 16px; height: 16px; accent-color: var(--teal); }

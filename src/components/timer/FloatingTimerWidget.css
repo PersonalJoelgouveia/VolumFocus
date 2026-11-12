@@ -67,7 +67,7 @@
 .cro-time {
   font-family: var(--font-mono);
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
   color: var(--text);
   letter-spacing: 0.04em;
   min-width: 62px;
@@ -91,14 +91,14 @@
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 1.5rem;
-  color: var(--teal);
+  color: var(--teal-fg);
   letter-spacing: 0.04em;
   text-align: center;
   padding: 2px 0 6px;
 }
 
 .cro-panel-label {
-  font-size: 0.67rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   text-align: center;
   margin-top: -6px;
@@ -115,13 +115,13 @@
   gap: 6px;
   padding: 4px 0 2px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--orange);
+  font-size: var(--fs-sm);
+  color: var(--orange-fg);
   font-weight: 600;
 }
 
 .cro-kcal-ico {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
 }
 
 .cro-sep {
@@ -146,7 +146,7 @@
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-2);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-family: var(--font-title);
   font-weight: 600;
   cursor: pointer;
@@ -162,7 +162,7 @@
 .cro-btn.cro-btn-rest {
   border-color: var(--teal-border);
   background: rgba(0, 196, 179, 0.12);
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .cro-btn.cro-btn-rest:hover {
@@ -172,9 +172,12 @@
 .cro-btn.cro-btn-stop {
   border-color: rgba(255, 77, 109, 0.3);
   background: rgba(255, 77, 109, 0.1);
-  color: var(--red);
+  color: var(--red-fg);
 }
 
 .cro-btn.cro-btn-stop:hover {
   background: rgba(255, 77, 109, 0.2);
 }
+
+.cro-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.cro-kcal-ico { display: inline-flex; color: var(--orange); }

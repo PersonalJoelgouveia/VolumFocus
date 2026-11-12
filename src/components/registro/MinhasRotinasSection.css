@@ -1,7 +1,7 @@
 .mrs { margin: 4px 0 18px; }
 .mrs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
-.mrs-title { font-family: var(--font-title); font-size: 0.95rem; font-weight: 700; color: var(--text); }
-.mrs-note { font-size: 0.8rem; color: var(--text-3); padding: 12px 0; line-height: 1.5; }
+.mrs-title { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
+.mrs-note { font-size: var(--fs-sm); color: var(--text-3); padding: 12px 0; line-height: 1.5; }
 .mrs-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
 @media (min-width: 640px) { .mrs-list { grid-template-columns: 1fr 1fr; } }
 .mrs-card {
@@ -12,14 +12,14 @@
 .mrs-card:hover { border-color: var(--border-md); }
 .mrs-card-ativa { border-color: var(--teal); background: var(--teal-glow); }
 .mrs-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
-.mrs-card-nome { font-size: 0.86rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mrs-card-nome { font-size: var(--fs-md); font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mrs-badge {
-  flex-shrink: 0; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--teal); background: var(--teal-glow); border: 1px solid var(--teal-border);
+  flex-shrink: 0; font-size: var(--fs-2xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--teal-fg); background: var(--teal-glow); border: 1px solid var(--teal-border);
   border-radius: 999px; padding: 2px 8px; vertical-align: middle;
 }
 .mrs-pills { display: flex; gap: 4px; flex-wrap: wrap; }
-.mrs-readonly { font-size: 0.72rem; color: var(--text-3); margin: 6px 0 4px; }
+.mrs-readonly { font-size: var(--fs-xs); color: var(--text-3); margin: 6px 0 4px; }
 .mrs-voltar { margin-bottom: 12px; }
 .mrs-voltar-fim { margin-top: 14px; }
 .mrs-detalhe-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -28,8 +28,8 @@
 .mrs-dia { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--rs); padding: 12px 14px; }
 .mrs-dia-descanso { opacity: 0.75; }
 .mrs-dia-count { font-weight: 500; color: var(--text-3); }
-.mrs-descanso { font-size: 0.74rem; color: var(--text-3); margin-top: 4px; }
-.mrs-ord { color: var(--text-3); font-family: var(--font-mono); font-size: 0.72rem; }
+.mrs-descanso { font-size: var(--fs-xs); color: var(--text-3); margin-top: 4px; }
+.mrs-ord { color: var(--text-3); font-family: var(--font-mono); font-size: var(--fs-xs); }
 .mrs-treinos { margin-top: 10px; }
 .mrs-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: none; }
 .mrs-tabs::-webkit-scrollbar { display: none; }
@@ -40,9 +40,9 @@
 }
 .mrs-tab:hover { border-color: var(--border-md); }
 .mrs-tab.active { border-color: var(--teal); background: var(--teal-glow); }
-.mrs-tab-letra { font-family: var(--font-title); font-size: 0.78rem; font-weight: 700; color: var(--text); white-space: nowrap; }
-.mrs-tab.active .mrs-tab-letra { color: var(--teal); }
-.mrs-tab-dias { font-size: 0.6rem; color: var(--text-3); font-family: var(--font-mono); white-space: nowrap; }
+.mrs-tab-letra { font-family: var(--font-title); font-size: var(--fs-sm); font-weight: 700; color: var(--text); white-space: nowrap; }
+.mrs-tab.active .mrs-tab-letra { color: var(--teal-fg); }
+.mrs-tab-dias { font-size: var(--fs-2xs); color: var(--text-3); font-family: var(--font-mono); white-space: nowrap; }
 .mrs-descanso-fim { margin-top: 12px; }
 .mrs-toggle-semana { margin: 12px 0 0; }
 .mrs-mais { margin-top: 8px; }

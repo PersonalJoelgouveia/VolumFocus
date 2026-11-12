@@ -61,7 +61,7 @@
 }
 
 .npbar-label {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -69,7 +69,7 @@
 
 .npbar-name {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--fs-lg);
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -80,19 +80,19 @@
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: 100px;
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
-  color: var(--purple);
+  color: var(--purple-fg);
   background: var(--purple-bg, rgba(167, 139, 250, 0.12));
 }
 
 .npbar-detail {
-  font-size: 0.8rem;
-  color: var(--teal);
+  font-size: var(--fs-sm);
+  color: var(--teal-fg);
 }
 
 .npbar-next {
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   white-space: nowrap;
   overflow: hidden;
@@ -112,7 +112,7 @@
 }
 
 .npbar-resting .npbar-time {
-  color: var(--teal);
+  color: var(--teal-fg);
 }
 
 .npbar-ringing .npbar-time {
@@ -132,7 +132,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-2, var(--text));
   background: var(--bg-3);
@@ -149,7 +149,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 0.9rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: #04201d;
   background: var(--teal);
@@ -170,4 +170,9 @@ body.np-bar-open .cro-widget {
   body.np-bar-open .cro-widget {
     bottom: 170px;
   }
+}
+
+/* A barra mede ~132px: sobe a pilha de toasts para ficar acima dela. */
+body.np-bar-open {
+  --toast-lift: 140px;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Heart } from 'lucide-react';
 import { useExecStore } from '../../store/useExecStore';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
@@ -147,6 +148,28 @@ export function ExecutionModal() {
     if (k !== null) handleToggleSet(k);
   }
 
+  /** Próximo exercício ainda não concluído do dia (depois do atual; se não houver, volta ao início). */
+  function findNextIdx(): number | null {
+    if (exec.day === null || exec.idx === null) return null;
+    const log = getDayLog(exec.day);
+    for (let step = 1; step < log.length; step++) {
+      const i = (exec.idx + step) % log.length;
+      if (!isExerciseDone(exec.day, i)) return i;
+    }
+    return null;
+  }
+
+  function handleNextExercise() {
+    if (exec.day === null) return;
+    const next = findNextIdx();
+    if (next === null) return;
+    const nextEntry = getDayLog(exec.day)[next];
+    exec.stopTimer();
+    exec.stopAlarm();
+    exec.close();
+    exec.open(exec.day, next, isCardioLogEntry(nextEntry) ? { isCardio: true, totalSets: 0 } : { isCardio: false, totalSets: nextEntry.sets || 1 });
+  }
+
   function startEdit(k: number) {
     if (!strengthEntry) return;
     const load = strengthEntry.serieLoads?.[k] ?? strengthEntry.load;
@@ -190,12 +213,13 @@ export function ExecutionModal() {
         ? 'Exercício concluído 🎉'
         : exec.remaining > 0 && exec.remaining < exec.restDuration
           ? 'Pausado'
-          : isCardio
-            ? 'Cronômetro'
-            : 'Pronto para iniciar';
+          : 'Pronto para iniciar';
 
   const ringWarn = exec.running && exec.remaining > 0 && exec.remaining <= 10;
   const ringDone = exec.remaining <= 0;
+  const exerciseFinished = allSetsDone || (exec.day !== null && exec.idx !== null && isExerciseDone(exec.day, exec.idx));
+  const nextIdx = exerciseFinished ? findNextIdx() : null;
+  const nextName = nextIdx !== null && exec.day !== null ? exercises.find((e) => e.id === getDayLog(exec.day as number)[nextIdx]?.exId)?.name : undefined;
 
   return (
     <div className="modal-backdrop" onClick={handleClose}>
@@ -212,7 +236,10 @@ export function ExecutionModal() {
           <div className="exec-ex-name">{exercise.name}</div>
           <div className="exec-ex-tags">
             {isCardio ? (
-              <span className="ex-tag ex-tag-cardio">❤️ Cardio</span>
+              <span className="ex-tag ex-tag-cardio">
+                <Heart size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 4 }} />
+                Cardio
+              </span>
             ) : (
               <>
                 <span className="ex-tag ex-tag-ag">{exercise.agonist}</span>
@@ -329,6 +356,22 @@ export function ExecutionModal() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {exerciseFinished && (
+          <div className="exec-next-ex">
+            {nextIdx !== null ? (
+              <button type="button" className="btn btn-primary exec-next-ex-btn" onClick={handleNextExercise}>
+                <span className="exec-next-ex-label">Próximo exercício</span>
+                {nextName && <span className="exec-next-ex-name">{nextName}</span>}
+              </button>
+            ) : (
+              <button type="button" className="btn btn-primary exec-next-ex-btn" onClick={handleClose}>
+                <span className="exec-next-ex-label">Treino do dia concluído</span>
+                <span className="exec-next-ex-name">Fechar</span>
+              </button>
+            )}
           </div>
         )}
 

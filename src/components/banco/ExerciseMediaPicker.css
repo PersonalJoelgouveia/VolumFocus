@@ -6,7 +6,7 @@
   border: 1px solid transparent;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--text-3);
   background: transparent;
@@ -42,7 +42,7 @@
 }
 .mx-img-slot:hover { border-color: var(--teal-border); background: var(--teal-glow); }
 .mx-img-slot input[type='file'] { display: none; }
-.mx-img-placeholder { font-size: 0.68rem; font-weight: 600; color: var(--text-3); text-align: center; line-height: 1.6; padding: 8px; pointer-events: none; }
+.mx-img-placeholder { font-size: var(--fs-2xs); font-weight: 600; color: var(--text-3); text-align: center; line-height: 1.6; padding: 8px; pointer-events: none; }
 .mx-img-preview { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mx-img-remove {
   position: absolute;
@@ -54,7 +54,7 @@
   border: none;
   background: rgba(4, 4, 6, 0.75);
   color: var(--text);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,8 +70,8 @@
   align-items: center;
   justify-content: center;
   background: rgba(4, 4, 6, 0.55);
-  color: var(--teal);
-  font-size: 0.65rem;
+  color: var(--teal-fg);
+  font-size: var(--fs-2xs);
   font-weight: 700;
   z-index: 3;
   flex-direction: column;
@@ -102,6 +102,6 @@
 .mx-yt-preview.mx-yt-preview-show { display: flex; }
 .mx-yt-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mx-yt-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #fff; background: rgba(4, 4, 6, 0.28); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); pointer-events: none; }
-.mx-yt-status { font-size: 0.68rem; font-weight: 600; margin-top: 7px; min-height: 1em; }
-.mx-yt-status.mx-yt-ok { color: var(--green); }
-.mx-yt-status.mx-yt-err { color: var(--orange); }
+.mx-yt-status { font-size: var(--fs-2xs); font-weight: 600; margin-top: 7px; min-height: 1em; }
+.mx-yt-status.mx-yt-ok { color: var(--green-fg); }
+.mx-yt-status.mx-yt-err { color: var(--orange-fg); }

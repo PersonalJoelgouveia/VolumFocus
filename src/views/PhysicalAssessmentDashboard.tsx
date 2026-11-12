@@ -66,7 +66,7 @@ function GraficoLinha({ titulo, unidade, pontos }: { titulo: string; unidade: st
           <Tooltip
             contentStyle={{ background: 'var(--bg-2)', border: '1px solid var(--border-md)', borderRadius: 'var(--rs)' }}
             labelStyle={{ color: 'var(--text-2)', fontSize: 11 }}
-            itemStyle={{ color: 'var(--teal)', fontSize: 12 }}
+            itemStyle={{ color: 'var(--teal-fg)', fontSize: 12 }}
             formatter={(value: unknown) => [formatarValor(Number(value), unidade), titulo]}
           />
           <Line type="monotone" dataKey="valor" stroke="var(--teal)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />

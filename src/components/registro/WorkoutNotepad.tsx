@@ -14,6 +14,24 @@ const EMPTY_LOG: WorkoutDayLog = [];
 
 type Status = 'synced' | 'typing' | 'error';
 
+/** Rascunho com erro de validação sobrevive a trocar de dia / sair do modo (só nesta aba). */
+const draftKey = (day: number) => `jg3_np_draft_${day}`;
+function readStoredDraft(day: number): string | null {
+  try {
+    return sessionStorage.getItem(draftKey(day));
+  } catch {
+    return null;
+  }
+}
+function writeStoredDraft(day: number, value: string | null) {
+  try {
+    if (value === null) sessionStorage.removeItem(draftKey(day));
+    else sessionStorage.setItem(draftKey(day), value);
+  } catch {
+    /* armazenamento indisponível: segue sem persistir */
+  }
+}
+
 interface WorkoutNotepadProps {
   day: DayIndex;
 }
@@ -40,13 +58,15 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
 
   const canonical = useMemo(() => serializeDayLog(dayLog, exercises, pse), [dayLog, exercises, pse]);
 
-  const [draft, setDraft] = useState(canonical);
-  const [status, setStatus] = useState<Status>('synced');
+  const storedDraft = useRef(readStoredDraft(day)).current;
+  const restored = storedDraft !== null && storedDraft !== canonical;
+  const [draft, setDraft] = useState(restored ? (storedDraft as string) : canonical);
+  const [status, setStatus] = useState<Status>(restored ? 'typing' : 'synced');
   const [errors, setErrors] = useState<NotepadError[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   const draftRef = useRef(draft);
-  const dirtyRef = useRef(false);
+  const dirtyRef = useRef(restored);
   const lastCanonicalRef = useRef(canonical);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roleRef = useRef(isPersonalMode ? 'personal' : 'aluno');
@@ -68,8 +88,10 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
     setWarnings(r.warnings);
     if (!r.ok) {
       setStatus('error');
+      writeStoredDraft(day, draftRef.current);
       return false;
     }
+    writeStoredDraft(day, null);
 
     const nextPse = r.pse ?? curPse;
     const before = serializeDayLog(oldLog, exs, curPse);
@@ -100,6 +122,12 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
 
   const applyRef = useRef(applyDraft);
   applyRef.current = applyDraft;
+
+  // Rascunho restaurado: revalida para mostrar de novo as linhas com erro (ou gravar, se já estiver válido).
+  useEffect(() => {
+    if (restored) applyRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Mudança vinda de fora (timer, "+ Exercício", sync): reescreve o texto, a menos que esteja digitando.
   useEffect(() => {

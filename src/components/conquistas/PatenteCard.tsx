@@ -41,7 +41,7 @@ export function PatenteCard({ streakDef, state }: PatenteCardProps) {
           </div>
         </>
       ) : (
-        <div className="ach-patente-next" style={{ color: 'var(--teal)' }}>
+        <div className="ach-patente-next" style={{ color: 'var(--teal-fg)' }}>
           🏆 Patente máxima atingida!
         </div>
       )}

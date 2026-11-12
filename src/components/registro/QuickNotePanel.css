@@ -44,12 +44,12 @@
 .qn-panel-titulo {
   font-weight: 600;
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-lg);
 }
 
 .qn-panel-cliente {
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -59,7 +59,7 @@
 .qn-panel-treino,
 .qn-panel-datahora {
   color: var(--text-2);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -77,7 +77,7 @@
   border: 1px solid var(--border);
   border-radius: var(--rs);
   color: var(--text-2);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   padding: 4px 8px;
   min-height: auto;
   cursor: pointer;
@@ -113,7 +113,7 @@
 
 .qn-panel-loading {
   color: var(--text-2);
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   padding: 8px 0;
 }
 

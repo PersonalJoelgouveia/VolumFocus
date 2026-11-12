@@ -4,7 +4,7 @@
 
 .bf-field label {
   display: block;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -36,7 +36,7 @@
   background: var(--bg-3);
   border: 1px solid var(--border);
   border-radius: var(--rs);
-  color: var(--teal);
+  color: var(--teal-fg);
   font-weight: 700;
 }
 
@@ -44,9 +44,9 @@
 .bf-field-header label { margin-bottom: 0; }
 
 .bf-reset-btn {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   border-radius: 999px;
@@ -57,9 +57,9 @@
 
 .bf-reset-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
 
-.bf-hint { font-size: 0.68rem; color: var(--text-3); margin-top: 4px; }
+.bf-hint { font-size: var(--fs-2xs); color: var(--text-3); margin-top: 4px; }
 
-.bf-error { font-size: 0.72rem; color: var(--red); margin-top: 6px; }
+.bf-error { font-size: var(--fs-xs); color: var(--red-fg); margin-top: 6px; }
 .bf-error-summary { text-align: center; margin: 4px 0; }
 
 .bf-summary {
@@ -74,16 +74,16 @@
   margin: 16px 0;
 }
 
-.bf-summary-row { display: flex; align-items: baseline; justify-content: space-between; font-size: 0.86rem; }
+.bf-summary-row { display: flex; align-items: baseline; justify-content: space-between; font-size: var(--fs-md); }
 .bf-summary-row span { color: var(--text-2); }
-.bf-summary-row strong { color: var(--teal); font-size: 0.95rem; }
+.bf-summary-row strong { color: var(--teal-fg); font-size: var(--fs-lg); }
 
 .bf-actions { display: flex; gap: 8px; margin-top: 16px; }
 .bf-actions .btn { flex: 1; min-height: 44px; }
 
 .bf-fotos { margin-top: 16px; }
 .bf-fotos-title {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;

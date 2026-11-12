@@ -10,3 +10,34 @@ html, body, #root {
   min-width: 0;
   box-sizing: border-box;
 }
+
+/* Respeita a preferência do sistema por menos movimento (pulsos e anéis infinitos). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dígitos de largura fixa: cronômetros, cargas e contadores não "pulam" ao mudar de valor. */
+.exec-ring-time,
+.cro-time,
+.itv-time,
+.exec-set-info,
+.exec-set-edit input,
+.npbar-detail,
+input[inputmode='decimal'],
+input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco visível para navegação por teclado em todo o app. `!important` porque várias telas
+   fazem `outline: none` em `:focus` e só trocam a cor da borda (contraste insuficiente). */
+:is(a, button, input, select, textarea, summary, [role='button'], [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--teal-fg) !important;
+  outline-offset: 2px;
+}

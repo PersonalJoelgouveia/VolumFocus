@@ -19,7 +19,7 @@
   /* Tipografia */
   --text: #eeeef2;
   --text-2: #a0a0b0;
-  --text-3: #7a7a90;
+  --text-3: #8a8aa0;
 
   /* Cores funcionais e semânticas */
   --red: #ff4d6d;
@@ -31,6 +31,15 @@
   --yellow: #ffd166;
   --yellow-bg: rgba(255, 209, 102, 0.09);
   --purple: #a78bfa;
+
+  /* Variantes para TEXTO/ícones coloridos (use var(--x-fg) em `color`; var(--x) fica para fundos e traços).
+     No tema escuro são iguais às cores de marca; no claro escurecem para contraste >= 4,5:1. */
+  --teal-fg: var(--teal);
+  --red-fg: var(--red);
+  --orange-fg: var(--orange);
+  --green-fg: var(--green);
+  --yellow-fg: var(--yellow);
+  --purple-fg: var(--purple);
 
   /* Bordas e espaçamentos */
   --border: rgba(255, 255, 255, 0.055);
@@ -45,6 +54,14 @@
 
   /* Transição padrão — migrado 1:1 do :root do monolito */
   --tr: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Escala tipográfica (menor texto legível = 0,7rem ~ 11px) */
+  --fs-2xs: 0.7rem;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8rem;
+  --fs-md: 0.875rem;
+  --fs-lg: 0.95rem;
+  --fs-base: 1rem;
 
   /* Fontes */
   --font-body: 'Plus Jakarta Sans', sans-serif;
@@ -88,7 +105,14 @@
 
   --text: #14141c;
   --text-2: #52525f;
-  --text-3: #767685;
+  --text-3: #6a6a7a;
+
+  --teal-fg: #00796f;
+  --red-fg: #d6204a;
+  --orange-fg: #b45309;
+  --green-fg: #0b7a5a;
+  --yellow-fg: #8a6200;
+  --purple-fg: #6d4fd6;
 
   --teal-glow: rgba(0, 196, 179, 0.12);
   --teal-border: rgba(0, 196, 179, 0.3);
@@ -101,6 +125,23 @@
   --border-md: rgba(20, 20, 30, 0.14);
 
   --header-bg: rgba(255, 255, 255, 0.85);
+}
+
+/* Superfícies que ficam escuras nos dois temas: restauram os tokens do tema escuro
+   para que texto e cores de marca mantenham contraste dentro delas. */
+:root[data-theme='light'] :is(#sidebar, .npbar, .cro-pill, .cro-panel) {
+  --text: #eeeef2;
+  --text-2: #a0a0b0;
+  --text-3: #8a8aa0;
+  --teal-fg: var(--teal);
+  --red-fg: var(--red);
+  --orange-fg: var(--orange);
+  --green-fg: var(--green);
+  --yellow-fg: var(--yellow);
+  --purple-fg: var(--purple);
+  --border: rgba(255, 255, 255, 0.055);
+  --border-md: rgba(255, 255, 255, 0.1);
+  --bg-3: #18181f;
 }
 
 * {

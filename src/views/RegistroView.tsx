@@ -195,7 +195,7 @@ export function RegistroView() {
         <div className="page-title">
           Treinos <span className="tag">SEMANA ATUAL</span>
           {isPersonalMode && activeSessao && (
-            <span className="tag" style={{ marginLeft: 6, background: 'var(--teal-glow)', color: 'var(--teal)' }}>
+            <span className="tag" style={{ marginLeft: 6, background: 'var(--teal-glow)', color: 'var(--teal-fg)' }}>
               SESSÃO · {activeSessao.alunoNome.split(' ')[0]}
             </span>
           )}
@@ -243,7 +243,7 @@ export function RegistroView() {
             dayLogLength={dayLog.length}
             freeCount={freeCount}
             isTimerActive={isTimerActive}
-            onCronometrar={askToStart}
+            onIniciarTreino={askToStart}
             onImportar={() => openModal('import-workout')}
             onClonarDia={() => openModal('clone-day')}
             onToggleConjugar={() => {

@@ -44,7 +44,7 @@ export function CalorieCard() {
       <div className="met-neutral">
         <div className="met-neutral-ico">📊</div>
         <div className="met-neutral-txt">
-          {isCalorieActive ? 'Inicie o cronômetro para calcular.' : 'Gasto calórico em tempo real via cronômetro.'}
+          {isCalorieActive ? 'Inicie o treino para calcular.' : 'Gasto calórico em tempo real durante o treino.'}
         </div>
         {!isCalorieActive && (
           <button className="met-activate-btn" onClick={openWeightModal}>

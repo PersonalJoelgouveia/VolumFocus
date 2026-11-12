@@ -2,8 +2,8 @@
 .md-view { max-width: 640px; margin: 0 auto; }
 .md-back { margin-bottom: 14px; }
 
-.md-page-title { font-size: 1rem; font-weight: 700; color: var(--text); margin: 0 0 6px; }
-.md-hub-desc { font-size: 0.82rem; color: var(--text-3); line-height: 1.5; margin-bottom: 16px; }
+.md-page-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); margin: 0 0 6px; }
+.md-hub-desc { font-size: var(--fs-sm); color: var(--text-3); line-height: 1.5; margin-bottom: 16px; }
 
 .md-cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 
@@ -20,8 +20,8 @@
   min-height: 44px;
 }
 .md-cat-card:hover { border-color: var(--teal-border); background: var(--teal-glow); }
-.md-cat-title { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.md-cat-sub { font-size: 0.76rem; color: var(--text-3); }
+.md-cat-title { font-size: var(--fs-base); font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.md-cat-sub { font-size: var(--fs-xs); color: var(--text-3); }
 
 .md-nivel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
 
@@ -38,19 +38,19 @@
   min-height: 44px;
 }
 .md-nivel-card:hover { border-color: var(--teal-border); background: var(--teal-glow); }
-.md-nivel-num { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
-.md-nivel-nome { font-size: 0.88rem; font-weight: 600; color: var(--text); margin: 3px 0 6px; }
-.md-nivel-status { font-size: 0.72rem; color: var(--text-3); }
-.md-nivel-status.filled { color: var(--teal); }
+.md-nivel-num { font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-3); }
+.md-nivel-nome { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 3px 0 6px; }
+.md-nivel-status { font-size: var(--fs-xs); color: var(--text-3); }
+.md-nivel-status.filled { color: var(--teal-fg); }
 
 .md-nivel-header { margin-bottom: 16px; }
 .md-nivel-badge {
   display: inline-block;
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   border: 1px solid var(--teal-border);
   border-radius: var(--rs);
@@ -65,13 +65,13 @@
   text-align: center;
 }
 .md-empty-ico { font-size: 1.8rem; margin-bottom: 10px; opacity: 0.7; }
-.md-empty-title { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-.md-empty-desc { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; }
+.md-empty-title { font-size: var(--fs-lg); font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.md-empty-desc { font-size: var(--fs-sm); color: var(--text-3); line-height: 1.5; }
 
 .md-nivel-header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .md-nivel-header-row .md-back { margin-bottom: 0; }
 
-.md-metodos-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-3); }
+.md-metodos-label { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; color: var(--text-3); }
 
 .md-esqueleto {
   background: var(--bg-2);
@@ -81,7 +81,7 @@
   margin-bottom: 16px;
 }
 .md-esqueleto-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-.md-esqueleto-item { font-size: 0.82rem; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.md-esqueleto-item { font-size: var(--fs-sm); color: var(--text); display: flex; align-items: center; gap: 8px; }
 .md-esqueleto-item .md-nivel-badge { padding: 1px 7px; }
 
 .md-fase-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -91,17 +91,17 @@
   border-radius: var(--rs);
   padding: 6px 12px;
   font-family: inherit;
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-3);
   cursor: pointer;
   transition: var(--tr);
 }
 .md-fase-tab:hover { border-color: var(--border-md); }
-.md-fase-tab.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal); }
+.md-fase-tab.active { border-color: var(--teal); background: var(--teal-glow); color: var(--teal-fg); }
 
 .md-cardio-resumo {
-  font-size: 0.84rem;
+  font-size: var(--fs-md);
   color: var(--text);
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -109,10 +109,10 @@
   padding: 10px 12px;
   margin-bottom: 16px;
 }
-.md-cardio-meta { color: var(--text-3); font-size: 0.78rem; }
+.md-cardio-meta { color: var(--text-3); font-size: var(--fs-sm); }
 
 /* ========== Modal Copiar para Cliente (CopiarParaClienteModal.tsx) ========== */
-.md-copy-hint { font-size: 0.8rem; color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
+.md-copy-hint { font-size: var(--fs-sm); color: var(--text-3); line-height: 1.5; margin: 0 0 14px; }
 
 .md-cliente-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; margin-bottom: 16px; }
 
@@ -138,12 +138,12 @@
   height: 30px;
   border-radius: 50%;
   background: var(--teal-glow);
-  color: var(--teal);
+  color: var(--teal-fg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   flex-shrink: 0;
 }
-.md-cliente-nome { font-size: 0.85rem; font-weight: 600; }
+.md-cliente-nome { font-size: var(--fs-md); font-weight: 600; }

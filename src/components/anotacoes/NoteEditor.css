@@ -55,18 +55,18 @@
 }
 
 .ne-limite {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   text-align: right;
 }
 
 .ne-limite-atingido {
-  color: var(--orange);
+  color: var(--orange-fg);
   font-weight: 600;
 }
 
 .ne-status {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   min-height: 1em;
   text-align: right;
@@ -75,7 +75,7 @@
 /* "Não sincronizado" — aviso, não erro fatal: o conteúdo já está salvo
  * localmente (ver doc do componente), só ainda não subiu pra nuvem. */
 .ne-status-alerta {
-  color: var(--orange);
+  color: var(--orange-fg);
 }
 
 @media (max-width: 640px) {

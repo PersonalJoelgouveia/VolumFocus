@@ -11,7 +11,7 @@
   border: 1px solid var(--border);
 }
 .editex-serie-row.is-done { border-color: rgba(34, 211, 160, 0.3); background: rgba(34, 211, 160, 0.06); }
-.editex-serie-num { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 700; color: var(--text-3); width: 20px; flex-shrink: 0; }
+.editex-serie-num { font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 700; color: var(--text-3); width: 20px; flex-shrink: 0; }
 
 .editex-serie-check {
   width: 26px;
@@ -24,7 +24,7 @@
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   color: transparent;
   transition: var(--tr);
 }
@@ -43,7 +43,7 @@
   color: var(--text);
   font-family: inherit;
 }
-.editex-serie-field span { font-size: 0.65rem; color: var(--text-3); flex-shrink: 0; }
+.editex-serie-field span { font-size: var(--fs-2xs); color: var(--text-3); flex-shrink: 0; }
 
 .editex-serie-remove {
   width: 26px;
@@ -52,7 +52,7 @@
   border: none;
   background: transparent;
   color: var(--text-3);
-  font-size: 0.65rem;
+  font-size: var(--fs-2xs);
   cursor: pointer;
   flex-shrink: 0;
   display: flex;
@@ -60,13 +60,27 @@
   justify-content: center;
   transition: var(--tr);
 }
-.editex-serie-remove:hover { background: var(--red-bg); color: var(--red); }
+.editex-serie-remove:hover { background: var(--red-bg); color: var(--red-fg); }
 
 .editex-add-serie-btn { width: 100%; margin-bottom: 16px; }
 
 .editex-reprange-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .editex-reprange-row input { width: 64px; text-align: center; padding: 8px; font-size: 16px; }
-.editex-reprange-hint { font-size: 0.68rem; color: var(--text-3); margin-bottom: 14px; }
+.editex-reprange-hint { font-size: var(--fs-2xs); color: var(--text-3); margin-bottom: 14px; }
 
 .editex-footer { display: flex; gap: 8px; margin-top: 16px; }
 .editex-danger-btn { width: 100%; margin-top: 10px; }
+
+/* Área de toque mínima de 44px. */
+.editex-serie-check::after,
+.editex-serie-remove::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+.editex-serie-check,
+.editex-serie-remove { position: relative; }

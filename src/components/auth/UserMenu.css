@@ -11,7 +11,7 @@
   padding: 4px 10px 4px 8px;
   border-radius: 100px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   color: var(--bg-1);
@@ -46,11 +46,11 @@
   color: #000;
   font-family: var(--font-title);
   font-weight: 800;
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
 }
 
 .user-chip-name {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-2);
   max-width: 90px;
@@ -64,12 +64,12 @@
   padding: 0;
   background: none;
   border: none;
-  font-size: 0.6rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   cursor: pointer;
   text-decoration: underline;
 }
-.user-chip-logout:hover { color: var(--red); }
+.user-chip-logout:hover { color: var(--red-fg); }
 .user-chip-logout:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Badge de status de sync — sucessor de #vf-sync-dot, agora dentro

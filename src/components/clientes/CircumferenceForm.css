@@ -23,7 +23,7 @@
 .cf-row--erro { border-color: rgba(255, 77, 109, 0.4); }
 
 .cf-label {
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text-2);
 }
@@ -47,7 +47,7 @@
   outline-offset: 2px;
 }
 
-.cf-unit { font-size: 0.76rem; color: var(--text-3); flex-shrink: 0; }
+.cf-unit { font-size: var(--fs-xs); color: var(--text-3); flex-shrink: 0; }
 
 .cf-custom-header { display: flex; align-items: center; gap: 6px; }
 
@@ -55,7 +55,7 @@
   flex: 1;
   min-width: 0;
   min-height: 48px;
-  font-size: 0.86rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   padding: 0 8px;
   background: var(--bg-3);
@@ -73,7 +73,7 @@
 
 .cf-side-select {
   min-height: 48px;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   background: var(--bg-3);
   border: 1px solid var(--border);
   border-radius: var(--rs);
@@ -88,7 +88,7 @@
   border: 1px solid var(--border);
   background: var(--bg-3);
   color: var(--text-2);
-  font-size: 1rem;
+  font-size: var(--fs-base);
   line-height: 1;
   cursor: pointer;
   transition: var(--tr);
@@ -96,6 +96,6 @@
 
 .cf-remove-btn:active { transform: scale(0.9); }
 
-.cf-error { font-size: 0.72rem; color: var(--red); }
+.cf-error { font-size: var(--fs-xs); color: var(--red-fg); }
 
 .cf-add-btn { min-height: 48px; width: 100%; }

@@ -2,7 +2,7 @@
 
 .stg-group { margin-bottom: 20px; }
 .stg-group-title {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-3);
@@ -35,10 +35,10 @@
 .stg-row-disabled:active { background: var(--bg-3); }
 
 .stg-row-icon { font-size: 1.1rem; line-height: 1; width: 22px; text-align: center; }
-.stg-row-label { flex: 1; font-size: 0.92rem; color: var(--text); font-weight: 600; }
+.stg-row-label { flex: 1; font-size: var(--fs-lg); color: var(--text); font-weight: 600; }
 .stg-row-disabled .stg-row-label { color: var(--text-2); }
 .stg-row-soon {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   background: var(--bg-3);
   border-radius: 999px;
@@ -69,7 +69,7 @@
   background: transparent;
   color: var(--text-2);
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   cursor: pointer;
   transition: var(--tr);
@@ -79,7 +79,7 @@
 
 .stg-theme-opt.active {
   background: var(--bg-2);
-  color: var(--teal);
+  color: var(--teal-fg);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 
@@ -104,7 +104,7 @@
   background: transparent;
   color: var(--text-2);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
   transition: var(--tr);
@@ -115,6 +115,6 @@
 
 .stg-lang-opt.active {
   background: var(--bg-2);
-  color: var(--teal);
+  color: var(--teal-fg);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }

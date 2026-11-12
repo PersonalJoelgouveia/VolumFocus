@@ -59,7 +59,7 @@
 .exec-ex-tags { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; }
 
 .exec-sets-label {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -91,7 +91,7 @@
 .exec-set-pill:hover { border-color: var(--border-md); }
 .exec-set-num {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   color: var(--text-3);
   min-width: 24px;
@@ -99,7 +99,7 @@
 }
 .exec-set-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .exec-set-info {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-2);
   text-decoration: underline;
@@ -120,7 +120,7 @@
   border-radius: 6px;
   text-align: center;
 }
-.exec-set-edit span { font-size: 0.72rem; color: var(--text-3); flex-shrink: 0; }
+.exec-set-edit span { font-size: var(--fs-xs); color: var(--text-3); flex-shrink: 0; }
 .exec-set-save-btn {
   position: relative;
   width: 28px;
@@ -130,7 +130,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--teal);
+  color: var(--teal-fg);
   background: var(--teal-glow);
   cursor: pointer;
 }
@@ -143,13 +143,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   flex-shrink: 0;
-  color: var(--teal);
+  color: var(--teal-fg);
   transition: var(--tr);
 }
 .exec-set-pill.is-active { border-color: var(--teal-border); background: var(--teal-glow); }
-.exec-set-pill.is-active .exec-set-num { color: var(--teal); }
+.exec-set-pill.is-active .exec-set-num { color: var(--teal-fg); }
 .exec-set-pill.is-done { opacity: 0.5; }
 .exec-set-pill.is-done .exec-set-info { text-decoration: line-through; }
 .exec-set-pill.is-done .exec-set-check { background: var(--teal); border-color: var(--teal); color: #000; }
@@ -159,14 +159,14 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 7px;
 }
-.exec-notes-label .exec-notes-hash { font-family: var(--font-mono); color: var(--teal); font-size: 0.85rem; letter-spacing: 0; }
+.exec-notes-label .exec-notes-hash { font-family: var(--font-mono); color: var(--teal-fg); font-size: var(--fs-md); letter-spacing: 0; }
 .exec-notes-label .exec-notes-opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-3); }
 .exec-notes-input {
   width: 100%;
@@ -190,8 +190,8 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.6rem;
-  color: var(--teal);
+  font-size: var(--fs-2xs);
+  color: var(--teal-fg);
   opacity: 0;
   transition: opacity 0.25s ease;
   margin-left: auto;
@@ -223,9 +223,9 @@
 }
 .exec-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .exec-ring-time { font-family: var(--font-mono); font-size: 2.05rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-.exec-ring.exec-ring-done .exec-ring-time { color: var(--red); animation: execPulse 0.9s ease-in-out infinite; }
-.exec-ring-label { font-size: 0.67rem; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 0 8px; line-height: 1.3; }
-.exec-ring-label.exec-ring-label-sm { font-size: 0.56rem; letter-spacing: 0.02em; }
+.exec-ring.exec-ring-done .exec-ring-time { color: var(--red-fg); animation: execPulse 0.9s ease-in-out infinite; }
+.exec-ring-label { font-size: var(--fs-2xs); color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 0 8px; line-height: 1.3; }
+.exec-ring-label.exec-ring-label-sm { font-size: var(--fs-2xs); letter-spacing: 0.02em; }
 @keyframes execPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 .exec-controls { display: flex; gap: 8px; justify-content: center; align-items: center; width: 100%; }
@@ -246,19 +246,46 @@
   background: var(--bg-3);
   color: var(--text-3);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   cursor: pointer;
   transition: var(--tr);
 }
 .exec-preset-pill:hover { border-color: var(--border-md); color: var(--text-2); }
-.exec-preset-pill.is-active { background: var(--teal-glow); border-color: var(--teal-border); color: var(--teal); }
+.exec-preset-pill.is-active { background: var(--teal-glow); border-color: var(--teal-border); color: var(--teal-fg); }
 
 @media (max-width: 767px) {
   .exec-ring { width: 168px; height: 168px; }
   .exec-ring-time { font-size: 1.74rem; }
-  .exec-ex-name { font-size: 0.96rem; }
+  .exec-ex-name { font-size: var(--fs-lg); }
   .exec-controls { gap: 6px; }
-  .exec-ctrl-btn { font-size: 0.72rem; padding: 9px 8px; }
+  .exec-ctrl-btn { font-size: var(--fs-xs); padding: 9px 8px; }
   .exec-dismiss { top: 8px; right: 8px; }
 }
+
+/* Área de toque mínima de 44px. */
+.exec-set-save-btn::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+.exec-set-save-btn { position: relative; }
+
+/* Atalho para o próximo exercício, logo que o atual termina. */
+.exec-next-ex { display: flex; }
+.exec-next-ex-btn {
+  flex: 1;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.2;
+}
+.exec-next-ex-label { font-weight: 700; font-size: var(--fs-lg); }
+.exec-next-ex-name { font-size: var(--fs-xs); opacity: 0.85; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

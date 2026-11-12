@@ -11,7 +11,7 @@
   border-radius: var(--rs);
   color: var(--text);
   padding: 10px 12px;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   margin-bottom: 10px;
 }
 
@@ -46,7 +46,7 @@
   border-bottom: 1px solid var(--border);
   background: none;
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   min-height: auto;
 }
 
@@ -59,13 +59,13 @@
 }
 
 .addex-dropdown-tag {
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   color: var(--text-3);
   flex-shrink: 0;
 }
 
 .addex-dropdown-create {
-  color: var(--teal);
+  color: var(--teal-fg);
   font-weight: 600;
 }
 
@@ -79,7 +79,7 @@
 
 .addex-label {
   display: block;
-  font-size: 0.66rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-3);
@@ -90,7 +90,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   margin-bottom: 10px;
 }
@@ -104,7 +104,7 @@
   background: none;
   border: none;
   color: var(--text-3);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   padding: 4px 0;
   min-height: auto;
 }

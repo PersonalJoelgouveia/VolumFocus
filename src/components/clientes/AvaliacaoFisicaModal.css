@@ -81,13 +81,13 @@
 }
 
 .af-protocol-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.af-protocol-title { font-size: 0.92rem; font-weight: 700; color: var(--text); }
-.af-protocol-subtitle { font-size: 0.76rem; color: var(--text-3); line-height: 1.3; }
+.af-protocol-title { font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
+.af-protocol-subtitle { font-size: var(--fs-xs); color: var(--text-3); line-height: 1.3; }
 
 .af-protocol-chevron { font-size: 1.3rem; color: var(--text-3); flex-shrink: 0; }
 
 .af-protocol-badge {
-  font-size: 0.62rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;

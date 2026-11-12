@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react';
-import type { CSSProperties, MouseEvent } from 'react';
+import { useState } from 'react';
+import type { CSSProperties } from 'react';
+import { Camera, Clapperboard, Flame, Heart, Pencil, Play, Timer, Trash2 } from 'lucide-react';
+import { useConfirmStore } from '../../store/useConfirmStore';
 import type { WorkoutLogEntry, StrengthLogEntry } from '../../types/workout';
 import { isCardioLogEntry } from '../../types/workout';
 import type { Exercise } from '../../types/exercise';
@@ -58,7 +60,6 @@ export function ExerciseListItem({
   weekLog,
   itemProps,
 }: ExerciseListItemProps) {
-  const lastTapRef = useRef(0);
   const [showMedia, setShowMedia] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -78,24 +79,22 @@ export function ExerciseListItem({
 
   const clickable = mode === 'conjugar' && !isGrouped;
 
-  /** Duplo toque (<380ms) no item concluído reseta o status — mesmo timing do original. */
-  function handleDoneClick(e: MouseEvent) {
-    if (!isDone || mode !== 'normal') return;
-    if ((e.target as HTMLElement).closest('button')) return;
-    const now = Date.now();
-    if (now - lastTapRef.current < 380) {
-      onResetDone();
-      lastTapRef.current = 0;
-    } else {
-      lastTapRef.current = now;
-    }
+  /** Resetar um exercício concluído apaga o progresso: pede confirmação explícita. */
+  async function handleResetClick() {
+    const ok = await useConfirmStore.getState().ask(`Reabrir "${exercise?.name ?? 'exercício'}"? O status de concluído será removido.`, { confirmLabel: 'Reabrir' });
+    if (ok) onResetDone();
+  }
+
+  async function handleRemoveCardio() {
+    const ok = await useConfirmStore.getState().ask('Remover este cardio do dia?', { confirmLabel: 'Remover', danger: true });
+    if (ok) onRemove();
   }
 
   return (
     <div
       className={classes.join(' ')}
       style={{ paddingLeft: isGrouped ? 32 : undefined } as CSSProperties}
-      onClick={clickable ? onToggleSelect : isDone && mode === 'normal' ? handleDoneClick : undefined}
+      onClick={clickable ? onToggleSelect : undefined}
       {...itemProps}
     >
       {mode === 'conjugar' && !isGrouped && (
@@ -128,7 +127,10 @@ export function ExerciseListItem({
 
         <div className="ex-tags">
           {isCardio ? (
-            <span className="ex-tag ex-tag-cardio">❤️ Cardio</span>
+            <span className="ex-tag ex-tag-cardio">
+              <Heart size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 4 }} />
+              Cardio
+            </span>
           ) : (
             <>
               <span className="ex-tag ex-tag-ag">{exercise.agonist}</span>
@@ -144,8 +146,14 @@ export function ExerciseListItem({
         <div className="serie-chips">
           {isCardio ? (
             <>
-              <span className="cd-chip cd-chip-dur">⏱️ {entry.duration || 0} min</span>
-              <span className="cd-chip cd-chip-int">🔥 PSE {entry.intensity ?? '-'}/10</span>
+              <span className="cd-chip cd-chip-dur">
+                  <Timer size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 3 }} />
+                  {entry.duration || 0} min
+                </span>
+              <span className="cd-chip cd-chip-int">
+                  <Flame size={12} aria-hidden="true" style={{ verticalAlign: '-1px', marginRight: 3 }} />
+                  PSE {entry.intensity ?? '-'}/10
+                </span>
               {(() => {
                 const zone = CARDIO_ZONES.find((z) => z.id === entry.hrZone) ?? CARDIO_ZONES[2];
                 return (
@@ -200,7 +208,7 @@ export function ExerciseListItem({
         </div>
 
         {entry.notes && (
-          <div style={{ fontSize: '0.67rem', color: 'var(--teal)', marginTop: 5, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: '0.67rem', color: 'var(--teal-fg)', marginTop: 5, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontFamily: 'var(--font-mono)', fontStyle: 'normal' }}>#</span>
             {entry.notes}
           </div>
@@ -212,46 +220,48 @@ export function ExerciseListItem({
           <button
             className={`btn btn-icon btn-sm${hasMedia ? ' btn-play' : ' btn-ghost'}`}
             title={hasMedia ? 'Ver mídia do exercício' : 'Sem mídia cadastrada'}
+            aria-label={hasMedia ? 'Ver mídia do exercício' : 'Sem mídia cadastrada'}
             onClick={(e) => {
               e.stopPropagation();
               setShowMedia(true);
             }}
           >
-            {hasMedia ? '🎬' : '📷'}
+            {hasMedia ? <Clapperboard size={16} aria-hidden="true" /> : <Camera size={16} aria-hidden="true" />}
           </button>
           <button
             className="btn btn-play btn-icon btn-sm"
             title="Iniciar execução"
+            aria-label="Iniciar execução"
             onClick={(e) => {
               e.stopPropagation();
               onPlay();
             }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="6 3 20 12 6 21 6 3" />
-            </svg>
+            <Play size={14} aria-hidden="true" />
           </button>
           {isCardio ? (
             <button
               className="btn btn-ghost btn-icon btn-sm"
               title="Remover"
+              aria-label="Remover cardio"
               onClick={(e) => {
                 e.stopPropagation();
-                onRemove();
+                void handleRemoveCardio();
               }}
             >
-              🗑️
+              <Trash2 size={16} aria-hidden="true" />
             </button>
           ) : (
             <button
               className="btn btn-ghost btn-icon btn-sm"
               title="Editar exercício"
+              aria-label="Editar exercício"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowEdit(true);
               }}
             >
-              ✏️
+              <Pencil size={16} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -262,28 +272,38 @@ export function ExerciseListItem({
           <button
             className={`btn btn-icon btn-sm${hasMedia ? ' btn-play' : ' btn-ghost'}`}
             title={hasMedia ? 'Ver mídia do exercício' : 'Sem mídia cadastrada'}
+            aria-label={hasMedia ? 'Ver mídia do exercício' : 'Sem mídia cadastrada'}
             onClick={(e) => {
               e.stopPropagation();
               setShowMedia(true);
             }}
           >
-            {hasMedia ? '🎬' : '📷'}
+            {hasMedia ? <Clapperboard size={16} aria-hidden="true" /> : <Camera size={16} aria-hidden="true" />}
           </button>
           {!isCardio && (
             <button
               className="btn btn-ghost btn-icon btn-sm"
               title="Editar exercício"
+              aria-label="Editar exercício"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowEdit(true);
               }}
             >
-              ✏️
+              <Pencil size={16} aria-hidden="true" />
             </button>
           )}
-          <div className="ex-done-badge">
-            ✓ Concluído<span className="ex-done-hint">· 2× p/ resetar</span>
-          </div>
+          <button
+            type="button"
+            className="ex-done-badge"
+            aria-label="Concluído — tocar para reabrir o exercício"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleResetClick();
+            }}
+          >
+            ✓ Concluído
+          </button>
         </div>
       )}
 
