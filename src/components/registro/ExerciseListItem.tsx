@@ -9,6 +9,7 @@ import { getLastLoad } from '../../utils/lastLoad';
 import type { WeekLog } from '../../types/workout';
 import { ExerciseMediaModal } from './ExerciseMediaModal';
 import { EditExerciseModal } from './EditExerciseModal';
+import { CargaAlvoButton } from './CargaAlvoButton';
 
 export type ListMode = 'normal' | 'reorder' | 'conjugar';
 
@@ -124,7 +125,10 @@ export function ExerciseListItem({
       <div className="ex-accent" style={{ background: color }} />
 
       <div className="ex-info">
-        <div className="ex-name">{exercise.name}</div>
+        <div className="ex-name">
+          {exercise.name}
+          {!isCardio && mode === 'normal' && <CargaAlvoButton exerciseName={exercise.name} reps={(entry as StrengthLogEntry).reps} />}
+        </div>
 
         <div className="ex-tags">
           {isCardio ? (
