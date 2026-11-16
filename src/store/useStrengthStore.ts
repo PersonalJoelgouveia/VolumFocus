@@ -2,7 +2,20 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { StrFormulaKey, StrRecord } from '../types/strength';
 
+/** Ponto do histórico de 1RM — um por recorde salvo (aditivo: `records` não muda). */
+export interface StrHistoryEntry {
+  exercise: string;
+  weight: number;
+  reps: number;
+  oneRM: number;
+  formula: StrFormulaKey;
+  /** ISO 8601. */
+  data: string;
+}
+
 interface StrengthState {
+  /** Histórico de recordes salvos, mais antigo primeiro. Estados antigos sem este campo continuam válidos ([]). */
+  history: StrHistoryEntry[];
   /** Sucessor direto de strState.records (jg3_strength_records) — indexado por nome do exercício. */
   records: Record<string, StrRecord>;
 
@@ -15,11 +28,16 @@ export const useStrengthStore = create<StrengthState>()(
   persist(
     (set, get) => ({
       records: {},
+      history: [],
 
       upsertRecord: (exerciseName, weight, reps, oneRM, formula, rir) => {
         const existing = get().records[exerciseName];
         if (existing && oneRM <= existing.oneRM) return false;
         set((state) => ({
+          history: [
+            ...(state.history ?? []),
+            { exercise: exerciseName, weight, reps, oneRM, formula: formula || 'hibrida', data: new Date().toISOString() },
+          ],
           records: {
             ...state.records,
             [exerciseName]: { weight, reps, rir: rir || 0, oneRM, formula: formula || 'hibrida', date: new Date().toLocaleDateString('pt-BR') },
