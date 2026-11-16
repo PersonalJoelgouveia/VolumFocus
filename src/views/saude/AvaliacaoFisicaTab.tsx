@@ -1,5 +1,12 @@
+import { useState } from 'react';
 import { useUIStore } from '../../store/useUIStore';
 import { MinhaAvaliacaoFisicaView } from '../MinhaAvaliacaoFisicaView';
+import { ConsistencyGridCard } from '../../components/shared/ConsistencyGridCard';
+import { ForcaContent } from '../ForcaView';
+import { CardioContent } from '../CardioView';
+import '../../components/shared/ConsistencyGridCard.css';
+
+type AvSub = 'avaliacao' | 'forca' | 'cardio';
 
 /**
  * Aba "Avaliação Física" do hub Saúde. Zero lógica nova: reusa
@@ -22,24 +29,42 @@ import { MinhaAvaliacaoFisicaView } from '../MinhaAvaliacaoFisicaView';
 export function AvaliacaoFisicaTab({ onVoltar }: { onVoltar: () => void }) {
   const isAlunoMode = useUIStore((s) => s.isAlunoMode);
   const setActiveView = useUIStore((s) => s.setActiveView);
-
-  if (!isAlunoMode) {
-    return (
-      <div className="sh-redirect-card">
-        <div className="sh-redirect-ico" aria-hidden="true">📋</div>
-        <div className="sh-redirect-txt">
-          A Avaliação Física é individual por aluno — acesse pelo perfil dele na tela Clientes.
-        </div>
-        <button type="button" className="btn btn-primary" onClick={() => setActiveView('clientes')}>
-          Ir para Clientes
-        </button>
-      </div>
-    );
-  }
+  const [sub, setSub] = useState<AvSub>('avaliacao');
 
   return (
-    <div className="sh-af-embed">
-      <MinhaAvaliacaoFisicaView onClose={onVoltar} />
+    <div>
+      <div className="perf-tabs" role="tablist" aria-label="Avaliação Física">
+        <button type="button" role="tab" aria-selected={sub === 'avaliacao'} className={`perf-tab${sub === 'avaliacao' ? ' active' : ''}`} onClick={() => setSub('avaliacao')}>
+          📋 Avaliação Física
+        </button>
+        <button type="button" role="tab" aria-selected={sub === 'forca'} className={`perf-tab${sub === 'forca' ? ' active' : ''}`} onClick={() => setSub('forca')}>
+          Força 1RM
+        </button>
+        <button type="button" role="tab" aria-selected={sub === 'cardio'} className={`perf-tab${sub === 'cardio' ? ' active' : ''}`} onClick={() => setSub('cardio')}>
+          Cardiorrespiratório
+        </button>
+      </div>
+
+      {sub === 'avaliacao' && !isAlunoMode && (
+        <div className="sh-redirect-card">
+          <div className="sh-redirect-ico" aria-hidden="true">📋</div>
+          <div className="sh-redirect-txt">
+            A Avaliação Física é individual por aluno — acesse pelo perfil dele na tela Clientes.
+          </div>
+          <button type="button" className="btn btn-primary" onClick={() => setActiveView('clientes')}>
+            Ir para Clientes
+          </button>
+        </div>
+      )}
+      {sub === 'avaliacao' && isAlunoMode && (
+        <div className="sh-af-embed">
+          <MinhaAvaliacaoFisicaView onClose={onVoltar} />
+        </div>
+      )}
+
+      {sub !== 'avaliacao' && <ConsistencyGridCard />}
+      {sub === 'forca' && <div className="perf-panel active"><ForcaContent /></div>}
+      {sub === 'cardio' && <div className="perf-panel active"><CardioContent /></div>}
     </div>
   );
 }

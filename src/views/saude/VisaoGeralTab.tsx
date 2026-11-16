@@ -15,7 +15,7 @@ const CARDS: OverviewCard[] = [
     tab: 'avaliacao',
     icon: '📋',
     title: 'Avaliação Física',
-    desc: 'Histórico, evolução e comparativo das suas avaliações (Dobras, Bioimpedância, Online).',
+    desc: 'Histórico, evolução e comparativo das avaliações (Dobras, Bioimpedância, Online) + testes de Força 1RM e Cardiorrespiratório.',
   },
   {
     tab: 'exames',
