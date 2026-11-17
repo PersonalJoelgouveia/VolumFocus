@@ -67,7 +67,7 @@ export function MinhaRotinaView() {
     if (!totalExercicios) return;
 
     const ok = await useConfirmStore.getState().ask(
-      `Importar esta rotina para Treinos → Semana Atual? Isso substitui o que já estiver registrado nos dias com exercícios prescritos.`,
+      `Importar esta rotina para Meus Treinos → Semana Atual? Isso substitui o que já estiver registrado nos dias com exercícios prescritos.`,
       { confirmLabel: 'Importar Rotina' }
     );
     if (!ok) return;

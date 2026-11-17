@@ -97,7 +97,7 @@ export const VIEW_ICON: Partial<Record<ViewId, ReactNode>> = {
 };
 
 export const VIEW_META: Record<ViewId, ViewMeta> = {
-  registro: { title: 'Treinos', sub: 'Semana Atual' },
+  registro: { title: 'Meus Treinos', sub: 'Semana Atual' },
   dashboard: { title: 'X-ray', sub: 'Análise & Resumo Unificado' },
   banco: { title: 'Banco de Exercícios', sub: 'Biblioteca Biomecânica', ptOnly: true },
   forca: { title: 'Força 1RM', sub: 'Teste de Carga Máxima — Multi-Fórmula' },

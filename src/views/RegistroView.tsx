@@ -173,7 +173,7 @@ export function RegistroView() {
       <div>
         <div className="sec-row">
           <div className="page-title">
-            Treinos <span className="tag">ROTINA</span>
+            Meus Treinos <span className="tag">ROTINA</span>
           </div>
         </div>
         <MinhasRotinasSection
@@ -193,7 +193,7 @@ export function RegistroView() {
 
       <div className="sec-row">
         <div className="page-title">
-          Treinos <span className="tag">SEMANA ATUAL</span>
+          Meus Treinos <span className="tag">SEMANA ATUAL</span>
           {isPersonalMode && activeSessao && (
             <span className="tag" style={{ marginLeft: 6, background: 'var(--teal-glow)', color: 'var(--teal)' }}>
               SESSÃO · {activeSessao.alunoNome.split(' ')[0]}
