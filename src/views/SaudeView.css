@@ -257,3 +257,8 @@
   .sd-conn-top { flex-wrap: wrap; }
   .sd-status { order: 3; margin-left: 52px; }
 }
+
+/* Sub-abas (Avaliação Física | Força 1RM | Cardiorrespiratório) em telas estreitas: rolagem horizontal em vez de cortar. */
+.sh-view .perf-tabs { overflow-x: auto; scrollbar-width: none; }
+.sh-view .perf-tabs::-webkit-scrollbar { display: none; }
+.sh-view .perf-tab { flex: 1 0 auto; padding: 9px 12px; }

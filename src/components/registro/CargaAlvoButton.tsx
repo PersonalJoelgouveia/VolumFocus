@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Target } from 'lucide-react';
 import { useStrengthStore } from '../../store/useStrengthStore';
@@ -26,6 +26,8 @@ export function CargaAlvoButton({ exerciseName, reps }: Props) {
   const [modal, setModal] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
   const ptrRef = useRef<string>('mouse');
+  const tipRef = useRef<HTMLSpanElement>(null);
+  const [shift, setShift] = useState(0);
 
   const alvo = cargaAlvoDoTeste(record, reps);
 
@@ -36,6 +38,15 @@ export function CargaAlvoButton({ exerciseName, reps }: Props) {
     };
     document.addEventListener('pointerdown', close);
     return () => document.removeEventListener('pointerdown', close);
+  }, [tip]);
+
+  // Mantém o balão dentro da tela (celulares estreitos): desloca para a esquerda se vazar à direita.
+  useLayoutEffect(() => {
+    if (!tip || !tipRef.current) return;
+    tipRef.current.style.transform = 'translateX(0)';
+    const r = tipRef.current.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    setShift(r.right > vw - 8 ? Math.min(r.left - 8, r.right - (vw - 8)) : 0);
   }, [tip]);
 
   if (!(reps >= 1)) return null;
@@ -72,7 +83,7 @@ export function CargaAlvoButton({ exerciseName, reps }: Props) {
       </button>
 
       {tip && (
-        <span className="ca-tip" role="tooltip" onClick={(e) => e.stopPropagation()}>
+        <span ref={tipRef} className="ca-tip" role="tooltip" style={{ transform: `translateX(-${shift}px)` }} onClick={(e) => e.stopPropagation()}>
           {alvo ? (
             <>
               <strong className="ca-tip-val">{formatarCarga(alvo.carga)}</strong>

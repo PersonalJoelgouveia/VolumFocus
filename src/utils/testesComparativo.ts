@@ -54,9 +54,9 @@ export function montarSeriesForca(history: StrHistoryEntry[], records: Record<st
     }
     serie.pontos.push(ponto);
   };
-  for (const h of history) {
-    add(h.exercise, h.formula, { id: `h-${h.exercise}-${h.data}`, ts: Date.parse(h.data) || 0, valor: h.oneRM, detalhe: `${h.weight}kg × ${h.reps} reps` });
-  }
+  history.forEach((h, i) => {
+    add(h.exercise, h.formula, { id: `h-${i}-${h.exercise}-${h.data}`, ts: Date.parse(h.data) || 0, valor: h.oneRM, detalhe: `${h.weight}kg × ${h.reps} reps` });
+  });
   // Recordes antigos (anteriores ao histórico) entram como ponto-base, sem duplicar.
   for (const [exercise, r] of Object.entries(records)) {
     const formula = r.formula || 'hibrida';

@@ -127,4 +127,11 @@ export const EXERCISE_NAMES: Record<string, { es: string; en: string }> = {
   c9: { es: 'HIIT Funcional', en: 'Functional HIIT' },
   c10: { es: 'Ciclismo al Aire Libre', en: 'Outdoor Cycling' },
   c11: { es: 'Carrera al Aire Libre', en: 'Outdoor Running' },
+  // Flexores do Quadril / Hip Flexors
+  e93: { es: 'Flexión de Cadera Unilateral en Suelo', en: 'Single-Leg Floor Hip Flexion' },
+  e94: { es: 'Elevación de Rodilla de Pie', en: 'Standing Knee Raise' },
+  e95: { es: 'Flexión de Cadera en Polea Baja', en: 'Low-Cable Hip Flexion' },
+  e96: { es: 'Elevación de Pierna Recta Acostado', en: 'Supine Straight Leg Raise' },
+  e97: { es: 'Flexión de Cadera Sentado con Tobillera', en: 'Seated Hip Flexion with Ankle Weight' },
+  e98: { es: 'Marcha con Rodillas Altas Lenta', en: 'Slow High-Knee March' },
 };

@@ -34,3 +34,11 @@ describe('séries', () => {
     expect(new Date(parseDataPtBr('10/01/2026')).getMonth()).toBe(0);
   });
 });
+
+describe('ids únicos', () => {
+  it('dois registros no mesmo instante não colidem', () => {
+    const h = { exercise: 'Supino', weight: 80, reps: 5, oneRM: 93, formula: 'hibrida' as const, data: '2026-02-01T00:00:00Z' };
+    const ids = montarSeriesForca([h, { ...h, oneRM: 95 }], {})[0].pontos.map((p) => p.id);
+    expect(new Set(ids).size).toBe(2);
+  });
+});
