@@ -20,8 +20,10 @@
   border: 1px solid var(--border);
   border-radius: var(--rs);
   resize: vertical;
-  white-space: pre;
-  overflow-x: auto;
+  /* Quebra automática de linha: o texto nunca ultrapassa a largura (sem rolagem horizontal). */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-x: hidden;
 }
 
 .np-textarea:focus {

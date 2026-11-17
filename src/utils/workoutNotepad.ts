@@ -40,6 +40,7 @@ function exerciseName(e: WorkoutLogEntry, exercises: Exercise[]): string {
   return exercises.find((x) => x.id === e.exId)?.name ?? e.exId;
 }
 
+/** Corpo da linha do exercício (sem a nota — a nota vai numa linha própria, abaixo). */
 function entryToText(e: WorkoutLogEntry, exercises: Exercise[]): string {
   const name = safeName(exerciseName(e, exercises));
   let body: string;
@@ -60,8 +61,11 @@ function entryToText(e: WorkoutLogEntry, exercises: Exercise[]): string {
     body = `${name} ${sets}x${repsTxt}${loadTxt}`;
   }
 
-  const note = e.notes ? safeNote(e.notes) : '';
-  return note ? `${body} #${note}` : body;
+  return body;
+}
+
+function entryNote(e: WorkoutLogEntry): string {
+  return e.notes ? safeNote(e.notes) : '';
 }
 
 /**
@@ -93,12 +97,20 @@ export function serializeDayLog(dayLog: WorkoutDayLog, exercises: Exercise[], ps
   for (const row of buildDayLogRows(dayLog)) {
     if (row.kind === 'free') {
       lines.push(entryToText(row.entry, exercises));
+      // Nota (#) sempre numa linha própria, logo abaixo do exercício a que pertence.
+      const note = entryNote(row.entry);
+      if (note) lines.push(`#${note}`);
       continue;
     }
     const parts = row.members.map((m) => entryToText(m.entry, exercises));
     const type = row.members[0].entry.groupType ?? 'biset';
     const tag = type !== inferredGroupType(row.members.length) ? `[${GROUP_LABELS[type]}] ` : '';
     lines.push(tag + parts.join(' + '));
+    // Conjugado: cada nota vai abaixo, identificada pelo nome do exercício ("#Nome: nota").
+    for (const m of row.members) {
+      const note = entryNote(m.entry);
+      if (note) lines.push(`#${safeName(exerciseName(m.entry, exercises))}: ${note}`);
+    }
   }
   if (pse != null) lines.push(`PSE: ${pse}`);
   return lines.join('\n');
@@ -184,14 +196,78 @@ function strengthFromParsed(p: ReturnType<typeof parseExLine> & object, line: nu
   };
 }
 
+interface LogicalLine {
+  /** Linha (1-based) do exercício no texto original. */
+  line: number;
+  raw: string;
+}
+
+/** `+` dentro de uma nota não pode virar separador de conjugado (mesma regra do serializador). */
+function noteText(s: string): string {
+  return s.replace(/\+/g, '＋').trim();
+}
+
+const PSE_LINE_RE = /^PSE\s*[:\s]\s*\d+\s*$/i;
+
+/**
+ * Junta cada linha que começa com `#` ao exercício logo acima, formando a
+ * linha lógica `exercício #nota` que o restante do parser já entende. Em
+ * conjugados, `#Nome: nota` vai para a parte de mesmo nome (sem nome
+ * reconhecido: primeira parte ainda sem nota). Texto antigo com `#` na mesma
+ * linha continua válido.
+ */
+function mergeNoteLines(text: string, errors: NotepadError[]): LogicalLine[] {
+  const out: LogicalLine[] = [];
+  text.split(/\r?\n/).forEach((rawLine, idx) => {
+    const line = idx + 1;
+    const t = rawLine.trim();
+    if (!t) return;
+    if (!t.startsWith('#')) {
+      out.push({ line, raw: rawLine });
+      return;
+    }
+    const prev = out[out.length - 1];
+    if (!prev || PSE_LINE_RE.test(prev.raw.trim())) {
+      errors.push({ line, text: rawLine, reason: 'Nota (#) sem exercício acima. Escreva o exercício e, na linha de baixo, a nota.' });
+      return;
+    }
+    const note = t.slice(1).trim();
+    if (!note) return;
+    const prevText = prev.raw.trim();
+    const hasPlus = /\s\+\s|\+/.test(prevText.replace(/#.*$/, ''));
+    if (!hasPlus) {
+      prev.raw = prevText.includes('#') ? `${prevText} ${noteText(note)}` : `${prevText} #${noteText(note)}`;
+      return;
+    }
+    // Conjugado: separa a tag [Superset] (se houver) e localiza a parte pelo nome.
+    const tagM = prevText.match(TAG_RE);
+    const tag = tagM ? tagM[0] : '';
+    const parts = prevText.slice(tag.length).split('+').map((p) => p.trim());
+    const colon = note.indexOf(':');
+    let idxPart = -1;
+    let body = note;
+    if (colon > 0) {
+      const nm = norm(note.slice(0, colon));
+      const nameOf = (p: string) => norm(p.replace(/\s+\d+\s*x.*$/i, '').replace(/#.*$/, ''));
+      idxPart = parts.findIndex((p) => nameOf(p) === nm);
+      if (idxPart === -1) idxPart = parts.findIndex((p) => nameOf(p).startsWith(nm) && nm.length >= 3);
+      if (idxPart !== -1) body = note.slice(colon + 1).trim();
+    }
+    if (idxPart === -1) idxPart = Math.max(0, parts.findIndex((p) => !p.includes('#')));
+    const n = noteText(body);
+    parts[idxPart] = parts[idxPart].includes('#') ? `${parts[idxPart]} ${n}` : `${parts[idxPart]} #${n}`;
+    prev.raw = tag + parts.join(' + ');
+  });
+  return out;
+}
+
 /** Texto → itens estruturados (sem consultar o log atual). Linhas inválidas viram `errors`. */
 export function parseNotepadText(text: string, exercises: Exercise[]): NotepadParseResult {
   const items: NotepadItem[] = [];
   const errors: NotepadError[] = [];
   let pse: number | null = null;
 
-  text.split(/\r?\n/).forEach((rawLine, idx) => {
-    const line = idx + 1;
+  mergeNoteLines(text, errors).forEach(({ line, raw: rawLine }) => {
     let s = rawLine.trim();
     if (!s) return;
 
@@ -437,4 +513,33 @@ export function applyNotepadText(
   const rec = reconcileNotepad(parsed.items, oldLog, exercises, opts);
   const errors = [...parsed.errors, ...rec.errors].sort((a, b) => a.line - b.line);
   return { ...rec, errors, pse: parsed.pse, ok: errors.length === 0 };
+}
+
+/**
+ * Quebra automática: um `#` no meio de uma linha vai para a linha de baixo
+ * (a nota fica sempre embaixo do exercício). Não quebra se o resto da linha
+ * tem `+` (nota dentro de conjugado digitado em uma linha só) nem linhas que
+ * já começam com `#`. Devolve o texto e a nova posição do cursor.
+ */
+export function quebrarNotas(text: string, caret: number): { text: string; caret: number } {
+  const lines = text.split('\n');
+  let offset = 0;
+  let newCaret = caret;
+  const out: string[] = [];
+  for (const line of lines) {
+    const i = line.indexOf('#');
+    if (i > 0 && line.slice(0, i).trim() !== '' && !line.slice(i).includes('+')) {
+      const before = line.slice(0, i).replace(/\s+$/, '');
+      const rest = line.slice(i);
+      const cut = before.length;
+      out.push(before, rest);
+      // posições a partir do corte avançam: +1 (nova quebra) − espaços removidos
+      if (caret > offset + cut) newCaret += 1 - (i - cut);
+      offset += line.length + 1;
+    } else {
+      out.push(line);
+      offset += line.length + 1;
+    }
+  }
+  return { text: out.join('\n'), caret: Math.max(0, newCaret) };
 }

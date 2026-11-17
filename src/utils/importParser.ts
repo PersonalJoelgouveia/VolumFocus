@@ -186,6 +186,23 @@ export function parseImportText(raw: string, exercises: Exercise[]): ParsedImpor
     .filter(Boolean);
 
   lines.forEach((line) => {
+    // Linha de nota (#): pertence ao exercício acima. Em conjugado, "#Nome: nota" mira o exercício de mesmo nome.
+    if (line.startsWith('#')) {
+      let note = line.slice(1).trim();
+      if (!note || items.length === 0) return;
+      let target = items[items.length - 1];
+      const colon = note.indexOf(':');
+      if (colon > 0 && target.groupId) {
+        const nm = norm(note.slice(0, colon));
+        const hit = items.filter((i) => i.groupId === target.groupId).find((i) => norm(i.matched?.name ?? i.rawName) === nm);
+        if (hit) {
+          target = hit;
+          note = note.slice(colon + 1).trim();
+        }
+      }
+      target.notes = target.notes ? `${target.notes} ${note}` : note;
+      return;
+    }
     const pseMatch = line.match(/PSE[:\s]*(\d+)/i);
     if (pseMatch) {
       pse = Math.min(10, Math.max(1, parseInt(pseMatch[1], 10)));

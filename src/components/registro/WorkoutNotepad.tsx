@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useWorkoutStore, notificarCargaEditada } from '../../store/useWorkoutStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { isCardioLogEntry } from '../../types/workout';
 import type { DayIndex, WorkoutDayLog } from '../../types/workout';
-import { applyNotepadText, serializeDayLog } from '../../utils/workoutNotepad';
+import { applyNotepadText, quebrarNotas, serializeDayLog } from '../../utils/workoutNotepad';
 import type { NotepadError } from '../../utils/workoutNotepad';
 import './WorkoutNotepad.css';
 
 const DEBOUNCE_MS = 700;
+
 /** Referência estável: um `?? []` novo a cada render derruba o React (erro #185). */
 const EMPTY_LOG: WorkoutDayLog = [];
 
@@ -131,7 +132,19 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
     };
   }, []);
 
-  function handleChange(value: string) {
+  const caretRef = useRef<number | null>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    if (caretRef.current !== null && taRef.current) {
+      taRef.current.setSelectionRange(caretRef.current, caretRef.current);
+      caretRef.current = null;
+    }
+  }, [draft]);
+
+  function handleChange(raw: string, caret: number) {
+    const q = quebrarNotas(raw, caret);
+    const value = q.text;
+    if (value !== raw) caretRef.current = q.caret;
     draftRef.current = value;
     dirtyRef.current = true;
     setDraft(value);
@@ -157,9 +170,10 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
   return (
     <div className="np-wrap">
       <textarea
+        ref={taRef}
         className="np-textarea"
         value={draft}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => handleChange(e.target.value, e.target.selectionStart)}
         onBlur={handleBlur}
         rows={Math.min(28, Math.max(9, lineCount + 2))}
         spellCheck={false}
@@ -167,7 +181,7 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
         autoCorrect="off"
         aria-label="Treino do dia em texto"
         aria-invalid={status === 'error'}
-        placeholder={'Supino Reto 4x10 80kg #focar na descida\nAgachamento 3x8/8/6 100kg\nPSE: 7'}
+        placeholder={'Supino Reto 4x10 80kg\n#focar na descida\nAgachamento 3x8/8/6 100kg\nPSE: 7'}
       />
 
       <div className={`np-status np-status-${status}`} role="status" aria-live="polite">
@@ -195,10 +209,12 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
 
       <details className="np-help">
         <summary>Como escrever</summary>
-        <pre>{`Nome 3x10 80kg #nota          carga e reps iguais
+        <pre>{`Nome 3x10 80kg                carga e reps iguais
+#nota                         nota (#) na linha de baixo do exercício
 Nome 3x8/8/6 80kg 82,5kg 85kg  reps e cargas por série
 Nome 3x12 12,5kg              decimais: ponto ou vírgula
 A 3x10 20kg + B 3x10 15kg     conjugado (Bi-Set / Tri-Set)
+#B: nota                      nota de um dos conjugados
 [Superset] A 3x10 + B 3x10    Superset ou Circuito
 Esteira 30min int 6           cardio
 PSE: 7                        PSE do dia`}</pre>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_EXERCISES } from '../../data/defaultExercises';
 import type { CardioLogEntry, StrengthLogEntry, WorkoutDayLog } from '../../types/workout';
-import { applyNotepadText, parseNotepadText, serializeDayLog } from '../workoutNotepad';
+import { applyNotepadText, parseNotepadText, quebrarNotas, serializeDayLog } from '../workoutNotepad';
 import { parseImportText } from '../importParser';
 
 const EX = DEFAULT_EXERCISES;
@@ -20,7 +20,7 @@ describe('serializeDayLog', () => {
 
   it('escreve reps e cargas por série, decimais e notas', () => {
     const e = s(strength[0].id, { serieReps: [8, 8, 6], serieLoads: [80, 82.5, 85], notes: 'focar na descida' });
-    expect(serializeDayLog([e], EX)).toBe(`${strength[0].name} 3x8/8/6 80kg 82.5kg 85kg #focar na descida`);
+    expect(serializeDayLog([e], EX)).toBe(`${strength[0].name} 3x8/8/6 80kg 82.5kg 85kg\n#focar na descida`);
   });
 
   it('omite a carga quando é zero e acrescenta PSE', () => {
@@ -240,5 +240,69 @@ describe('permissões do Aluno', () => {
     const r = applyNotepadText(txt, [e], EX, { role: 'aluno' });
     expect(r.ok).toBe(true);
     expect(r.log).toHaveLength(2);
+  });
+});
+
+describe('notas (#) na linha de baixo', () => {
+  const nm = strength[0].name;
+  const nm2 = strength[1].name;
+
+  it('nota na linha seguinte pertence ao exercício acima', () => {
+    const r = parseNotepadText(`${nm} 3x10 80kg\n#focar na descida\n${nm2} 3x8 20kg`, EX);
+    expect(r.errors).toEqual([]);
+    expect(r.items).toHaveLength(2);
+    expect(r.items[0].notes).toBe('focar na descida');
+    expect(r.items[1].notes).toBeUndefined();
+  });
+
+  it('formato antigo (nota na mesma linha) continua válido', () => {
+    const r = parseNotepadText(`${nm} 3x10 80kg #focar`, EX);
+    expect(r.items[0].notes).toBe('focar');
+  });
+
+  it('várias linhas # acumulam na nota do mesmo exercício', () => {
+    const r = parseNotepadText(`${nm} 3x10 80kg\n#linha um\n#linha dois`, EX);
+    expect(r.items[0].notes).toBe('linha um linha dois');
+  });
+
+  it('+ dentro da nota não vira conjugado', () => {
+    const r = parseNotepadText(`${nm} 3x10 80kg\n#subir 2+2 kg`, EX);
+    expect(r.errors).toEqual([]);
+    expect(r.items).toHaveLength(1);
+  });
+
+  it('# sem exercício acima ou logo após PSE é erro', () => {
+    expect(parseNotepadText(`#solta\n${nm} 3x10 80kg`, EX).errors[0].line).toBe(1);
+    expect(parseNotepadText(`PSE: 7\n#solta`, EX).errors).toHaveLength(1);
+  });
+
+  it('conjugado: "#Nome: nota" vai para o exercício certo; ida e volta preserva', () => {
+    const txt = `${nm} 3x10 20kg + ${nm2} 3x10 15kg\n#${nm2}: segurar\n#${nm}: explosivo`;
+    const r = parseNotepadText(txt, EX);
+    expect(r.errors).toEqual([]);
+    expect(r.items[0].notes).toBe('explosivo');
+    expect(r.items[1].notes).toBe('segurar');
+  });
+
+  it('serializa nota de conjugado abaixo, com o nome', () => {
+    const a = { ...s(strength[0].id), groupId: 'g', groupType: 'biset' as const, notes: 'n1' };
+    const b = { ...s(strength[1].id), groupId: 'g', groupType: 'biset' as const };
+    const txt = serializeDayLog([a, b] as never, EX);
+    expect(txt.split('\n')).toEqual([`${nm} 3x10 80kg + ${nm2} 3x10 80kg`, `#${nm}: n1`]);
+  });
+});
+
+describe('quebrarNotas (quebra automática ao digitar #)', () => {
+  it('manda # do meio da linha para a linha de baixo e ajusta o cursor', () => {
+    const r = quebrarNotas('Supino 3x10 80kg #focar', 23);
+    expect(r.text).toBe('Supino 3x10 80kg\n#focar');
+    expect(r.caret).toBe(23); // fim do texto (23 = 16 + 1 quebra + 6)
+  });
+  it('não mexe em linhas que já começam com # nem sem #', () => {
+    expect(quebrarNotas('A 3x10\n#nota', 5).text).toBe('A 3x10\n#nota');
+    expect(quebrarNotas('A 3x10 20kg', 3).text).toBe('A 3x10 20kg');
+  });
+  it('não quebra quando o resto tem + (conjugado em uma linha)', () => {
+    expect(quebrarNotas('A 3x10 #x + B 3x10', 4).text).toBe('A 3x10 #x + B 3x10');
   });
 });
