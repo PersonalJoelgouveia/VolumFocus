@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useModeloStore } from '../../store/useModeloStore';
+import { useUIStore } from '../../store/useUIStore';
 import {
   TRAINING_MODEL_CATEGORIAS,
   TRAINING_MODEL_CATEGORIA_LABELS,
@@ -63,6 +64,21 @@ type Screen =
  */
 export function ModelosToolView({ onVoltar }: { onVoltar: () => void }) {
   const [screen, setScreen] = useState<Screen>({ tipo: 'hub' });
+  const isPersonalMode = useUIStore((s) => s.isPersonalMode);
+
+  // Exclusivo do Personal. A proteção dos dados em si está no store
+  // (useModeloStore: leituras vazias / escritas bloqueadas fora do papel
+  // Personal); este guard evita uma tela vazia/quebrada.
+  if (!isPersonalMode) {
+    return (
+      <div className="an-empty">
+        Esta ferramenta é exclusiva do Personal Trainer.{' '}
+        <button className="btn btn-ghost btn-sm" onClick={onVoltar}>
+          ← Voltar
+        </button>
+      </div>
+    );
+  }
 
   if (screen.tipo === 'frequencia') {
     return (

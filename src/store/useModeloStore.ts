@@ -16,6 +16,18 @@ import { gerarSessoesCompletas } from '../data/trainingSessionContent';
 import { buildAlunoRotinaFromTrainingModel } from '../utils/buildAlunoRotinaFromTrainingModel';
 import { useAlunoStore } from './useAlunoStore';
 import { useExerciseStore } from './useExerciseStore';
+import { useUIStore } from './useUIStore';
+
+/**
+ * Modelos é exclusivo do Personal. Os modelos vivem no cliente (catálogo no
+ * código + edições em localStorage; NÃO há coleção no Firestore), então não
+ * existe regra de segurança do Firestore a aplicar a eles: a camada de acesso
+ * aos dados deste app é este store. O papel vem do mesmo `isPersonalMode`
+ * definido pelo login (useAuthStore) — o mesmo usado por Anotações/Clientes.
+ * Para qualquer outro papel (Aluno, deslogado, papel ainda não resolvido),
+ * leituras devolvem vazio e escritas não fazem nada.
+ */
+export const ehPersonal = (): boolean => useUIStore.getState().isPersonalMode === true;
 
 export interface CopiarParaClienteResult {
   ok: boolean;
@@ -86,6 +98,7 @@ export const useModeloStore = create<ModeloState>()(
       modelos: criarCatalogoComProgressao(),
 
       listarFrequenciasPorCategoria: (categoria) => {
+        if (!ehPersonal()) return [];
         const vistos = new Set<string>();
         const resultado: { frequencia: FrequenciaSemanal; variante?: VariantePorGenero }[] = [];
         for (const m of get().modelos) {
@@ -99,14 +112,16 @@ export const useModeloStore = create<ModeloState>()(
       },
 
       listarPorFrequencia: (categoria, frequencia, variante) =>
-        get()
+        !ehPersonal()
+          ? []
+          : get()
           .modelos.filter((m) => m.categoria === categoria && m.frequencia === frequencia && m.variante === variante)
           .sort((a, b) => a.nivel - b.nivel),
 
-      getModelo: (id) => get().modelos.find((m) => m.id === id),
+      getModelo: (id) => (ehPersonal() ? get().modelos.find((m) => m.id === id) : undefined),
 
       garantirSessoesIniciais: (modeloId) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) => {
             if (m.id !== modeloId || m.sessoes.length > 0) return m;
             const esqueleto = getEsqueletoFrequencia(m.frequencia, m.variante);
@@ -116,7 +131,7 @@ export const useModeloStore = create<ModeloState>()(
         })),
 
       addExercicio: (modeloId, sessaoId, fase, entrada) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) =>
             m.id !== modeloId
               ? m
@@ -129,7 +144,7 @@ export const useModeloStore = create<ModeloState>()(
         })),
 
       updateExercicio: (modeloId, sessaoId, fase, entrada) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) =>
             m.id !== modeloId
               ? m
@@ -144,7 +159,7 @@ export const useModeloStore = create<ModeloState>()(
         })),
 
       removeExercicio: (modeloId, sessaoId, fase, entradaId) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) =>
             m.id !== modeloId
               ? m
@@ -157,7 +172,7 @@ export const useModeloStore = create<ModeloState>()(
         })),
 
       reorderExercicio: (modeloId, sessaoId, fase, fromIdx, toIdx) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) =>
             m.id !== modeloId
               ? m
@@ -179,7 +194,7 @@ export const useModeloStore = create<ModeloState>()(
         })),
 
       setBlocoDuracao: (modeloId, sessaoId, fase, minutos) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) =>
             m.id !== modeloId
               ? m
@@ -194,11 +209,12 @@ export const useModeloStore = create<ModeloState>()(
         })),
 
       setDuracaoEstimada: (modeloId, minutos) =>
-        set((state) => ({
+        set((state) => (!ehPersonal() ? state : {
           modelos: state.modelos.map((m) => (m.id === modeloId ? { ...m, duracaoEstimadaMinutos: minutos, atualizado: new Date().toISOString() } : m)),
         })),
 
       copiarParaCliente: (modeloId, alunoId) => {
+        if (!ehPersonal()) return { ok: false, exerciciosNaoEncontrados: [] };
         const modelo = get().modelos.find((m) => m.id === modeloId);
         const alunoStore = useAlunoStore.getState();
         if (!modelo || !alunoStore.getAluno(alunoId)) {

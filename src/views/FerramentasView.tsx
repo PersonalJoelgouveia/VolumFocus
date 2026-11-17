@@ -11,8 +11,8 @@ interface ToolCard {
   title: string;
   desc: string;
   comingSoon?: boolean;
-  /** Nunca mostrado pro Aluno — usado por ferramentas que são dado privado
-   *  do Personal (ver Anotações). Isto é só higiene de interface: a
+  /** Nunca mostrado pro Aluno — usado por ferramentas exclusivas do Personal
+   *  (Anotações, Modelos). Isto é só higiene de interface: a
    *  proteção real é a regra do Firestore (Aluno não tem `allow` nenhum na
    *  subcoleção `anotacoes`), não esconder o card. */
   ptOnly?: boolean;
@@ -28,7 +28,13 @@ const CARDS: ToolCard[] = [
     desc: 'Prontuário de acompanhamento do treinamento por cliente.',
     ptOnly: true,
   },
-  { key: 'modelos', icon: '📋', title: 'Modelos', desc: 'Biblioteca de modelos de treino organizados por nível de experiência.' },
+  {
+    key: 'modelos',
+    icon: '📋',
+    title: 'Modelos',
+    desc: 'Biblioteca de modelos de treino organizados por nível de experiência.',
+    ptOnly: true,
+  },
   { key: 'lembretes', icon: '🔔', title: 'Lembretes', desc: 'Alertas pra você e seus alunos.', comingSoon: true },
 ];
 
@@ -69,7 +75,9 @@ export function FerramentasView() {
     return <TimerToolView onVoltar={() => setScreen('hub')} />;
   }
 
-  if (screen === 'modelos') {
+  // Exclusivo do Personal: card filtrado + este guard + guard na própria
+  // tela + guarda no store (useModeloStore) — ver ModelosToolView.
+  if (screen === 'modelos' && isPersonalMode) {
     return <ModelosToolView onVoltar={() => setScreen('hub')} />;
   }
 
