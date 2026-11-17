@@ -1,17 +1,13 @@
-import { useState } from 'react';
 import { ConsistencyGridCard } from '../components/shared/ConsistencyGridCard';
 import { XRayContent } from './DashboardView';
 import '../components/shared/ConsistencyGridCard.css';
 
 /**
- * Performance: grid de consistência do mês + submenu X-ray ao final.
- * Os testes de Força 1RM e Cardiorrespiratório vivem em Saúde > Avaliação
- * Física. O X-ray (análise semanal, volume, balanço agonista/antagonista)
- * mantém todas as funcionalidades — é o mesmo componente, só reposicionado.
+ * Performance: grid de consistência do mês e, ao final, todo o conteúdo do
+ * X-ray (antigo item da sidebar). Os testes de Força 1RM e Cardiorrespiratório
+ * vivem em Saúde > Avaliação Física.
  */
 export function PerformanceView() {
-  const [xrayOpen, setXrayOpen] = useState(true);
-
   return (
     <div>
       <div className="sec-row">
@@ -22,12 +18,12 @@ export function PerformanceView() {
 
       <ConsistencyGridCard />
 
-      <div className="perf-tabs" style={{ marginTop: 24 }}>
-        <button type="button" className={`perf-tab${xrayOpen ? ' active' : ''}`} aria-expanded={xrayOpen} onClick={() => setXrayOpen((v) => !v)}>
-          X-ray <span style={{ opacity: 0.7, fontWeight: 400 }}>· Análise &amp; Resumo Unificado</span> {xrayOpen ? '▾' : '▸'}
-        </button>
+      <div className="sec-row" style={{ marginTop: 28 }}>
+        <div className="page-title">
+          X-ray <span className="tag">ANÁLISE &amp; RESUMO UNIFICADO</span>
+        </div>
       </div>
-      {xrayOpen && <XRayContent />}
+      <XRayContent />
     </div>
   );
 }
