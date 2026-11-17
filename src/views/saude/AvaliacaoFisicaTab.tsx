@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useUIStore } from '../../store/useUIStore';
 import { MinhaAvaliacaoFisicaView } from '../MinhaAvaliacaoFisicaView';
-import { ConsistencyGridCard } from '../../components/shared/ConsistencyGridCard';
 import { ForcaContent } from '../ForcaView';
 import { CardioContent } from '../CardioView';
 import { TestesComparativoDashboard } from '../../components/saude/TestesComparativoDashboard';
@@ -63,7 +62,6 @@ export function AvaliacaoFisicaTab({ onVoltar }: { onVoltar: () => void }) {
         </div>
       )}
 
-      {sub !== 'avaliacao' && <ConsistencyGridCard />}
       {sub === 'forca' && <div className="perf-panel active"><ForcaContent /></div>}
       {sub === 'forca' && <TestesComparativoDashboard tipo="forca" />}
       {sub === 'cardio' && <div className="perf-panel active"><CardioContent /></div>}

@@ -56,6 +56,13 @@ export const useExerciseStore = create<ExerciseState>()(
           e.synergist = e.synergist.filter((m) => (MUSCLE_GROUPS as readonly string[]).includes(m));
           e.stabilizer = e.stabilizer.filter((m) => (MUSCLE_GROUPS as readonly string[]).includes(m));
         });
+        // Correção anatômica aditiva: flexores do quadril são sinergistas nas
+        // elevações de perna (cópias persistidas antigas não os tinham).
+        state?.exercises.forEach((e) => {
+          if ((e.id === 'e42' || e.id === 'e81') && !e.synergist.includes('Flexores do Quadril')) {
+            e.synergist = [...e.synergist, 'Flexores do Quadril'];
+          }
+        });
         state?.mergeNewDefaults();
       },
     }

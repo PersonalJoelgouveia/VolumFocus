@@ -115,7 +115,7 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
 };
 
 /** Itens da navegação principal (sidebar desktop), na ordem do monolito. */
-export const PRIMARY_NAV: ViewId[] = ['registro', 'dashboard', 'conquistas'];
+export const PRIMARY_NAV: ViewId[] = ['registro', 'performance', 'conquistas'];
 export const PT_NAV: ViewId[] = ['banco', 'clientes', 'notifications'];
 /** Sem views exclusivas de aluno hoje — "Minha Rotina" foi fundida em Treinos. */
 export const ALUNO_NAV: ViewId[] = [];

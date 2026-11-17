@@ -16,6 +16,7 @@ export const MUSCLE_GROUPS = [
   'Panturrilhas',
   'Abdômen',
   'Extensores da Coluna',
+  'Flexores do Quadril',
 ] as const;
 
 export type MuscleGroup = (typeof MUSCLE_GROUPS)[number];

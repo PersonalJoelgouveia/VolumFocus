@@ -43,7 +43,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   {id:'e39',name:'Abdominal Crunch',               agonist:'Abdômen',             synergist:[],                             stabilizer:[]},
   {id:'e40',name:'Prancha Isométrica',             agonist:'Extensores da Coluna',synergist:['Abdômen'],                    stabilizer:[]},
   {id:'e41',name:'Russian Twist',                  agonist:'Abdômen',             synergist:[],                             stabilizer:[]},
-  {id:'e42',name:'Abdominal Infra',                agonist:'Abdômen',             synergist:[],                             stabilizer:[]},
+  {id:'e42',name:'Abdominal Infra',                agonist:'Abdômen',             synergist:['Flexores do Quadril'],                             stabilizer:[]},
   {id:'e43',name:'Pallof Press',                   agonist:'Extensores da Coluna',synergist:['Ombros'],                     stabilizer:['Abdômen']},
   {id:'e44',name:'Hiperextensão Lombar',           agonist:'Extensores da Coluna',synergist:['Glúteos'],                    stabilizer:[]},
   {id:'e45',name:'Bird Dog',                       agonist:'Extensores da Coluna',synergist:['Abdômen'],                    stabilizer:[]},
@@ -102,7 +102,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   {id:'e80',name:'Burrinho (Donkey Calf Raise)',   agonist:'Panturrilhas',        synergist:[],                             stabilizer:[]},
 
   // ── Abdômen — flexão, rotação e estabilização lateral ──
-  {id:'e81',name:'Elevação de Pernas Suspenso',    agonist:'Abdômen',             synergist:[],                             stabilizer:[]},
+  {id:'e81',name:'Elevação de Pernas Suspenso',    agonist:'Abdômen',             synergist:['Flexores do Quadril'],                             stabilizer:[]},
   {id:'e82',name:'Abdominal na Polia (Cable Crunch)',agonist:'Abdômen',           synergist:[],                             stabilizer:[]},
   {id:'e83',name:'Prancha Lateral',                agonist:'Abdômen',             synergist:['Extensores da Coluna'],       stabilizer:[]},
 
@@ -120,6 +120,14 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   {id:'e90',name:'Agachamento Cossaco (Cossack Squat)',agonist:'Quadríceps',       synergist:['Glúteos','Isquiotibiais'],    stabilizer:['Abdômen']},
   {id:'e91',name:'Balanço de Perna (Leg Swing)',    agonist:'Isquiotibiais',       synergist:['Glúteos'],                    stabilizer:[]},
   {id:'e92',name:'Mobilidade de Tornozelo (Ankle Rock)',agonist:'Panturrilhas',    synergist:[],                             stabilizer:[]},
+
+  // ── Flexores do Quadril (psoas/ilíaco, reto femoral) — antagonistas dos Glúteos na extensão do quadril ──
+  {id:'e93', name:'Flexão de Quadril Unilateral Solo',      agonist:'Flexores do Quadril', synergist:['Quadríceps','Abdômen'], stabilizer:['Extensores da Coluna']},
+  {id:'e94', name:'Elevação de Joelho em Pé (Standing Knee Raise)',agonist:'Flexores do Quadril', synergist:['Quadríceps','Abdômen'], stabilizer:['Glúteos']},
+  {id:'e95', name:'Flexão de Quadril na Polia Baixa',        agonist:'Flexores do Quadril', synergist:['Quadríceps'],           stabilizer:['Abdômen']},
+  {id:'e96', name:'Elevação de Perna Reta Deitado',          agonist:'Flexores do Quadril', synergist:['Quadríceps','Abdômen'], stabilizer:[]},
+  {id:'e97', name:'Flexão de Quadril Sentado com Caneleira', agonist:'Flexores do Quadril', synergist:['Quadríceps'],           stabilizer:['Abdômen']},
+  {id:'e98', name:'Marcha Elevada Lenta (High Knee March)',  agonist:'Flexores do Quadril', synergist:['Quadríceps','Panturrilhas'], stabilizer:['Abdômen','Glúteos']},
 
   // ── Cardiorrespiratórios ──
   {id:'c1', name:'Esteira (Corrida)',              agonist:'Cardio', type:'cardio', synergist:[], stabilizer:[]},

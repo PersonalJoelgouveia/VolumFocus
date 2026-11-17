@@ -1,16 +1,33 @@
-import { useEffect } from 'react';
-import { useUIStore } from '../store/useUIStore';
+import { useState } from 'react';
+import { ConsistencyGridCard } from '../components/shared/ConsistencyGridCard';
+import { XRayContent } from './DashboardView';
+import '../components/shared/ConsistencyGridCard.css';
 
 /**
- * Performance foi transferida para Saúde > Avaliação Física (sub-abas
- * Força 1RM e Cardiorrespiratório). Os dados (jg3_strength_records e
- * jg3_cardio_data) não mudaram de lugar — só a navegação. Este ViewId é
- * mantido apenas como redirecionamento, para não quebrar atalhos antigos.
+ * Performance: grid de consistência do mês + submenu X-ray ao final.
+ * Os testes de Força 1RM e Cardiorrespiratório vivem em Saúde > Avaliação
+ * Física. O X-ray (análise semanal, volume, balanço agonista/antagonista)
+ * mantém todas as funcionalidades — é o mesmo componente, só reposicionado.
  */
 export function PerformanceView() {
-  const setActiveView = useUIStore((s) => s.setActiveView);
-  useEffect(() => {
-    setActiveView('saude');
-  }, [setActiveView]);
-  return null;
+  const [xrayOpen, setXrayOpen] = useState(true);
+
+  return (
+    <div>
+      <div className="sec-row">
+        <div className="page-title">
+          Performance <span className="tag">MÉTRICAS</span>
+        </div>
+      </div>
+
+      <ConsistencyGridCard />
+
+      <div className="perf-tabs" style={{ marginTop: 24 }}>
+        <button type="button" className={`perf-tab${xrayOpen ? ' active' : ''}`} aria-expanded={xrayOpen} onClick={() => setXrayOpen((v) => !v)}>
+          X-ray <span style={{ opacity: 0.7, fontWeight: 400 }}>· Análise &amp; Resumo Unificado</span> {xrayOpen ? '▾' : '▸'}
+        </button>
+      </div>
+      {xrayOpen && <XRayContent />}
+    </div>
+  );
 }

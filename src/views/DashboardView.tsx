@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useUIStore } from '../store/useUIStore';
 import { useExerciseStore } from '../store/useExerciseStore';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { LEVEL_GOALS, LOWER, UPPER, VOL_MAX_LOWER, VOL_MAX_UPPER, COMPARISONS } from '../data/dashboardData';
@@ -17,7 +19,7 @@ import '../components/dashboard/MuscleBalanceCard.css';
  * O bloco de Top 1RM segue pendente para uma próxima iteração — fora do
  * escopo explícito desta fase (sobrecarga progressiva + balanço + toasts).
  */
-export function DashboardView() {
+export function XRayContent() {
   const exercises = useExerciseStore((s) => s.exercises);
   const weekLog = useWorkoutStore((s) => s.weekLog);
   const selectedLevel = useWorkoutStore((s) => s.selectedLevel);
@@ -30,12 +32,6 @@ export function DashboardView() {
 
   return (
     <div>
-      <div className="sec-row">
-        <div className="page-title">
-          Dashboard <span className="tag">SEMANA</span>
-        </div>
-      </div>
-
       <div className="level-pill">
         {(Object.entries(LEVEL_GOALS) as [TrainingLevel, typeof lv][]).map(([key, goal]) => (
           <button
@@ -103,4 +99,17 @@ export function DashboardView() {
       <MuscleBalanceCard weekVol={weekVol} />
     </div>
   );
+}
+
+/**
+ * X-ray deixou de ser item independente da sidebar: agora é uma seção ao
+ * final de Performance (ver PerformanceView). Este ViewId permanece só como
+ * redirecionamento, para não quebrar atalhos antigos.
+ */
+export function DashboardView() {
+  const setActiveView = useUIStore((s) => s.setActiveView);
+  useEffect(() => {
+    setActiveView('performance');
+  }, [setActiveView]);
+  return null;
 }

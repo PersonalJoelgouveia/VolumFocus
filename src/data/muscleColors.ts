@@ -17,5 +17,6 @@ export const MUSCLE_COLOR: Record<ExerciseAgonist, string> = {
   Panturrilhas: '#5eead4',
   Abdômen: '#fde68a',
   'Extensores da Coluna': '#86efac',
+  'Flexores do Quadril': '#c084fc',
   Cardio: '#22d3a0',
 };

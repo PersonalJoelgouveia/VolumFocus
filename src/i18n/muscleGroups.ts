@@ -21,6 +21,7 @@ export const MUSCLE_LABELS: Record<Locale, Record<MuscleGroup | 'Cardio', string
     Panturrilhas: 'Panturrilhas',
     Abdômen: 'Abdômen',
     'Extensores da Coluna': 'Extensores da Coluna',
+    'Flexores do Quadril': 'Flexores do Quadril',
     Cardio: 'Cardio',
   },
   es: {
@@ -35,6 +36,7 @@ export const MUSCLE_LABELS: Record<Locale, Record<MuscleGroup | 'Cardio', string
     Panturrilhas: 'Pantorrillas',
     Abdômen: 'Abdomen',
     'Extensores da Coluna': 'Erectores de la Columna',
+    'Flexores do Quadril': 'Flexores de la Cadera',
     Cardio: 'Cardio',
   },
   en: {
@@ -49,6 +51,7 @@ export const MUSCLE_LABELS: Record<Locale, Record<MuscleGroup | 'Cardio', string
     Panturrilhas: 'Calves',
     Abdômen: 'Abs',
     'Extensores da Coluna': 'Spinal Erectors',
+    'Flexores do Quadril': 'Hip Flexors',
     Cardio: 'Cardio',
   },
 };

@@ -10,7 +10,7 @@ export const LEVEL_GOALS: Record<TrainingLevel, { min: number; max: number; labe
 
 /** Migrado de UPPER/LOWER e VOL_MAX_UPPER/VOL_MAX_LOWER (index.html ~4070-4072). */
 export const UPPER: MuscleGroup[] = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps'];
-export const LOWER: MuscleGroup[] = ['Quadríceps', 'Isquiotibiais', 'Glúteos', 'Panturrilhas'];
+export const LOWER: MuscleGroup[] = ['Quadríceps', 'Isquiotibiais', 'Glúteos', 'Flexores do Quadril', 'Panturrilhas'];
 export const VOL_MAX_UPPER = 30;
 export const VOL_MAX_LOWER = 50;
 
@@ -46,11 +46,18 @@ export const PAIRS: MusclePair[] = [
     tip: 'Uma razão próxima de 1:1 é uma referência comum entre os flexores e extensores do cotovelo.',
   },
   {
-    label: 'Glúteos × Extensores da Coluna',
+    label: 'Glúteos × Flexores do Quadril',
     ag: { muscles: ['Glúteos'], color: '#f472b6' },
+    ant: { muscles: ['Flexores do Quadril'], color: '#c084fc' },
+    safe: [0.5, 2.0],
+    tip: 'Glúteos estendem o quadril e os flexores do quadril o flexionam (ação oposta). Equilíbrio entre os dois favorece a postura e o controle da pelve.',
+  },
+  {
+    label: 'Abdômen × Extensores da Coluna',
+    ag: { muscles: ['Abdômen'], color: '#fde68a' },
     ant: { muscles: ['Extensores da Coluna'], color: '#86efac' },
     safe: [0.5, 2.0],
-    tip: 'Esses grupos trabalham juntos na estabilidade lombopélvica.',
+    tip: 'Flexão e extensão do tronco: manter os dois grupos equilibrados favorece a estabilidade lombar.',
   },
 ];
 
