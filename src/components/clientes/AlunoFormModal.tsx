@@ -71,8 +71,17 @@ export function AlunoFormModal({ aluno, onClose }: AlunoFormModalProps) {
     const saved = isEdit ? { ...aluno, ...patch } : addAluno(patch);
     if (isEdit) updateAluno(aluno.id, patch);
 
-    await syncAlunoPerfilToCloud(saved);
+    const nuvemOk = await syncAlunoPerfilToCloud(saved);
     setSaving(false);
+    if (!nuvemOk) {
+      // Salvo só neste aparelho: sem o doc na nuvem, testes/avaliações/rotinas do aluno são negados.
+      showToast(
+        '⚠️ Aluno salvo só neste aparelho: não foi possível gravar na nuvem. Abra o aluno, toque em Editar e Salvar para tentar de novo.',
+        'error'
+      );
+      onClose();
+      return;
+    }
     showToast(
       menor
         ? '✅ Aluno salvo. O acesso dele só é liberado depois que o responsável autorizar no app.'
