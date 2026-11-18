@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useUIStore } from '../../store/useUIStore';
-import { useCardioTestStore } from '../../store/useCardioTestStore';
+import { useCardioScope, useTestesScopePerfil } from '../testes/testesScope';
 import { getElapsedMs, getRemainingMs, useCooperTimerStore } from '../../store/useCooperTimerStore';
 import { CARDIO_PROTOCOLS, runCardioCalculation } from '../../utils/cardioVo2';
 import type { CardioModality, CardioProtocol, CardioTestInputs, CardioTestResult } from '../../types/cardioTest';
@@ -23,11 +23,12 @@ function fmtClock(ms: number) {
  */
 export function CardioTestPanel() {
   const showToast = useUIStore((s) => s.showToast);
-  const salvarTeste = useCardioTestStore((s) => s.salvar);
+  const { salvar: salvarTeste } = useCardioScope();
 
   const [open, setOpen] = useState(false);
-  const [gender, setGender] = useState<'M' | 'F'>('M');
-  const [age, setAge] = useState('30');
+  const perfil = useTestesScopePerfil();
+  const [gender, setGender] = useState<'M' | 'F'>(perfil?.gender ?? 'M');
+  const [age, setAge] = useState(perfil?.age ? String(perfil.age) : '30');
   const [weight, setWeight] = useState('75');
   const [fcRest, setFcRest] = useState('60');
   const [vo2Ergo, setVo2Ergo] = useState('');

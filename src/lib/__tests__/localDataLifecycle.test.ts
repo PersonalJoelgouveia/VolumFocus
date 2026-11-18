@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../testesDesempenhoRepository', () => ({
+  listTestes: vi.fn(),
+  createTeste: vi.fn(),
+  deleteTeste: vi.fn(),
+}));
 vi.mock('../backupRepository', () => ({
   LOCAL_STORAGE_KEYS: ['jg3_log', 'jg3_alunos', 'jg3_dirty'],
 }));

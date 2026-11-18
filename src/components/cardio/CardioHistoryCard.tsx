@@ -1,4 +1,4 @@
-import { useCardioTestStore } from '../../store/useCardioTestStore';
+import { useCardioScope } from '../testes/testesScope';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { useUIStore } from '../../store/useUIStore';
 import { CARDIO_PROTOCOLS } from '../../utils/cardioVo2';
@@ -14,8 +14,7 @@ function protocolLabel(modality: 'esteira' | 'bike', protocol: string): string {
  * último e o penúltimo teste — "Último × Anterior: +Xml/kg/min / +Y%".
  */
 export function CardioHistoryCard() {
-  const testes = useCardioTestStore((s) => s.testes);
-  const remover = useCardioTestStore((s) => s.remover);
+  const { testes, remover, canRemove } = useCardioScope();
   const showToast = useUIStore((s) => s.showToast);
 
   const [ultimo, anterior] = testes;
@@ -69,9 +68,11 @@ export function CardioHistoryCard() {
                     </div>
                   </div>
                 </div>
-                <button className="btn btn-ghost btn-icon btn-sm" title="Remover" onClick={() => handleRemover(t.id)}>
-                  🗑️
-                </button>
+                {canRemove(t.id) && (
+                  <button className="btn btn-ghost btn-icon btn-sm" title="Remover" onClick={() => handleRemover(t.id)}>
+                    🗑️
+                  </button>
+                )}
               </div>
             ))}
           </div>

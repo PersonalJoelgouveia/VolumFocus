@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
-import { useStrengthStore } from '../../store/useStrengthStore';
+import { useStrengthScope } from '../testes/testesScope';
 import { useUIStore } from '../../store/useUIStore';
 import { RIR_MESSAGES, STR_FORMULAS, STR_FORMULA_ORDER, strCalcAll } from '../../utils/strengthCalc';
 import { parseDecimal, sanitizeDecimalInput } from '../../utils/decimalInput';
@@ -41,7 +41,7 @@ function rirBadgeClass(rir: number): string {
 export function StrCalcCard({ onCalculated }: StrCalcCardProps) {
   const exercises = useExerciseStore((s) => s.exercises);
   const weekLog = useWorkoutStore((s) => s.weekLog);
-  const upsertRecord = useStrengthStore((s) => s.upsertRecord);
+  const { upsertRecord } = useStrengthScope();
   const showToast = useUIStore((s) => s.showToast);
 
   const strengthExercises = exercises.filter((e) => e.type !== 'cardio');

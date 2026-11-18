@@ -1,10 +1,16 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useUIStore } from '../../store/useUIStore';
 import { MinhaAvaliacaoFisicaView } from '../MinhaAvaliacaoFisicaView';
 import { ForcaContent } from '../ForcaView';
 import { CardioContent } from '../CardioView';
+import { AlunoMeusTestesProvider } from '../../components/testes/TestesScopeProviders';
 import { TestesComparativoDashboard } from '../../components/saude/TestesComparativoDashboard';
 import '../../components/shared/ConsistencyGridCard.css';
+
+function TestesDoUsuario({ aluno, children }: { aluno: boolean; children: ReactNode }) {
+  return aluno ? <AlunoMeusTestesProvider>{children}</AlunoMeusTestesProvider> : <>{children}</>;
+}
 
 type AvSub = 'avaliacao' | 'forca' | 'cardio';
 
@@ -62,10 +68,23 @@ export function AvaliacaoFisicaTab({ onVoltar }: { onVoltar: () => void }) {
         </div>
       )}
 
-      {sub === 'forca' && <div className="perf-panel active"><ForcaContent /></div>}
-      {sub === 'forca' && <TestesComparativoDashboard tipo="forca" />}
-      {sub === 'cardio' && <div className="perf-panel active"><CardioContent /></div>}
-      {sub === 'cardio' && <TestesComparativoDashboard tipo="cardio" />}
+      {sub !== 'avaliacao' && (
+        // Aluno: testes registrados pelo Personal (só leitura) + os próprios. Personal: os seus próprios (sem provider).
+        <TestesDoUsuario aluno={isAlunoMode}>
+          {sub === 'forca' && (
+            <>
+              <div className="perf-panel active"><ForcaContent /></div>
+              <TestesComparativoDashboard tipo="forca" />
+            </>
+          )}
+          {sub === 'cardio' && (
+            <>
+              <div className="perf-panel active"><CardioContent /></div>
+              <TestesComparativoDashboard tipo="cardio" />
+            </>
+          )}
+        </TestesDoUsuario>
+      )}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useStrengthStore } from '../../store/useStrengthStore';
-import { useCardioTestStore } from '../../store/useCardioTestStore';
+import { useCardioScope, useStrengthScope } from '../testes/testesScope';
 import {
   classificarTendencia,
   montarSeriesCardio,
@@ -28,9 +27,8 @@ const fmtDelta = (d: number, un: string) => `${d >= 0 ? '+' : ''}${d.toFixed(1)}
  * comparados entre si. Reativo aos stores → atualiza sozinho após novo teste.
  */
 export function TestesComparativoDashboard({ tipo }: { tipo: 'forca' | 'cardio' }) {
-  const history = useStrengthStore((s) => s.history);
-  const records = useStrengthStore((s) => s.records);
-  const testes = useCardioTestStore((s) => s.testes);
+  const { history, records } = useStrengthScope();
+  const { testes } = useCardioScope();
 
   const series = useMemo(
     () => (tipo === 'forca' ? montarSeriesForca(history ?? [], records) : montarSeriesCardio(testes)),

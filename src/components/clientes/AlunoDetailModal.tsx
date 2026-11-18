@@ -12,6 +12,7 @@ import { limparRascunhoOnline } from '../../lib/onlineAssessmentDraftStore';
 import { useSessionStore } from '../../store/useSessionStore';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { AvaliacaoFisicaModal } from './AvaliacaoFisicaModal';
+import { AlunoForcaCardioModal } from './AlunoForcaCardioModal';
 import './ClientesView.css';
 
 interface AlunoDetailModalProps {
@@ -38,6 +39,7 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   const [activeDay, setActiveDay] = useState(initialDay >= 0 ? initialDay : 0);
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
+  const [testesOpen, setTestesOpen] = useState(false);
 
   if (!aluno) return null;
 
@@ -120,6 +122,9 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
 
         <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setAvaliacaoOpen(true)}>
           📋 Avaliação Física
+        </button>
+        <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setTestesOpen(true)}>
+          💪 Força &amp; Cardio (testes e carga ideal)
         </button>
 
         {perfilOpen && (
@@ -208,6 +213,12 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           </button>
         </div>
       </div>
+
+      {testesOpen && (
+        <ErrorBoundary area="Força & Cardio do aluno" onClose={() => setTestesOpen(false)}>
+          <AlunoForcaCardioModal aluno={aluno} onClose={() => setTestesOpen(false)} />
+        </ErrorBoundary>
+      )}
 
       {avaliacaoOpen && (
         <ErrorBoundary area="a Avaliação Física" onClose={() => setAvaliacaoOpen(false)}>

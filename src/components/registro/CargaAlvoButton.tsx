@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Target } from 'lucide-react';
-import { useStrengthStore } from '../../store/useStrengthStore';
+import { useRecordesEfetivos } from '../testes/testesScope';
 import { STR_FORMULAS } from '../../utils/strengthCalc';
 import { cargaAlvoDoTeste, estimarPesoIdeal, formatarCarga } from '../../utils/cargaAlvo';
 import { parseDecimal, sanitizeDecimalInput } from '../../utils/decimalInput';
@@ -21,7 +21,7 @@ interface Props {
  * (estimativa descartável, rotulada como tal — não vira teste).
  */
 export function CargaAlvoButton({ exerciseName, reps }: Props) {
-  const record = useStrengthStore((s) => s.records[exerciseName]);
+  const record = useRecordesEfetivos()[exerciseName];
   const [tip, setTip] = useState(false);
   const [modal, setModal] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);

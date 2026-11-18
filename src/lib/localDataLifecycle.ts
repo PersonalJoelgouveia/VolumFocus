@@ -4,6 +4,7 @@ import { OWNER_KEY, OWNER_UUID_CACHE_KEY, clearLocalOwnerMemory, setLocalOwner }
 import { descartarMemoriaSensivel } from './guardedStorage';
 import { QUARENTENA_KEY } from './migracaoSensivel';
 import { useAlunoStore } from '../store/useAlunoStore';
+import { useTestesRemotosStore } from '../store/useTestesRemotosStore';
 
 /**
  * Ciclo de vida dos dados locais (P1 da auditoria de segurança).
@@ -41,6 +42,7 @@ const MEDIA_DBS = ['volumfocus-assessment-media', 'volumfocus-media'];
 export function limparMemoriaSensivel(): void {
   descartarMemoriaSensivel();
   useAlunoStore.setState({ avaliacoes: {}, notas: {} });
+  useTestesRemotosStore.getState().limpar();
 }
 
 /** Nunca deixa o logout travar por causa de um IndexedDB que não responde. */

@@ -1,11 +1,11 @@
 import { useExerciseStore } from '../../store/useExerciseStore';
-import { useStrengthStore } from '../../store/useStrengthStore';
+import { useStrengthScope } from '../testes/testesScope';
 import { MUSCLE_COLOR } from '../../data/muscleColors';
 import { STR_FORMULAS } from '../../utils/strengthCalc';
 
 /** Sucessor do CARD 3 (Recordes Pessoais) + strRenderRecords() (index.html ~3034-3043, ~9341-9370). */
 export function StrRecordsCard() {
-  const records = useStrengthStore((s) => s.records);
+  const { records } = useStrengthScope();
   const exercises = useExerciseStore((s) => s.exercises);
 
   const entries = Object.entries(records).sort((a, b) => b[1].oneRM - a[1].oneRM);

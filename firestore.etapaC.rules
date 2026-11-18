@@ -295,6 +295,43 @@ service cloud.firestore {
         && d.get('id', null) == o.get('id', null);
     }
 
+    // ---- testes de FORÇA (1RM) e CARDIO registrados pelo Personal para um aluno ---------------------
+    // alunos/{email}/testesDesempenho/{id}. Dado de saúde: só o Personal DONO do cliente cria/apaga
+    // (ptDoAluno + consentOk); o aluno só LÊ os próprios. Sem update (correção = apagar e criar de novo).
+    // Autoria = e-mail do token (não forjável); campos fixos e faixas plausíveis; sem campos de dono.
+    function testeDesempenhoValido(id) {
+      let d = request.resource.data;
+      return semCamposDeDono(d)
+        && d.keys().hasAll(['id', 'tipo', 'data', 'autorEmail'])
+        && d.id == id && id.size() <= 128
+        && d.tipo in ['forca', 'cardio']
+        && d.data is string && d.data.size() <= 40
+        && d.autorEmail is string && d.autorEmail.lower() == emailToken()
+        && (
+          (d.tipo == 'forca'
+            && d.keys().hasOnly(['id', 'tipo', 'data', 'autorEmail', 'exercise', 'weight', 'reps', 'rir', 'oneRM', 'formula'])
+            && d.keys().hasAll(['exercise', 'weight', 'reps', 'rir', 'oneRM', 'formula'])
+            && d.exercise is string && d.exercise.size() > 0 && d.exercise.size() <= 200
+            && d.weight is number && d.weight >= 0.1 && d.weight <= 2000
+            && d.reps is number && d.reps >= 1 && d.reps <= 100
+            && d.rir is number && d.rir >= 0 && d.rir <= 20
+            && d.oneRM is number && d.oneRM >= 0.1 && d.oneRM <= 3000
+            && d.formula in ['hibrida', 'epley', 'brzycki', 'lombardi'])
+          ||
+          (d.tipo == 'cardio'
+            && d.keys().hasOnly(['id', 'tipo', 'data', 'autorEmail', 'resultado'])
+            && d.keys().hasAll(['resultado'])
+            && d.resultado is map
+            && d.resultado.keys().hasOnly(['id', 'data', 'inputs', 'vo2', 'fcMax', 'fcRest', 'fcr', 'classification', 'zones', 'formulaUsed'])
+            && d.resultado.keys().hasAll(['inputs', 'vo2', 'classification', 'zones'])
+            && d.resultado.vo2 is number && d.resultado.vo2 >= 1 && d.resultado.vo2 <= 150
+            && d.resultado.inputs is map
+            && d.resultado.inputs.modality in ['esteira', 'bike']
+            && d.resultado.classification is map
+            && d.resultado.zones is list && d.resultado.zones.size() <= 12)
+        );
+    }
+
     // ---- avaliação online criada pelo ALUNO -----------------------------------
     // Só campos esperados; sem `review`/`evaluator`; status fixo; id == id do
     // documento; faixas numéricas plausíveis. (O Personal não passa por aqui.)
@@ -399,8 +436,11 @@ service cloud.firestore {
       allow get: if ehDono(email)
         || ptRotinaAcesso(email)
         || (ehPT() && (meuAluno(resource.data) || (aceitarLegadoSemDono() && semDono(resource.data))));
-      // Sem list: enumerar clientes é negado (o app não lista a coleção; usa o e-mail).
-      allow list: if false;
+      // Listar: só o Personal e só os clientes DONOS dele (ownerUUID conferido no servidor contra
+      // userOwners/{uid}). Permite sincronizar a lista de clientes entre aparelhos. A consulta do app
+      // PRECISA filtrar where('ownerUUID','==', <o dele>); consulta sem esse filtro é negada.
+      // Aluno e o outro Personal continuam sem enumerar nada; docs legados sem ownerUUID não aparecem.
+      allow list: if ehPT() && 'ownerUUID' in resource.data && isMyOwnerUUID(resource.data.ownerUUID);
       allow create: if alunoCriacaoValida();
       allow update: if alunoAtualizacaoValida();
       // Ninguém apaga o doc do cliente pelo app: o Firestore NÃO apaga as subcoleções junto, e um
@@ -422,6 +462,14 @@ service cloud.firestore {
         allow create: if rotinaCriacaoValida(email, id);
         allow update: if rotinaAtualizacaoValida(email, id);
         allow delete: if false;
+      }
+
+      // Testes de Força/Cardio do aluno, registrados pelo Personal dono. O aluno só lê os próprios.
+      match /testesDesempenho/{id} {
+        allow get, list: if (ehDono(email) && consentOk(email)) || ptDoAluno(email);
+        allow create: if ptDoAluno(email) && consentOk(email) && testeDesempenhoValido(id);
+        allow update: if false;
+        allow delete: if ptDoAluno(email);
       }
 
       // Prontuário: só o Personal DONO do cliente (o aluno NUNCA lê).
