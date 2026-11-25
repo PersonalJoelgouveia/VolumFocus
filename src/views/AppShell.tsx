@@ -34,6 +34,7 @@ import { SettingsView } from '../views/SettingsView';
 import { useSyncStore } from '../store/useSyncStore';
 
 import './AppShell.css';
+import { useCardioSemanalSync } from '../hooks/useCardioSemanalSync';
 
 /**
  * Shell principal — sucessor da composição estática Sidebar + bottom-nav +
@@ -86,6 +87,9 @@ export function AppShell() {
   useEffect(() => {
     useSyncStore.getState().init();
   }, []);
+
+  // Aluno logado: envia o resumo semanal de cardio para o Personal ver no perfil (no-op para o Personal).
+  useCardioSemanalSync();
 
   return (
     <div id="app-shell">

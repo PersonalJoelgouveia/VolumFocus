@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlunoCardioSemanaCard } from './AlunoCardioSemanaCard';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -126,6 +127,10 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
         <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setTestesOpen(true)}>
           💪 Força &amp; Cardio (testes e carga ideal)
         </button>
+
+        <div style={{ marginTop: 8 }}>
+          <AlunoCardioSemanaCard alunoEmail={aluno.email} />
+        </div>
 
         {perfilOpen && (
           <div className="cli-profile-grid">

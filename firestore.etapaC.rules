@@ -299,6 +299,19 @@ service cloud.firestore {
     // alunos/{email}/testesDesempenho/{id}. Dado de saúde: só o Personal DONO do cliente cria/apaga
     // (ptDoAluno + consentOk); o aluno só LÊ os próprios. Sem update (correção = apagar e criar de novo).
     // Autoria = e-mail do token (não forjável); campos fixos e faixas plausíveis; sem campos de dono.
+    // Resumo semanal de cardio do aluno (gravado pelo PRÓPRIO aluno; o Personal dono só lê).
+    function cardioSemanalValido(semana) {
+      let d = request.resource.data;
+      return semCamposDeDono(d)
+        && d.keys().hasOnly(['semana', 'totalMin', 'metaMin', 'sessoes', 'atualizadoEm'])
+        && d.keys().hasAll(['semana', 'totalMin', 'metaMin', 'sessoes', 'atualizadoEm'])
+        && semana.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+        && d.semana == semana
+        && d.totalMin is number && d.totalMin >= 0 && d.totalMin <= 100000
+        && d.metaMin is number && d.metaMin >= 0 && d.metaMin <= 10080
+        && d.atualizadoEm is string && d.atualizadoEm.size() <= 40
+        && d.sessoes is list && d.sessoes.size() <= 40;
+    }
     function testeDesempenhoValido(id) {
       let d = request.resource.data;
       return semCamposDeDono(d)
@@ -461,6 +474,13 @@ service cloud.firestore {
         allow get, list: if (ehDono(email) && consentOk(email)) || ptRotinaAcesso(email);
         allow create: if rotinaCriacaoValida(email, id);
         allow update: if rotinaAtualizacaoValida(email, id);
+        allow delete: if false;
+      }
+
+      // Cardio semanal do aluno: o aluno (cadastrado, com consentimento) grava o próprio; o Personal dono lê.
+      match /cardioSemanal/{semana} {
+        allow get, list: if (ehDono(email) && consentOk(email)) || ptDoAluno(email);
+        allow create, update: if ehDono(email) && cadastrado(email) && consentOk(email) && cardioSemanalValido(semana);
         allow delete: if false;
       }
 
