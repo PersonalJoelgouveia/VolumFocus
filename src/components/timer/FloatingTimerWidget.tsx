@@ -84,7 +84,12 @@ export function FloatingTimerWidget() {
     const entry = log[target];
     togglePanel();
     if (isCardioLogEntry(entry)) {
-      openExec(selectedDay, target, { isCardio: true, totalSets: 0 });
+      openExec(selectedDay, target, {
+        isCardio: true,
+        totalSets: 1,
+        durationSec: Math.max(0, entry.duration || 0) * 60,
+        alreadyDone: isExerciseDone(selectedDay, target),
+      });
     } else {
       openExec(selectedDay, target, { isCardio: false, totalSets: entry.sets || 1 });
     }

@@ -1,7 +1,8 @@
 import type { CardioWeekSummary, EngajamentoBadge } from '../types/history';
 import type { Exercise } from '../types/exercise';
 import type { WeekLog } from '../types/workout';
-import { DAYS_SHORT, isCardioLogEntry } from '../types/workout';
+import { DAYS_SHORT, exDoneKey, isCardioLogEntry } from '../types/workout';
+import type { ExDoneMap } from '../types/workout';
 
 /** Migrado de countWeekWorkouts() (index.html ~5395). */
 export function countWeekWorkouts(weekLog: WeekLog): number {
@@ -21,12 +22,16 @@ export function getEngajamentoBadge(n: number): EngajamentoBadge {
 }
 
 /** Migrado de getCardioWeekSummary() (index.html ~5408). */
-export function getCardioWeekSummary(weekLog: WeekLog, exercises: Exercise[]): CardioWeekSummary {
+export function getCardioWeekSummary(weekLog: WeekLog, exercises: Exercise[], exDone?: ExDoneMap): CardioWeekSummary {
   let totalMin = 0;
   let maior: CardioWeekSummary['maior'] = null;
   for (let d = 0; d < 7; d++) {
-    for (const e of weekLog[d] ?? []) {
+    const log = weekLog[d] ?? [];
+    for (let i = 0; i < log.length; i++) {
+      const e = log[i];
       if (!isCardioLogEntry(e)) continue;
+      // Com `exDone`, só o cardio CONCLUÍDO conta (prescrito e não executado fica de fora).
+      if (exDone && !exDone[exDoneKey(d, i)]) continue;
       const ex = exercises.find((x) => x.id === e.exId);
       const dur = e.duration || 0;
       totalMin += dur;

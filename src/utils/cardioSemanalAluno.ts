@@ -1,5 +1,5 @@
-import { DAYS_SHORT, isCardioLogEntry } from '../types/workout';
-import type { WeekLog } from '../types/workout';
+import { DAYS_SHORT, exDoneKey, isCardioLogEntry } from '../types/workout';
+import type { ExDoneMap, WeekLog } from '../types/workout';
 import type { Exercise } from '../types/exercise';
 
 /**
@@ -40,13 +40,17 @@ export function montarResumoCardio(
   weekLog: WeekLog,
   exercises: Exercise[],
   metaMin: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  exDone?: ExDoneMap
 ): ResumoCardioSemanal {
   const sessoes: SessaoCardioResumo[] = [];
   let totalMin = 0;
   for (let d = 0; d < 7; d++) {
-    for (const e of weekLog[d] ?? []) {
+    const log = weekLog[d] ?? [];
+    for (let i = 0; i < log.length; i++) {
+      const e = log[i];
       if (!isCardioLogEntry(e)) continue;
+      if (exDone && !exDone[exDoneKey(d, i)]) continue; // só cardio concluído
       const duracao = Math.max(0, Math.min(1440, Math.round(e.duration || 0)));
       totalMin += duracao;
       if (sessoes.length < MAX_SESSOES_RESUMO) {

@@ -28,7 +28,9 @@ export function useCardioSemanalSync(): void {
       const resumo = montarResumoCardio(
         useWorkoutStore.getState().weekLog,
         useExerciseStore.getState().exercises,
-        useCardioGoalStore.getState().metaMin
+        useCardioGoalStore.getState().metaMin,
+        new Date(),
+        useWorkoutStore.getState().exDone
       );
       const ass = assinaturaResumo(resumo);
       if (ass === ultima) return;

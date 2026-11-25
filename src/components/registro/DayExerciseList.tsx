@@ -42,7 +42,12 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
     const entry = dayLog[idx];
     if (!entry) return;
     if (isCardioLogEntry(entry)) {
-      openExec(selectedDay, idx, { isCardio: true, totalSets: 0 });
+      openExec(selectedDay, idx, {
+        isCardio: true,
+        totalSets: 1,
+        durationSec: Math.max(0, entry.duration || 0) * 60,
+        alreadyDone: useWorkoutStore.getState().isExerciseDone(selectedDay, idx),
+      });
     } else {
       openExec(selectedDay, idx, { isCardio: false, totalSets: entry.sets || 1 });
     }

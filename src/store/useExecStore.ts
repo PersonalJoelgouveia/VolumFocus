@@ -42,7 +42,18 @@ interface ExecState {
   presets: readonly number[];
 
   /** Abre o modal para o exercício `idx` do dia `day`. */
-  open: (day: number, idx: number, opts: { isCardio: boolean; totalSets: number }) => void;
+  open: (
+    day: number,
+    idx: number,
+    opts: {
+      isCardio: boolean;
+      totalSets: number;
+      /** Cardio: duração PRESCRITA em segundos — vira o tempo total do cronômetro. */
+      durationSec?: number;
+      /** Cardio: o exercício já estava concluído ao abrir o modal. */
+      alreadyDone?: boolean;
+    }
+  ) => void;
   close: () => void;
 
   editSet: (k: number) => void;
@@ -84,22 +95,27 @@ export const useExecStore = create<ExecState>()((set, get) => ({
   editingSet: null,
   presets: EXEC_PRESETS,
 
-  open: (day, idx, { isCardio, totalSets }) =>
+  open: (day, idx, { isCardio, totalSets, durationSec, alreadyDone }) => {
+    // Cardio = uma única "série": o tempo prescrito inteiro, com um check de conclusão.
+    const sets = isCardio ? 1 : totalSets;
+    const total = isCardio && durationSec && durationSec > 0 ? Math.round(durationSec) : DEFAULT_REST;
+    const jaFeito = isCardio && !!alreadyDone;
     set({
       isOpen: true,
       day,
       idx,
       isCardio,
-      totalSets: isCardio ? 0 : totalSets,
-      done: Array(isCardio ? 0 : totalSets).fill(false),
-      current: 0,
-      restDuration: DEFAULT_REST,
-      remaining: DEFAULT_REST,
+      totalSets: sets,
+      done: Array(sets).fill(jaFeito),
+      current: jaFeito ? sets : 0,
+      restDuration: total,
+      remaining: total,
       endAt: null,
       running: false,
       alarming: false,
       editingSet: null,
-    }),
+    });
+  },
 
   close: () => set({ isOpen: false, running: false, alarming: false, endAt: null }),
 
@@ -109,7 +125,7 @@ export const useExecStore = create<ExecState>()((set, get) => ({
 
   toggleSet: (k) => {
     const s = get();
-    if (s.isCardio || k < 0 || k >= s.totalSets) return { justCompleted: false, allDone: false };
+    if (k < 0 || k >= s.totalSets) return { justCompleted: false, allDone: false };
     const wasDone = s.done[k];
     const done = [...s.done];
     done[k] = !wasDone;
@@ -122,7 +138,7 @@ export const useExecStore = create<ExecState>()((set, get) => ({
 
   nextSet: () => {
     const s = get();
-    if (s.isCardio || s.current >= s.totalSets) return null;
+    if (s.current >= s.totalSets) return null;
     return s.current;
   },
 
@@ -164,6 +180,7 @@ export const useExecStore = create<ExecState>()((set, get) => ({
 
   adjustRest: (delta) => {
     const s = get();
+    if (s.isCardio) return; // cardio: o cronômetro é o tempo prescrito, não se ajusta
     const newDuration = Math.max(10, Math.min(600, s.restDuration + delta));
     const applied = newDuration - s.restDuration;
     if (s.running && s.endAt !== null) {
@@ -178,7 +195,7 @@ export const useExecStore = create<ExecState>()((set, get) => ({
     });
   },
 
-  setPreset: (sec) => set({ running: false, endAt: null, restDuration: sec, remaining: sec }),
+  setPreset: (sec) => get().isCardio ? undefined : set({ running: false, endAt: null, restDuration: sec, remaining: sec }),
 
   tick: () => {
     const s = get();

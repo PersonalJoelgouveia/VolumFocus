@@ -39,6 +39,7 @@ export function ExecutionModal() {
   const weekLog = useWorkoutStore((s) => s.weekLog);
   const updateLogEntry = useWorkoutStore((s) => s.updateLogEntry);
   const markExerciseDone = useWorkoutStore((s) => s.markExerciseDone);
+  const unmarkExerciseDone = useWorkoutStore((s) => s.unmarkExerciseDone);
   const getDayLog = useWorkoutStore((s) => s.getDayLog);
   const isExerciseDone = useWorkoutStore((s) => s.isExerciseDone);
   const exercises = useExerciseStore((s) => s.exercises);
@@ -67,6 +68,13 @@ export function ExecutionModal() {
     const run = () => {
       const { justFinished } = useExecStore.getState().tick();
       if (justFinished) {
+        // Cardio: o fim do cronômetro (tempo prescrito completo) conclui o exercício.
+        const st = useExecStore.getState();
+        if (st.isCardio && st.day !== null && st.idx !== null) {
+          if (!st.done[0]) st.toggleSet(0);
+          useWorkoutStore.getState().markExerciseDone(st.day, st.idx);
+          useAchievementStore.getState().fireCheckIn();
+        }
         if (navigator.vibrate) {
           try {
             navigator.vibrate([200, 100, 200]);
@@ -74,7 +82,9 @@ export function ExecutionModal() {
             /* vibração indisponível */
           }
         }
-        showToast('⏰ Descanso finalizado — bora pra próxima série!');
+        showToast(
+          st.isCardio ? '🏆 Cardio concluído — tempo prescrito completo!' : '⏰ Descanso finalizado — bora pra próxima série!'
+        );
       }
     };
     const onVisible = () => {
@@ -178,7 +188,19 @@ export function ExecutionModal() {
   function handleToggleSet(k: number) {
     if (exec.day === null || exec.idx === null || !entry || !exercise) return;
     const { justCompleted, allDone } = exec.toggleSet(k);
-    if (!justCompleted) return;
+    if (!justCompleted) {
+      // Cardio: desmarcar o check desfaz a conclusão (o check é a única "série").
+      if (isCardio) unmarkExerciseDone(exec.day, exec.idx);
+      return;
+    }
+    if (isCardio) {
+      exec.stopTimer();
+      exec.stopAlarm();
+      markExerciseDone(exec.day, exec.idx);
+      useAchievementStore.getState().fireCheckIn();
+      showToast(`🏆 ${exercise.name} — cardio concluído!`);
+      return;
+    }
     if (!allDone) {
       exec.startTimer();
       showToast(`💪 Série ${k + 1} concluída — descanso iniciado`);
@@ -234,7 +256,7 @@ export function ExecutionModal() {
     exec.finishEditSet();
   }
 
-  const allSetsDone = !isCardio && exec.totalSets > 0 && exec.current >= exec.totalSets;
+  const allSetsDone = exec.totalSets > 0 && exec.current >= exec.totalSets;
   const ringLabel = exec.alarming
     ? '🔔 Toque para parar'
     : exec.running
@@ -246,7 +268,7 @@ export function ExecutionModal() {
         : exec.remaining > 0 && exec.remaining < exec.restDuration
           ? 'Pausado'
           : isCardio
-            ? 'Cronômetro'
+            ? 'Tempo prescrito'
             : 'Pronto para iniciar';
 
   const ringWarn = exec.running && exec.remaining > 0 && exec.remaining <= 10;
@@ -282,6 +304,35 @@ export function ExecutionModal() {
         </div>
 
         <ExecutionMediaSection exercise={exercise} />
+
+        {isCardio && (
+          <div>
+            <div className="exec-sets-label">Progresso do cardio</div>
+            <div className="exec-sets-list">
+              <div
+                className={`exec-set-pill${exec.done[0] ? ' is-done' : ''}${!exec.done[0] ? ' is-active' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label={exec.done[0] ? 'Cardio concluído — toque para desfazer' : 'Marcar cardio como concluído'}
+                onClick={() => handleToggleSet(0)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleToggleSet(0);
+                  }
+                }}
+              >
+                <span className="exec-set-num">CARDIO</span>
+                <span className="exec-set-body">
+                  <span className="exec-set-info">
+                    {entry.duration || 0} min · PSE {entry.intensity ?? '-'}/10
+                  </span>
+                </span>
+                <span className="exec-set-check">{exec.done[0] ? '✓' : ''}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!isCardio && (
           <div>
@@ -408,7 +459,7 @@ export function ExecutionModal() {
             className={`exec-ring${ringWarn ? ' exec-ring-warn' : ''}${ringDone ? ' exec-ring-done' : ''}${exec.alarming ? ' exec-ring-alarm' : ''}`}
             role="button"
             tabIndex={0}
-            aria-label="Toque para iniciar ou pausar o descanso."
+            aria-label={isCardio ? "Toque para iniciar ou pausar o cronômetro." : "Toque para iniciar ou pausar o descanso."}
             title="Toque: iniciar/pausar"
             onClick={() => exec.ringSingleTap()}
             onKeyDown={(e) => {
@@ -441,19 +492,22 @@ export function ExecutionModal() {
                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
               </svg>
             </button>
-            <button className="btn btn-ghost btn-sm exec-ctrl-btn" onClick={() => exec.adjustRest(-30)}>
-              − 30s
-            </button>
-            <button className="btn btn-ghost btn-sm exec-ctrl-btn" onClick={() => exec.adjustRest(30)}>
-              + 30s
-            </button>
             {!isCardio && (
-              <button
+              <button className="btn btn-ghost btn-sm exec-ctrl-btn" onClick={() => exec.adjustRest(-30)}>
+                − 30s
+              </button>
+            )}
+            {!isCardio && (
+              <button className="btn btn-ghost btn-sm exec-ctrl-btn" onClick={() => exec.adjustRest(30)}>
+                + 30s
+              </button>
+            )}
+            <button
                 className={`btn btn-primary exec-ctrl-btn exec-next-btn${exec.current >= exec.totalSets ? ' is-done' : ''}`}
                 onClick={handleNextSet}
                 disabled={exec.current >= exec.totalSets}
-                aria-label="Próxima série"
-                title="Próxima série"
+                aria-label={isCardio ? 'Concluir cardio' : 'Próxima série'}
+                title={isCardio ? 'Concluir cardio' : 'Próxima série'}
               >
                 <svg className="exec-skip-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
                   <path d="M5 5l9 7-9 7V5z" />
@@ -463,11 +517,10 @@ export function ExecutionModal() {
                   <polyline points="4 12 9 17 20 6" />
                 </svg>
               </button>
-            )}
           </div>
 
-          <div className="exec-presets">
-            {exec.presets.map((s) => (
+          <div className="exec-presets" hidden={isCardio}>
+            {(isCardio ? [] : exec.presets).map((s) => (
               <button
                 key={s}
                 className={`exec-preset-pill${exec.restDuration === s ? ' is-active' : ''}`}

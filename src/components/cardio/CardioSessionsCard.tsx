@@ -1,6 +1,6 @@
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useExerciseStore } from '../../store/useExerciseStore';
-import { DAYS_SHORT, isCardioLogEntry } from '../../types/workout';
+import { DAYS_SHORT, exDoneKey, isCardioLogEntry } from '../../types/workout';
 import type { WearableCardioWeek } from '../../hooks/useWearableCardioWeek';
 
 interface CardioSessionsCardProps {
@@ -23,12 +23,15 @@ interface CardioSessionsCardProps {
  */
 export function CardioSessionsCard({ wearable }: CardioSessionsCardProps) {
   const weekLog = useWorkoutStore((s) => s.weekLog);
+  const exDone = useWorkoutStore((s) => s.exDone);
   const exercises = useExerciseStore((s) => s.exercises);
 
   const manualSessions: { day: number; name: string; duration: number; intensity: number }[] = [];
   for (let d = 0; d < 7; d++) {
-    for (const e of weekLog[d] ?? []) {
-      if (!isCardioLogEntry(e)) continue;
+    const log = weekLog[d] ?? [];
+    for (let i = 0; i < log.length; i++) {
+      const e = log[i];
+      if (!isCardioLogEntry(e) || !exDone[exDoneKey(d, i)]) continue;
       const ex = exercises.find((x) => x.id === e.exId);
       manualSessions.push({ day: d, name: ex ? ex.name : 'Cardio', duration: e.duration || 0, intensity: e.intensity || 0 });
     }

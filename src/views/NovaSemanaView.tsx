@@ -22,6 +22,7 @@ import './NovaSemanaView.css';
  */
 export function NovaSemanaView() {
   const weekLog = useWorkoutStore((s) => s.weekLog);
+  const exDone = useWorkoutStore((s) => s.exDone);
   const weekPSE = useWorkoutStore((s) => s.weekPSE);
   const clearWeek = useWorkoutStore((s) => s.clearWeek);
   const exercises = useExerciseStore((s) => s.exercises);
@@ -34,7 +35,7 @@ export function NovaSemanaView() {
 
   const treinos = countWeekWorkouts(weekLog);
   const badge = getEngajamentoBadge(treinos);
-  const cardio = getCardioWeekSummary(weekLog, exercises);
+  const cardio = getCardioWeekSummary(weekLog, exercises, exDone);
   const metaCardioOk = cardio.totalMin >= metaMin;
   const frase = getMotivationalPhrase(treinos, metaCardioOk);
   const weekVol = calcWeekVolume(weekLog, exercises);

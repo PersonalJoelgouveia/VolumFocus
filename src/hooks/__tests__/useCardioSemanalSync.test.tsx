@@ -19,7 +19,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   repo.salvarResumoCardio.mockResolvedValue(undefined);
-  useWorkoutStore.setState({ weekLog: { 0: [{ exId: 'e1', type: 'cardio', duration: 30, intensity: 5, hrZone: 'z2' }] } as never });
+  useWorkoutStore.setState({ weekLog: { 0: [{ exId: 'e1', type: 'cardio', duration: 30, intensity: 5, hrZone: 'z2' }] } as never, exDone: { '0:0': true } as never });
 });
 afterEach(() => {
   cleanup();
@@ -27,6 +27,14 @@ afterEach(() => {
 });
 
 describe('useCardioSemanalSync', () => {
+  it('Aluno: cardio prescrito e NAO concluido nao entra no resumo', async () => {
+    useWorkoutStore.setState({ exDone: {} as never });
+    useUIStore.setState({ isPersonalMode: false, isAlunoMode: true });
+    useAuthStore.setState({ user: { email: 'ana@x.com' } as never });
+    render(<Probe />);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(repo.salvarResumoCardio.mock.calls[0][1].totalMin).toBe(0);
+  });
   it('Personal: nunca envia o próprio cardio', async () => {
     useUIStore.setState({ isPersonalMode: true, isAlunoMode: false });
     useAuthStore.setState({ user: { email: 'pt@x.com' } as never });

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useWearableStore } from '../store/useWearableStore';
 import { useCardioTestStore } from '../store/useCardioTestStore';
 import { useWorkoutStore } from '../store/useWorkoutStore';
-import { isCardioLogEntry } from '../types/workout';
+import { exDoneKey, isCardioLogEntry } from '../types/workout';
 import type { HeartRateSample, WearableWorkoutSession } from '../lib/wearables';
 import {
   bucketTimeInZones,
@@ -112,7 +112,12 @@ export function useWearableCardioWeek(): WearableCardioWeek {
 
       const manualDurationsByDay: Record<number, number[]> = {};
       for (let d = 0; d < 7; d++) {
-        manualDurationsByDay[d] = (weekLog[d] ?? []).filter(isCardioLogEntry).map((e) => e.duration || 0);
+        // Só o cardio manual CONCLUÍDO conta como "já registrado" (evita esconder o wearable por um prescrito).
+        const doneMap = useWorkoutStore.getState().exDone;
+        manualDurationsByDay[d] = (weekLog[d] ?? [])
+          .map((e, i) => ({ e, i }))
+          .filter(({ e, i }) => isCardioLogEntry(e) && doneMap[exDoneKey(d, i)])
+          .map(({ e }) => (isCardioLogEntry(e) ? e.duration || 0 : 0));
       }
 
       const withDup = markDuplicates(built, manualDurationsByDay).sort(

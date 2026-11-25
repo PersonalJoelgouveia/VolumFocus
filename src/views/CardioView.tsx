@@ -23,8 +23,9 @@ import '../components/cardio/CardioView.css';
  */
 export function CardioContent() {
   const weekLog = useWorkoutStore((s) => s.weekLog);
+  const exDone = useWorkoutStore((s) => s.exDone);
   const exercises = useExerciseStore((s) => s.exercises);
-  const summary = getCardioWeekSummary(weekLog, exercises);
+  const summary = getCardioWeekSummary(weekLog, exercises, exDone);
   const wearable = useWearableCardioWeek();
 
   return (
