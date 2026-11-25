@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { CardioResultCard } from './CardioResultCard';
 import { useCardioScope } from '../testes/testesScope';
 import { useConfirmStore } from '../../store/useConfirmStore';
 import { useUIStore } from '../../store/useUIStore';
@@ -18,6 +20,7 @@ export function CardioHistoryCard() {
   const showToast = useUIStore((s) => s.showToast);
 
   const [ultimo, anterior] = testes;
+  const [abertoId, setAbertoId] = useState<string | null>(null);
 
   async function handleRemover(id: string) {
     const ok = await useConfirmStore.getState().ask('Remover este teste do histórico?', {
@@ -55,26 +58,43 @@ export function CardioHistoryCard() {
           )}
 
           <div className="cardio-hist-list">
-            {testes.map((t) => (
-              <div className="cardio-hist-item" key={t.id}>
-                <div className="cardio-hist-item-left">
-                  <span className="cardio-hist-vo2">{t.vo2.toFixed(1)}</span>
-                  <div>
-                    <div className={`cardio-level-badge ${t.classification.cls}`} style={{ padding: '2px 7px', fontSize: '0.6rem' }}>
-                      {t.classification.label}
-                    </div>
-                    <div className="cardio-hist-date">
-                      {new Date(t.data).toLocaleDateString('pt-BR')} · {protocolLabel(t.inputs.modality, t.inputs.protocol)}
-                    </div>
+            {testes.map((t) => {
+              const aberto = abertoId === t.id;
+              return (
+                <div key={t.id}>
+                  <div className="cardio-hist-item">
+                    <button
+                      type="button"
+                      className="cardio-hist-item-left cardio-hist-open"
+                      aria-expanded={aberto}
+                      title={aberto ? 'Ocultar detalhes' : 'Ver detalhes e zonas de FC'}
+                      onClick={() => setAbertoId(aberto ? null : t.id)}
+                    >
+                      <span className="cardio-hist-vo2">{t.vo2.toFixed(1)}</span>
+                      <div>
+                        <div className={`cardio-level-badge ${t.classification.cls}`} style={{ padding: '2px 7px', fontSize: '0.6rem' }}>
+                          {t.classification.label}
+                        </div>
+                        <div className="cardio-hist-date">
+                          {new Date(t.data).toLocaleDateString('pt-BR')} · {protocolLabel(t.inputs.modality, t.inputs.protocol)}
+                        </div>
+                      </div>
+                      <span className="cardio-hist-chevron" aria-hidden="true">{aberto ? '▲' : '▼'}</span>
+                    </button>
+                    {canRemove(t.id) && (
+                      <button className="btn btn-ghost btn-icon btn-sm" title="Remover" onClick={() => handleRemover(t.id)}>
+                        🗑️
+                      </button>
+                    )}
                   </div>
+                  {aberto && (
+                    <div className="cardio-hist-detail">
+                      <CardioResultCard result={t} />
+                    </div>
+                  )}
                 </div>
-                {canRemove(t.id) && (
-                  <button className="btn btn-ghost btn-icon btn-sm" title="Remover" onClick={() => handleRemover(t.id)}>
-                    🗑️
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
