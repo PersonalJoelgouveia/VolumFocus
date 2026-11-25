@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { ForcaContent } from '../../views/ForcaView';
-import { CardioContent } from '../../views/CardioView';
+import { CardioTestPanel } from '../cardio/CardioTestPanel';
+import { CardioHistoryCard } from '../cardio/CardioHistoryCard';
+import { AlunoCardioSemanaCard } from './AlunoCardioSemanaCard';
+import '../cardio/CardioView.css';
 import { TestesComparativoDashboard } from '../saude/TestesComparativoDashboard';
 import { PersonalAlunoTestesProvider } from '../testes/TestesScopeProviders';
 import { useTestesScopeStatus } from '../testes/testesScope';
@@ -11,7 +14,7 @@ import './ClientesView.css';
 
 type Sub = 'forca' | 'cardio';
 
-function Conteudo({ sub }: { sub: Sub }) {
+function Conteudo({ sub, alunoEmail }: { sub: Sub; alunoEmail: string }) {
   const { loading, error } = useTestesScopeStatus();
   return (
     <>
@@ -24,7 +27,12 @@ function Conteudo({ sub }: { sub: Sub }) {
         </>
       ) : (
         <>
-          <div className="perf-panel active"><CardioContent /></div>
+          {/* Sem CardioContent: Meta Semanal/Sessões vêm do aparelho do Personal. Aqui só dados DO ALUNO. */}
+          <div className="perf-panel active">
+            <AlunoCardioSemanaCard alunoEmail={alunoEmail} />
+            <CardioTestPanel />
+            <CardioHistoryCard />
+          </div>
           <TestesComparativoDashboard tipo="cardio" />
         </>
       )}
@@ -65,7 +73,7 @@ export function AlunoForcaCardioModal({ aluno, onClose }: { aluno: Aluno; onClos
           </button>
         </div>
         <PersonalAlunoTestesProvider alunoEmail={aluno.email} perfil={perfil}>
-          <Conteudo sub={sub} />
+          <Conteudo sub={sub} alunoEmail={aluno.email} />
         </PersonalAlunoTestesProvider>
       </div>
     </div>
