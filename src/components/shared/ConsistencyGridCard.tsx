@@ -1,4 +1,10 @@
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { useRetroWeeksStore } from '../../store/useRetroWeeksStore';
+import { useUIStore } from '../../store/useUIStore';
+import { isCurrentWeek, weekAndDayOf } from '../../utils/retroWeek';
+import type { DayIndex } from '../../types/workout';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useHistoricoStore } from '../../store/useHistoricoStore';
 import { buildCgridData } from '../../utils/consistencyGrid';
@@ -17,13 +23,38 @@ export function ConsistencyGridCard() {
   const exercises = useExerciseStore((s) => s.exercises);
   const historico = useHistoricoStore((s) => s.semanas);
 
-  const data = buildCgridData(weekLog, exDone, historico, exercises);
+  const retro = useRetroWeeksStore((s) => s.weeks);
+  const setActiveView = useUIStore((s) => s.setActiveView);
+  const [offset, setOffset] = useState(0);
+
+  const data = buildCgridData(weekLog, exDone, historico, exercises, retro, offset);
+
+  /** Dia passado/hoje: abre a semana dele em Meus Treinos (atual) ou no lançamento retroativo (passada). */
+  function abrirDia(dateStr: string) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const { key, day } = weekAndDayOf(new Date(y, m - 1, d));
+    if (isCurrentWeek(key)) {
+      useWorkoutStore.getState().selectDay(day as DayIndex);
+      setActiveView('registro');
+      return;
+    }
+    useRetroWeeksStore.getState().open(key, day as DayIndex);
+    setActiveView('retro');
+  }
 
   return (
     <div className="card cgrid-section cgrid-compact" style={{ marginBottom: 16 }}>
       <div className="cgrid-header">
         <div className="cgrid-title">🗓️ Consistência do Mês</div>
-        <div className="cgrid-month-label">{data.monthLabel}</div>
+        <div className="cgrid-month-nav">
+          <button type="button" className="cgrid-nav-btn" aria-label="Mês anterior" onClick={() => setOffset((o) => o - 1)}>
+            <ChevronLeft size={16} />
+          </button>
+          <div className="cgrid-month-label">{data.monthLabel}</div>
+          <button type="button" className="cgrid-nav-btn" aria-label="Próximo mês" disabled={offset >= 0} onClick={() => setOffset((o) => Math.min(0, o + 1))}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
       <div className="cgrid-legend">
         <div className="cgrid-legend-item">
@@ -57,8 +88,22 @@ export function ConsistencyGridCard() {
         {data.cells.map((c) => (
           <div
             key={c.day}
-            className={`cgrid-cell ${c.state}${c.isToday ? ' cgrid-hoje' : ''}${c.isFuture ? ' cgrid-futuro' : ''}`}
-            title={`${c.day}`}
+            className={`cgrid-cell ${c.state}${c.isToday ? ' cgrid-hoje' : ''}${c.isFuture ? ' cgrid-futuro' : ' cgrid-click'}`}
+            title={c.isFuture ? `${c.day}` : `${c.day} — abrir/lançar treino deste dia`}
+            role={c.isFuture ? undefined : 'button'}
+            tabIndex={c.isFuture ? undefined : 0}
+            aria-label={c.isFuture ? undefined : `Abrir treino do dia ${c.day}`}
+            onClick={c.isFuture ? undefined : () => abrirDia(c.date)}
+            onKeyDown={
+              c.isFuture
+                ? undefined
+                : (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      abrirDia(c.date);
+                    }
+                  }
+            }
           >
             <span className="cgrid-day-num">{c.day}</span>
           </div>

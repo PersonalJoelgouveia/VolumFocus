@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { useWeek } from '../../store/weekScope';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { DAYS, DAYS_SHORT, isCardioLogEntry } from '../../types/workout';
@@ -25,9 +25,9 @@ export function CloneDayModal() {
   const showToast = useUIStore((s) => s.showToast);
   const isOpen = openModalId === MODAL_ID;
 
-  const selectedDay = useWorkoutStore((s) => s.selectedDay);
-  const weekLog = useWorkoutStore((s) => s.weekLog);
-  const setDayLog = useWorkoutStore((s) => s.setDayLog);
+  const selectedDay = useWeek((s) => s.selectedDay);
+  const weekLog = useWeek((s) => s.weekLog);
+  const setDayLog = useWeek((s) => s.setDayLog);
   const exercises = useExerciseStore((s) => s.exercises);
 
   const [targetDay, setTargetDay] = useState<number | null>(null);

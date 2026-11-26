@@ -1,4 +1,4 @@
-import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { getWeekApi, useWeek } from '../../store/weekScope';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useExecStore } from '../../store/useExecStore';
 import { buildDayLogRows } from '../../utils/dayLogGrouping';
@@ -27,14 +27,14 @@ interface DayExerciseListProps {
  * useWorkoutStore.
  */
 export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect, onUngroup }: DayExerciseListProps) {
-  const selectedDay = useWorkoutStore((s) => s.selectedDay);
-  const weekLog = useWorkoutStore((s) => s.weekLog);
-  const setDayLog = useWorkoutStore((s) => s.setDayLog);
-  const removeLogEntry = useWorkoutStore((s) => s.removeLogEntry);
-  const exDone = useWorkoutStore((s) => s.exDone);
-  const unmarkExerciseDone = useWorkoutStore((s) => s.unmarkExerciseDone);
-  const markExerciseDone = useWorkoutStore((s) => s.markExerciseDone);
-  const updateLogEntry = useWorkoutStore((s) => s.updateLogEntry);
+  const selectedDay = useWeek((s) => s.selectedDay);
+  const weekLog = useWeek((s) => s.weekLog);
+  const setDayLog = useWeek((s) => s.setDayLog);
+  const removeLogEntry = useWeek((s) => s.removeLogEntry);
+  const exDone = useWeek((s) => s.exDone);
+  const unmarkExerciseDone = useWeek((s) => s.unmarkExerciseDone);
+  const markExerciseDone = useWeek((s) => s.markExerciseDone);
+  const updateLogEntry = useWeek((s) => s.updateLogEntry);
   const exercises = useExerciseStore((s) => s.exercises);
   const openExec = useExecStore((s) => s.open);
 
@@ -46,7 +46,7 @@ export function DayExerciseList({ dayLog, mode, selectedIndices, onToggleSelect,
         isCardio: true,
         totalSets: 1,
         durationSec: Math.max(0, entry.duration || 0) * 60,
-        alreadyDone: useWorkoutStore.getState().isExerciseDone(selectedDay, idx),
+        alreadyDone: getWeekApi().isExerciseDone(selectedDay, idx),
       });
     } else {
       openExec(selectedDay, idx, { isCardio: false, totalSets: entry.sets || 1 });

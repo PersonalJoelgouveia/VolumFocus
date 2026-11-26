@@ -2,6 +2,7 @@ import type { Exercise } from '../types/exercise';
 import type { ExDoneMap, WeekLog, WorkoutDayLog } from '../types/workout';
 import { exDoneKey } from '../types/workout';
 import type { HistoricoSemana } from '../types/history';
+import type { RetroWeek } from '../store/useRetroWeeksStore';
 
 /**
  * Migrado fielmente de cgrid.buildMonthMap()/render() (index.html
@@ -37,7 +38,8 @@ export function buildMonthMap(
   weekLog: WeekLog,
   exDone: ExDoneMap,
   historico: HistoricoSemana[],
-  exercises: Exercise[]
+  exercises: Exercise[],
+  retro: Record<string, RetroWeek> = {}
 ): Record<string, DayActivity> {
   const map: Record<string, DayActivity> = {};
 
@@ -66,7 +68,21 @@ export function buildMonthMap(
     if (forca || cardio) map[k] = { forca, cardio };
   }
 
-  // 2. Semanas arquivadas com interseção no mesmo mês (sem sobrescrever a atual)
+  // 2. Semanas RETROATIVAS lançadas pelo usuário (presença do exercício = feito); a semana atual tem prioridade.
+  Object.entries(retro).forEach(([key, w]) => {
+    const [y, m, d0] = key.split('-').map(Number);
+    if (!y || !m || !d0) return;
+    for (let appDay = 0; appDay < 7; appDay++) {
+      const date = new Date(y, m - 1, d0 + appDay);
+      if (date.getFullYear() !== year || date.getMonth() !== month) continue;
+      const k = dateKey(date);
+      if (map[k]) continue;
+      const { forca, cardio } = analyzeLog(w.weekLog[appDay] ?? [], () => true);
+      if (forca || cardio) map[k] = { forca, cardio };
+    }
+  });
+
+  // 3. Semanas arquivadas com interseção no mesmo mês (sem sobrescrever atual/retroativa)
   historico.forEach((snap) => {
     if (!snap?.data) return;
     const snapMon = mondayOf(new Date(snap.data));
@@ -87,6 +103,8 @@ export function buildMonthMap(
 
 export interface CgridCell {
   day: number;
+  /** AAAA-MM-DD da célula (para abrir o dia ao clicar). */
+  date: string;
   state: 'cgrid-vazio' | 'cgrid-forca' | 'cgrid-cardio' | 'cgrid-ambos';
   isToday: boolean;
   isFuture: boolean;
@@ -94,6 +112,8 @@ export interface CgridCell {
 
 export interface CgridData {
   monthLabel: string;
+  year: number;
+  month: number;
   cells: CgridCell[];
   leadingEmpty: number;
   totalForca: number;
@@ -104,15 +124,26 @@ export interface CgridData {
 
 const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-export function buildCgridData(weekLog: WeekLog, exDone: ExDoneMap, historico: HistoricoSemana[], exercises: Exercise[]): CgridData {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+export function buildCgridData(
+  weekLog: WeekLog,
+  exDone: ExDoneMap,
+  historico: HistoricoSemana[],
+  exercises: Exercise[],
+  retro: Record<string, RetroWeek> = {},
+  /** 0 = mês atual; -1 = mês anterior… (nunca positivo). */
+  monthOffset = 0,
+  now: Date = new Date()
+): CgridData {
+  const base = new Date(now.getFullYear(), now.getMonth() + Math.min(0, monthOffset), 1);
+  const year = base.getFullYear();
+  const month = base.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = now.getDate();
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+  // Mês passado: todos os dias já aconteceram (nenhum "hoje", nenhum futuro).
+  const today = isCurrentMonth ? now.getDate() : daysInMonth;
   const firstDow = new Date(year, month, 1).getDay();
 
-  const monthMap = buildMonthMap(year, month, weekLog, exDone, historico, exercises);
+  const monthMap = buildMonthMap(year, month, weekLog, exDone, historico, exercises, retro);
 
   let totalForca = 0;
   let totalCardio = 0;
@@ -141,11 +172,13 @@ export function buildCgridData(weekLog: WeekLog, exDone: ExDoneMap, historico: H
       totalAtivos++;
     }
 
-    cells.push({ day: d, state, isToday: d === today, isFuture: d > today });
+    cells.push({ day: d, date: k, state, isToday: isCurrentMonth && d === today, isFuture: d > today });
   }
 
   return {
     monthLabel: `${MONTH_NAMES[month]} ${year}`,
+    year,
+    month,
     cells,
     leadingEmpty: firstDow,
     totalForca,

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useExecStore } from '../../store/useExecStore';
-import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { getWeekApi, retroAtivo, useWeek } from '../../store/weekScope';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -32,16 +32,21 @@ function fmt(sec: number) {
  * séries) são lidos ao vivo de useWorkoutStore/useExerciseStore usando
  * exec.day/exec.idx — não há cópia local do log.
  */
+/** Semana retroativa aberta? Conquistas/ofensiva/notificações só valem para o treino de hoje. */
+function emRetro(): boolean {
+  return retroAtivo();
+}
+
 export function ExecutionModal() {
   const exec = useExecStore();
   const showToast = useUIStore((s) => s.showToast);
 
-  const weekLog = useWorkoutStore((s) => s.weekLog);
-  const updateLogEntry = useWorkoutStore((s) => s.updateLogEntry);
-  const markExerciseDone = useWorkoutStore((s) => s.markExerciseDone);
-  const unmarkExerciseDone = useWorkoutStore((s) => s.unmarkExerciseDone);
-  const getDayLog = useWorkoutStore((s) => s.getDayLog);
-  const isExerciseDone = useWorkoutStore((s) => s.isExerciseDone);
+  const weekLog = useWeek((s) => s.weekLog);
+  const updateLogEntry = useWeek((s) => s.updateLogEntry);
+  const markExerciseDone = useWeek((s) => s.markExerciseDone);
+  const unmarkExerciseDone = useWeek((s) => s.unmarkExerciseDone);
+  const getDayLog = useWeek((s) => s.getDayLog);
+  const isExerciseDone = useWeek((s) => s.isExerciseDone);
   const exercises = useExerciseStore((s) => s.exercises);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
   const authUser = useAuthStore((s) => s.user);
@@ -72,8 +77,8 @@ export function ExecutionModal() {
         const st = useExecStore.getState();
         if (st.isCardio && st.day !== null && st.idx !== null) {
           if (!st.done[0]) st.toggleSet(0);
-          useWorkoutStore.getState().markExerciseDone(st.day, st.idx);
-          useAchievementStore.getState().fireCheckIn();
+          getWeekApi().markExerciseDone(st.day, st.idx);
+          if (!emRetro()) useAchievementStore.getState().fireCheckIn();
         }
         if (navigator.vibrate) {
           try {
@@ -175,7 +180,7 @@ export function ExecutionModal() {
    * da rotina publicada, não uma sessão real de treino.
    */
   function checkDiaConcluido() {
-    if (isPersonalMode || exec.day === null) return;
+    if (isPersonalMode || exec.day === null || emRetro()) return; // lançamento do passado não notifica o Personal
     const log = getDayLog(exec.day);
     if (!log.length) return;
     const todasFeitas = log.every((_, idx) => isExerciseDone(exec.day as number, idx));
@@ -197,7 +202,7 @@ export function ExecutionModal() {
       exec.stopTimer();
       exec.stopAlarm();
       markExerciseDone(exec.day, exec.idx);
-      useAchievementStore.getState().fireCheckIn();
+      if (!emRetro()) useAchievementStore.getState().fireCheckIn();
       showToast(`🏆 ${exercise.name} — cardio concluído!`);
       return;
     }
@@ -211,11 +216,11 @@ export function ExecutionModal() {
       showToast(`🏆 ${exercise.name} — todas as séries concluídas!`);
       // Sucessor de markAndApply() (index.html ~9896-9911): checa Titã do
       // Powerlifting e registra o check-in da ofensiva diária (Fire).
-      if (strengthEntry) {
+      if (strengthEntry && !emRetro()) {
         const maxLoad = Math.max(...(strengthEntry.serieLoads?.length ? strengthEntry.serieLoads : [strengthEntry.load || 0]));
         useAchievementStore.getState().checkTita(exercise.name, maxLoad);
       }
-      useAchievementStore.getState().fireCheckIn();
+      if (!emRetro()) useAchievementStore.getState().fireCheckIn();
     }
   }
 

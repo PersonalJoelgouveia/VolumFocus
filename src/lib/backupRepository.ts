@@ -5,6 +5,7 @@ import { useCalorieStore } from '../store/useCalorieStore';
 import { useProgressStore } from '../store/useProgressStore';
 import { useAlunoStore } from '../store/useAlunoStore';
 import { useHistoricoStore } from '../store/useHistoricoStore';
+import { useRetroWeeksStore } from '../store/useRetroWeeksStore';
 import { useRotinaStore } from '../store/useRotinaStore';
 import { useStrengthStore } from '../store/useStrengthStore';
 import { useAchievementStore } from '../store/useAchievementStore';
@@ -49,6 +50,8 @@ export interface BackupPayload {
   progress: { loadHistory: ReturnType<typeof useProgressStore.getState>['loadHistory'] };
   alunos: ReturnType<typeof useAlunoStore.getState>['alunos'];
   historico: ReturnType<typeof useHistoricoStore.getState>['semanas'];
+  /** Semanas retroativas lançadas pelo usuário (opcional: backups antigos não têm). */
+  retro?: ReturnType<typeof useRetroWeeksStore.getState>['weeks'];
   rotinas: ReturnType<typeof useRotinaStore.getState>['rotinas'];
   strength: ReturnType<typeof useStrengthStore.getState>['records'];
   achievements: {
@@ -77,6 +80,7 @@ export const LOCAL_STORAGE_KEYS = [
   'jg3_carga_progresso',
   'jg3_alunos',
   'historico_semanas',
+  'jg3_semanas_retro',
   'jg3_rotinas',
   'jg3_strength_records',
   'jg3_conquistas',
@@ -100,6 +104,7 @@ export function collectBackupPayload(): BackupPayload {
     progress: { loadHistory: useProgressStore.getState().loadHistory },
     alunos: useAlunoStore.getState().alunos,
     historico: useHistoricoStore.getState().semanas,
+    retro: useRetroWeeksStore.getState().weeks,
     rotinas: useRotinaStore.getState().rotinas,
     strength: useStrengthStore.getState().records,
     achievements: { streaks: ach.streaks, records: ach.records, fire: ach.fire },
@@ -121,6 +126,7 @@ export function hydrateFromBackup(payload: BackupPayload): void {
   if (payload.progress) useProgressStore.setState({ loadHistory: payload.progress.loadHistory });
   if (payload.alunos) useAlunoStore.setState({ alunos: payload.alunos });
   if (payload.historico) useHistoricoStore.setState({ semanas: payload.historico });
+  if (payload.retro) useRetroWeeksStore.getState().replaceAll(payload.retro);
   if (payload.rotinas) useRotinaStore.setState({ rotinas: payload.rotinas });
   if (payload.strength) useStrengthStore.setState({ records: payload.strength });
   if (payload.achievements) useAchievementStore.setState(payload.achievements);

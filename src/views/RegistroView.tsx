@@ -5,7 +5,7 @@ import { getTodayDayIndex } from '../utils/dayIndex';
 import { useCargasCompartilhadasSync } from '../hooks/useCargasCompartilhadasSync';
 import { useState } from 'react';
 import { NotebookPen } from 'lucide-react';
-import { useWorkoutStore } from '../store/useWorkoutStore';
+import { useRetroKey, useWeek } from '../store/weekScope';
 import { useUIStore } from '../store/useUIStore';
 import { useTimerStore } from '../store/useTimerStore';
 import { useProgressStore } from '../store/useProgressStore';
@@ -34,11 +34,13 @@ import type { ListMode } from '../components/registro/ExerciseListItem';
  */
 export function RegistroView() {
   useCargasCompartilhadasSync();
-  const selectedDay = useWorkoutStore((s) => s.selectedDay);
-  const selectDay = useWorkoutStore((s) => s.selectDay);
-  const weekLog = useWorkoutStore((s) => s.weekLog);
+  /** Semana retroativa aberta (Performance → dia passado): mesma tela, sem rotinas/sessões/timers. */
+  const retro = useRetroKey() !== null;
+  const selectedDay = useWeek((s) => s.selectedDay);
+  const selectDay = useWeek((s) => s.selectDay);
+  const weekLog = useWeek((s) => s.weekLog);
   const dayLog = weekLog[selectedDay] ?? [];
-  const setDayLog = useWorkoutStore((s) => s.setDayLog);
+  const setDayLog = useWeek((s) => s.setDayLog);
 
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
   const isAlunoMode = useUIStore((s) => s.isAlunoMode);
@@ -188,13 +190,13 @@ export function RegistroView() {
 
   return (
     <div>
-      {isPersonalMode && <SessionTabsBar />}
-      <AlunoRotinaSyncBanner />
+      {isPersonalMode && !retro && <SessionTabsBar />}
+      {!retro && <AlunoRotinaSyncBanner />}
 
       <div className="sec-row">
         <div className="page-title">
-          Meus Treinos <span className="tag">SEMANA ATUAL</span>
-          {isPersonalMode && activeSessao && (
+          Meus Treinos <span className="tag">{retro ? 'SEMANA RETROATIVA' : 'SEMANA ATUAL'}</span>
+          {isPersonalMode && !retro && activeSessao && (
             <span className="tag" style={{ marginLeft: 6, background: 'var(--teal-glow)', color: 'var(--teal)' }}>
               SESSÃO · {activeSessao.alunoNome.split(' ')[0]}
             </span>
@@ -206,10 +208,12 @@ export function RegistroView() {
               <button className="btn btn-primary" onClick={() => openModal('add-exercise')}>
                 + Exercício
               </button>
-              <button className="btn btn-ghost" onClick={() => openModal('rotinas')}>
-                📁 Rotinas
-              </button>
-              {isPersonalMode && activeSessao && (
+              {!retro && (
+                <button className="btn btn-ghost" onClick={() => openModal('rotinas')}>
+                  📁 Rotinas
+                </button>
+              )}
+              {isPersonalMode && !retro && activeSessao && (
                 // key força remontar (e resetar qual anotação está ativa)
                 // ao trocar de aba de sessão — nunca herda estado de um
                 // cliente pro outro.
@@ -221,9 +225,11 @@ export function RegistroView() {
                   sessionId={activeSessao.id}
                 />
               )}
-              <button className="btn btn-primary" onClick={handleCheckProgress}>
-                📈 Verificar Progressão
-              </button>
+              {!retro && (
+                <button className="btn btn-primary" onClick={handleCheckProgress}>
+                  📈 Verificar Progressão
+                </button>
+              )}
             </>
           )}
 
@@ -242,7 +248,7 @@ export function RegistroView() {
             mode={mode}
             dayLogLength={dayLog.length}
             freeCount={freeCount}
-            isTimerActive={isTimerActive}
+            isTimerActive={isTimerActive || retro}
             onCronometrar={askToStart}
             onImportar={() => openModal('import-workout')}
             onClonarDia={() => openModal('clone-day')}
@@ -258,7 +264,7 @@ export function RegistroView() {
         </div>
       </div>
 
-      {isAlunoMode && <MinhasRotinasSection abertaId={null} onAbrir={setRotinaAbertaId} onVoltar={() => setRotinaAbertaId(null)} onUsarTreino={(t) => void handleUsarTreino(t)} />}
+      {isAlunoMode && !retro && <MinhasRotinasSection abertaId={null} onAbrir={setRotinaAbertaId} onVoltar={() => setRotinaAbertaId(null)} onUsarTreino={(t) => void handleUsarTreino(t)} />}
 
       <div className="level-pill">
         {DAYS.map((day, i) => (
@@ -294,7 +300,7 @@ export function RegistroView() {
         )}
       </div>
 
-      {notepad && <NotepadTimerBar day={selectedDay} />}
+      {notepad && !retro && <NotepadTimerBar day={selectedDay} />}
 
       {mode === 'conjugar' && (
         <ConjugarBar

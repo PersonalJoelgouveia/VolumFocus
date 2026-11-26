@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { DayIndex, ExDoneMap, StrengthLogEntry, TrainingLevel, WeekLog, WorkoutDayLog, WorkoutLogEntry } from '../types/workout';
 import { exDoneKey } from '../types/workout';
 
-interface WorkoutState {
+export interface WorkoutState {
   /** Log da semana atual, indexado por dia (0=Segunda...6=Domingo). Equivale a `weekLog`. */
   weekLog: WeekLog;
   /** Dia atualmente selecionado na UI. Equivale a `selectedDay`. */

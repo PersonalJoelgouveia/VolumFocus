@@ -19,6 +19,7 @@ import { VIEW_META } from '../types/view';
 import { useT } from '../i18n/useT';
 
 import { RegistroView } from '../views/RegistroView';
+import { RetroWeekView } from '../views/RetroWeekView';
 import { DashboardView } from '../views/DashboardView';
 import { BancoView } from '../views/BancoView';
 import { ForcaView } from '../views/ForcaView';
@@ -57,6 +58,7 @@ const VIEW_COMPONENTS = {
   conquistas: ConquistasView,
   clientes: ClientesView,
   notifications: NotificationsView,
+  retro: RetroWeekView,
   settings: SettingsView,
 } as const;
 

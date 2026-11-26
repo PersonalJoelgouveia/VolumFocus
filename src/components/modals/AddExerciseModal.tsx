@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useExerciseStore } from '../../store/useExerciseStore';
-import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { useWeek } from '../../store/weekScope';
 import { useUIStore } from '../../store/useUIStore';
 import { MUSCLE_GROUPS } from '../../types/exercise';
 import type { MuscleGroup } from '../../types/exercise';
@@ -26,8 +26,8 @@ export function AddExerciseModal() {
 
   const exercises = useExerciseStore((s) => s.exercises);
   const addExercise = useExerciseStore((s) => s.addExercise);
-  const selectedDay = useWorkoutStore((s) => s.selectedDay);
-  const addLogEntry = useWorkoutStore((s) => s.addLogEntry);
+  const selectedDay = useWeek((s) => s.selectedDay);
+  const addLogEntry = useWeek((s) => s.addLogEntry);
 
   const [query, setQuery] = useState('');
   const [selectedExId, setSelectedExId] = useState<string | null>(null);

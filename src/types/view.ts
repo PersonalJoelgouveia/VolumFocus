@@ -16,6 +16,7 @@ export type ViewId =
   | 'conquistas'
   | 'clientes'
   | 'notifications'
+  | 'retro'
   | 'settings';
 
 export interface ViewMeta {
@@ -49,6 +50,7 @@ export const VIEW_META: Record<ViewId, ViewMeta> = {
     sub: 'Treinos concluídos & aprovações pendentes',
     ptOnly: true,
   },
+  retro: { title: 'Treino Retroativo', sub: 'Lançar treino de semanas passadas' },
   settings: { title: 'Configurações', sub: 'Preferências do aplicativo' },
 };
 

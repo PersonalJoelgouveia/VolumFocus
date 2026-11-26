@@ -9,6 +9,7 @@ import { useCalorieStore } from './useCalorieStore';
 import { useProgressStore } from './useProgressStore';
 import { useAlunoStore } from './useAlunoStore';
 import { useHistoricoStore } from './useHistoricoStore';
+import { useRetroWeeksStore } from './useRetroWeeksStore';
 import { useRotinaStore } from './useRotinaStore';
 import { useStrengthStore } from './useStrengthStore';
 import { useAchievementStore } from './useAchievementStore';
@@ -82,6 +83,7 @@ export const useSyncStore = create<SyncState>()(
           useProgressStore,
           useAlunoStore,
           useHistoricoStore,
+          useRetroWeeksStore,
           useRotinaStore,
           useStrengthStore,
           useAchievementStore,

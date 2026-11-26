@@ -44,3 +44,15 @@
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Navegação de mês e células clicáveis (lançamento de treino retroativo) */
+.cgrid-month-nav { display: flex; align-items: center; gap: 4px; }
+.cgrid-nav-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  color: var(--text-2, inherit); cursor: pointer;
+}
+.cgrid-nav-btn:disabled { opacity: 0.35; cursor: default; }
+.cgrid-cell.cgrid-click { cursor: pointer; }
+.cgrid-cell.cgrid-click:hover { filter: brightness(1.25); }

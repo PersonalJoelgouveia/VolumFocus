@@ -38,6 +38,7 @@ export const VIEW_ICON_MAP: Record<ViewId, LucideIcon> = {
   ferramentas: Toolbox,
   forca: Dumbbell,
   cardio: HeartPulse,
+  retro: Dumbbell,
   settings: Settings,
 };
 

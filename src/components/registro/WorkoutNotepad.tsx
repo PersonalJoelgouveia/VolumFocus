@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useWorkoutStore, notificarCargaEditada } from '../../store/useWorkoutStore';
+import { notificarCargaEditada } from '../../store/useWorkoutStore';
+import { getWeekApi, retroAtivo, useWeek } from '../../store/weekScope';
 import { useExerciseStore } from '../../store/useExerciseStore';
 import { useUIStore } from '../../store/useUIStore';
 import { isCardioLogEntry } from '../../types/workout';
@@ -34,8 +35,8 @@ interface WorkoutNotepadProps {
  * pendente do dia anterior no cleanup.
  */
 export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
-  const dayLog = useWorkoutStore((s) => s.weekLog[day]) ?? EMPTY_LOG;
-  const pse = useWorkoutStore((s) => s.weekPSE[day]);
+  const dayLog = useWeek((s) => s.weekLog[day]) ?? EMPTY_LOG;
+  const pse = useWeek((s) => s.weekPSE[day]);
   const exercises = useExerciseStore((s) => s.exercises);
   const isPersonalMode = useUIStore((s) => s.isPersonalMode);
 
@@ -59,7 +60,7 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    const store = useWorkoutStore.getState();
+    const store = getWeekApi();
     const exs = useExerciseStore.getState().exercises;
     const oldLog = store.weekLog[day] ?? EMPTY_LOG;
     const curPse = store.weekPSE[day];
@@ -88,7 +89,7 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
         const o = r.oldIndexOf[i];
         if (o === null || isCardioLogEntry(entry)) return;
         const prev = oldLog[o];
-        if (prev && !isCardioLogEntry(prev) && entry.load !== prev.load) notificarCargaEditada(entry.exId, entry.load);
+        if (prev && !isCardioLogEntry(prev) && entry.load !== prev.load && !retroAtivo()) notificarCargaEditada(entry.exId, entry.load);
       });
     }
     if (r.pse !== null && r.pse !== curPse) store.setDayPSE(day, r.pse);
@@ -158,7 +159,7 @@ export function WorkoutNotepad({ day }: WorkoutNotepadProps) {
     if (ok) {
       // Normaliza o texto (ex.: "12,5 kg" → "12.5kg") só depois de sair do campo.
       const exs = useExerciseStore.getState().exercises;
-      const store = useWorkoutStore.getState();
+      const store = getWeekApi();
       const norm = serializeDayLog(store.weekLog[day] ?? EMPTY_LOG, exs, store.weekPSE[day]);
       draftRef.current = norm;
       setDraft(norm);

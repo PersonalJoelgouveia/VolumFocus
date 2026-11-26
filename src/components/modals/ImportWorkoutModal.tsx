@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useExerciseStore } from '../../store/useExerciseStore';
-import { useWorkoutStore } from '../../store/useWorkoutStore';
+import { useWeek } from '../../store/weekScope';
 import { useUIStore } from '../../store/useUIStore';
 import { MUSCLE_GROUPS } from '../../types/exercise';
 import type { MuscleGroup } from '../../types/exercise';
@@ -75,10 +75,10 @@ export function ImportWorkoutModal() {
 
   const exercises = useExerciseStore((s) => s.exercises);
   const addExercise = useExerciseStore((s) => s.addExercise);
-  const selectedDay = useWorkoutStore((s) => s.selectedDay);
-  const getDayLog = useWorkoutStore((s) => s.getDayLog);
-  const setDayLog = useWorkoutStore((s) => s.setDayLog);
-  const setDayPSE = useWorkoutStore((s) => s.setDayPSE);
+  const selectedDay = useWeek((s) => s.selectedDay);
+  const getDayLog = useWeek((s) => s.getDayLog);
+  const setDayLog = useWeek((s) => s.setDayLog);
+  const setDayPSE = useWeek((s) => s.setDayPSE);
 
   const [rawText, setRawText] = useState('');
   const [items, setItems] = useState<ParsedImportItem[]>([]);
