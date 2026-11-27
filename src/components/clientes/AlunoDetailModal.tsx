@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlunoCardioSemanaCard } from './AlunoCardioSemanaCard';
+import { AlunoPerformanceModal } from './AlunoPerformanceModal';
 import { useAlunoStore } from '../../store/useAlunoStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useConfirmStore } from '../../store/useConfirmStore';
@@ -41,6 +42,7 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [avaliacaoOpen, setAvaliacaoOpen] = useState(false);
   const [testesOpen, setTestesOpen] = useState(false);
+  const [perfOpen, setPerfOpen] = useState(false);
 
   if (!aluno) return null;
 
@@ -121,6 +123,9 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           {perfilOpen ? '▲ Ocultar' : '▼ Ver'} mini-perfil
         </button>
 
+        <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setPerfOpen(true)}>
+          📈 Performance e Histórico
+        </button>
         <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setAvaliacaoOpen(true)}>
           📋 Avaliação Física
         </button>
@@ -218,6 +223,12 @@ export function AlunoDetailModal({ alunoId, onClose, onEditPerfil, onEditarRotin
           </button>
         </div>
       </div>
+
+      {perfOpen && (
+        <ErrorBoundary area="Performance e Histórico do aluno" onClose={() => setPerfOpen(false)}>
+          <AlunoPerformanceModal aluno={aluno} onClose={() => setPerfOpen(false)} />
+        </ErrorBoundary>
+      )}
 
       {testesOpen && (
         <ErrorBoundary area="Força & Cardio do aluno" onClose={() => setTestesOpen(false)}>

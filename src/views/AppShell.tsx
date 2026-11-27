@@ -36,6 +36,7 @@ import { useSyncStore } from '../store/useSyncStore';
 
 import './AppShell.css';
 import { useCardioSemanalSync } from '../hooks/useCardioSemanalSync';
+import { usePerformanceSync } from '../hooks/usePerformanceSync';
 
 /**
  * Shell principal — sucessor da composição estática Sidebar + bottom-nav +
@@ -92,6 +93,8 @@ export function AppShell() {
 
   // Aluno logado: envia o resumo semanal de cardio para o Personal ver no perfil (no-op para o Personal).
   useCardioSemanalSync();
+  // Aluno logado: publica a Performance (semana atual + histórico + retroativos) para o Personal (no-op para o Personal).
+  usePerformanceSync();
 
   return (
     <div id="app-shell">

@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { useExerciseStore } from '../store/useExerciseStore';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { LEVEL_GOALS, LOWER, UPPER, VOL_MAX_LOWER, VOL_MAX_UPPER, COMPARISONS } from '../data/dashboardData';
-import type { TrainingLevel } from '../types/workout';
+import type { TrainingLevel, WeekLog } from '../types/workout';
+import type { Exercise } from '../types/exercise';
 import { calcWeekTonnage, calcWeekVolume } from '../utils/volumeCalc';
 import { MetricCard } from '../components/dashboard/MetricCard';
 import { CalorieCard } from '../components/dashboard/CalorieCard';
@@ -19,11 +20,18 @@ import '../components/dashboard/MuscleBalanceCard.css';
  * O bloco de Top 1RM segue pendente para uma próxima iteração — fora do
  * escopo explícito desta fase (sobrecarga progressiva + balanço + toasts).
  */
-export function XRayContent() {
-  const exercises = useExerciseStore((s) => s.exercises);
-  const weekLog = useWorkoutStore((s) => s.weekLog);
-  const selectedLevel = useWorkoutStore((s) => s.selectedLevel);
-  const setLevel = useWorkoutStore((s) => s.setLevel);
+export function XRayContent({ weekLog: weekLogProp, exercises: exercisesProp }: { weekLog?: WeekLog; exercises?: Exercise[] } = {}) {
+  const exercisesLocal = useExerciseStore((s) => s.exercises);
+  const weekLogLocal = useWorkoutStore((s) => s.weekLog);
+  // Personal vendo um aluno passa a semana/exercícios DELE; sem props usa os do próprio usuário.
+  const exercises = exercisesProp ?? exercisesLocal;
+  const weekLog = weekLogProp ?? weekLogLocal;
+  const levelStore = useWorkoutStore((s) => s.selectedLevel);
+  const setLevelStore = useWorkoutStore((s) => s.setLevel);
+  // Vendo um aluno: o nível é só local (não altera o nível salvo do próprio Personal).
+  const [levelLocal, setLevelLocal] = useState<TrainingLevel>(levelStore);
+  const selectedLevel = weekLogProp ? levelLocal : levelStore;
+  const setLevel = weekLogProp ? setLevelLocal : setLevelStore;
 
   const weekVol = calcWeekVolume(weekLog, exercises);
   const { kg, reps, sets } = calcWeekTonnage(weekLog);
@@ -64,7 +72,7 @@ export function XRayContent() {
         />
         <MetricCard icon="🔁" label="Total de Séries" value={sets} unit="séries executadas" />
         <MetricCard icon="📊" label="Total de Reps" value={reps} unit="repetições no ciclo" />
-        <CalorieCard />
+        {!weekLogProp && <CalorieCard />}
       </div>
 
       <div className="grid-2" style={{ marginBottom: 24 }}>

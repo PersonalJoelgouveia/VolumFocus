@@ -56,3 +56,5 @@
 .cgrid-nav-btn:disabled { opacity: 0.35; cursor: default; }
 .cgrid-cell.cgrid-click { cursor: pointer; }
 .cgrid-cell.cgrid-click:hover { filter: brightness(1.25); }
+
+.cgrid-cell.cgrid-selected { outline: 2px solid var(--teal, #00c9b1); outline-offset: 1px; }

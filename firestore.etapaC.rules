@@ -299,6 +299,21 @@ service cloud.firestore {
     // alunos/{email}/testesDesempenho/{id}. Dado de saúde: só o Personal DONO do cliente cria/apaga
     // (ptDoAluno + consentOk); o aluno só LÊ os próprios. Sem update (correção = apagar e criar de novo).
     // Autoria = e-mail do token (não forjável); campos fixos e faixas plausíveis; sem campos de dono.
+    // Performance do aluno (uma semana por documento; gravada só pelo PRÓPRIO aluno, o Personal dono só lê).
+    function performanceSemanaValida(semana) {
+      let d = request.resource.data;
+      return semCamposDeDono(d)
+        && d.keys().hasOnly(['semana', 'origem', 'weekLog', 'weekPSE', 'exDone', 'exercicios', 'atualizadoEm'])
+        && d.keys().hasAll(['semana', 'origem', 'weekLog', 'weekPSE', 'exercicios', 'atualizadoEm'])
+        && semana.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+        && d.semana == semana
+        && d.origem in ['atual', 'retro', 'historico']
+        && d.weekLog is map && d.weekLog.keys().size() <= 7
+        && d.weekPSE is map && d.weekPSE.keys().size() <= 7
+        && (!('exDone' in d) || (d.exDone is map && d.exDone.keys().size() <= 400))
+        && d.exercicios is list && d.exercicios.size() <= 80
+        && d.atualizadoEm is string && d.atualizadoEm.size() <= 40;
+    }
     // Resumo semanal de cardio do aluno (gravado pelo PRÓPRIO aluno; o Personal dono só lê).
     function cardioSemanalValido(semana) {
       let d = request.resource.data;
@@ -474,6 +489,13 @@ service cloud.firestore {
         allow get, list: if (ehDono(email) && consentOk(email)) || ptRotinaAcesso(email);
         allow create: if rotinaCriacaoValida(email, id);
         allow update: if rotinaAtualizacaoValida(email, id);
+        allow delete: if false;
+      }
+
+      // Performance do aluno: o aluno (cadastrado, com consentimento) grava as próprias semanas; o Personal dono lê.
+      match /performanceSemanas/{semana} {
+        allow get, list: if (ehDono(email) && consentOk(email)) || ptDoAluno(email);
+        allow create, update: if ehDono(email) && cadastrado(email) && consentOk(email) && performanceSemanaValida(semana);
         allow delete: if false;
       }
 

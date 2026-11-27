@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { useRetroWeeksStore } from '../../store/useRetroWeeksStore';
+import type { RetroWeek } from '../../store/useRetroWeeksStore';
+import type { HistoricoSemana } from '../../types/history';
+import type { ExDoneMap, WeekLog } from '../../types/workout';
+import type { Exercise } from '../../types/exercise';
 import { useUIStore } from '../../store/useUIStore';
 import { isCurrentWeek, weekAndDayOf } from '../../utils/retroWeek';
 import type { DayIndex } from '../../types/workout';
@@ -17,7 +21,27 @@ import './ConsistencyGridCard.css';
  * (mesma posição de #cgrid-card-perf no original, que era a cópia
  * "principal" quando incorporado às sub-abas).
  */
-export function ConsistencyGridCard() {
+export interface CgridSource {
+  weekLog: WeekLog;
+  exDone: ExDoneMap;
+  historico: HistoricoSemana[];
+  retro: Record<string, RetroWeek>;
+  exercises: Exercise[];
+}
+
+/**
+ * Sem props: dados do próprio usuário e clique abre o dia (Meus Treinos / lançamento retroativo).
+ * Com `source` + `onSelectDate` (Personal vendo um aluno): usa os dados do aluno e o clique só seleciona o dia.
+ */
+export function ConsistencyGridCard({
+  source,
+  onSelectDate,
+  selectedDate,
+}: {
+  source?: CgridSource;
+  onSelectDate?: (dateStr: string) => void;
+  selectedDate?: string | null;
+} = {}) {
   const weekLog = useWorkoutStore((s) => s.weekLog);
   const exDone = useWorkoutStore((s) => s.exDone);
   const exercises = useExerciseStore((s) => s.exercises);
@@ -27,10 +51,16 @@ export function ConsistencyGridCard() {
   const setActiveView = useUIStore((s) => s.setActiveView);
   const [offset, setOffset] = useState(0);
 
-  const data = buildCgridData(weekLog, exDone, historico, exercises, retro, offset);
+  const data = source
+    ? buildCgridData(source.weekLog, source.exDone, source.historico, source.exercises, source.retro, offset)
+    : buildCgridData(weekLog, exDone, historico, exercises, retro, offset);
 
   /** Dia passado/hoje: abre a semana dele em Meus Treinos (atual) ou no lançamento retroativo (passada). */
   function abrirDia(dateStr: string) {
+    if (onSelectDate) {
+      onSelectDate(dateStr);
+      return;
+    }
     const [y, m, d] = dateStr.split('-').map(Number);
     const { key, day } = weekAndDayOf(new Date(y, m - 1, d));
     if (isCurrentWeek(key)) {
@@ -88,8 +118,8 @@ export function ConsistencyGridCard() {
         {data.cells.map((c) => (
           <div
             key={c.day}
-            className={`cgrid-cell ${c.state}${c.isToday ? ' cgrid-hoje' : ''}${c.isFuture ? ' cgrid-futuro' : ' cgrid-click'}`}
-            title={c.isFuture ? `${c.day}` : `${c.day} — abrir/lançar treino deste dia`}
+            className={`cgrid-cell ${c.state}${c.isToday ? ' cgrid-hoje' : ''}${c.isFuture ? ' cgrid-futuro' : ' cgrid-click'}${selectedDate === c.date ? ' cgrid-selected' : ''}`}
+            title={c.isFuture ? `${c.day}` : onSelectDate ? `${c.day} — ver treino deste dia` : `${c.day} — abrir/lançar treino deste dia`}
             role={c.isFuture ? undefined : 'button'}
             tabIndex={c.isFuture ? undefined : 0}
             aria-label={c.isFuture ? undefined : `Abrir treino do dia ${c.day}`}
